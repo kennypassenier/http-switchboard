@@ -48,6 +48,9 @@ pub enum RenderError {
     #[error("profile '{profile}': the template could not be rendered — {detail}. What now: if a field is undefined, either the source stopped sending it or its name changed; write `| default(...)` to accept that explicitly, or fix the path. An empty value is never produced on your behalf.")]
     Render { profile: String, detail: String },
 
+    #[error("profile '{profile}': the destination address could not be built — {detail}. What now: only path segments may be templated; the scheme, host and port always come from the config, so no incoming message can choose where its own translation goes.")]
+    Target { profile: String, detail: String },
+
     #[error("profile '{profile}': the rendered body is not valid JSON ({detail}), while the profile declares {content_type}. What now: look at the template's punctuation — a missing comma or brace; the values themselves are escaped for you, so the fault is in the fixed text around them.")]
     InvalidJson {
         profile: String,
@@ -125,7 +128,7 @@ pub fn prepare_value(profile: &Profile, json: &serde_json::Value) -> Result<Deli
     Ok(Delivery {
         target: match &profile.sink {
             Sink::Url { url, method } => Target::Url {
-                url: url.clone(),
+                url: render_target(profile, url, json)?,
                 method: method.clone(),
             },
             Sink::Kyu { topic } => Target::KyuTopic {
@@ -148,4 +151,81 @@ fn describe(err: &minijinja::Error) -> String {
         source = e.source();
     }
     parts.join(": ")
+}
+
+/// K7: a destination whose *path* carries a value from the message —
+/// `/devices/{{ id }}/state`. Everything about where the request goes
+/// still comes from the config (AR10): the scheme, the host and the port
+/// are split off before rendering and put back afterwards, so a template
+/// cannot reach them. Each interpolated value is percent-encoded by the
+/// engine rather than by the template author, the same "mechanism, not
+/// habit" rule AR7 applies to JSON.
+fn render_target(
+    profile: &Profile,
+    url: &str,
+    json: &serde_json::Value,
+) -> Result<String, RenderError> {
+    if !url.contains("{{") {
+        return Ok(url.to_string());
+    }
+
+    let (scheme, rest) = url.split_once("://").ok_or_else(|| RenderError::Target {
+        profile: profile.name.clone(),
+        detail: format!("'{url}' has no scheme"),
+    })?;
+    let (authority, path) = match rest.find('/') {
+        Some(i) => (&rest[..i], &rest[i..]),
+        None => (rest, ""),
+    };
+    if authority.contains("{{") {
+        return Err(RenderError::Target {
+            profile: profile.name.clone(),
+            detail: "the host or port is templated".to_string(),
+        });
+    }
+
+    let mut env = Environment::new();
+    env.set_undefined_behavior(UndefinedBehavior::Strict);
+    env.set_formatter(|out, _state, value| {
+        let raw = match value.as_str() {
+            Some(text) => text.to_string(),
+            None => value.to_string(),
+        };
+        out.write_str(&percent_encode(&raw))?;
+        Ok(())
+    });
+
+    let rendered = env
+        .render_str(path, json)
+        .map_err(|e| RenderError::Render {
+            profile: profile.name.clone(),
+            detail: describe(&e),
+        })?;
+
+    // Belt and braces: percent-encoding already makes these impossible,
+    // and a future change to the encoder should not quietly re-open them.
+    if rendered.contains("..") || rendered.contains("://") {
+        return Err(RenderError::Target {
+            profile: profile.name.clone(),
+            detail: format!("the rendered path '{rendered}' escapes its own address"),
+        });
+    }
+
+    Ok(format!("{scheme}://{authority}{rendered}"))
+}
+
+/// Percent-encode everything that is not unreserved. Deliberately strict:
+/// a slash inside a *value* is encoded, so a value can never add a path
+/// segment of its own.
+fn percent_encode(value: &str) -> String {
+    let mut out = String::with_capacity(value.len());
+    for byte in value.as_bytes() {
+        match byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                out.push(*byte as char)
+            }
+            other => out.push_str(&format!("%{other:02X}")),
+        }
+    }
+    out
 }

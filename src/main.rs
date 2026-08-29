@@ -12,7 +12,8 @@ fn usage() -> String {
     format!(
         "http-switchboard <config.toml> [--listen {DEFAULT_LISTEN}]\n\
          http-switchboard --check-config <config.toml>\n\
-         http-switchboard --healthcheck [http://127.0.0.1:8080/healthz]\n"
+         http-switchboard --healthcheck [http://127.0.0.1:8080/healthz]\n\
+         http-switchboard test --config <config.toml> --profile <name> --input <message.json>\n"
     )
 }
 
@@ -52,6 +53,84 @@ async fn main() -> ExitCode {
                 }
                 Err(message) => {
                     eprintln!("{message}");
+                    ExitCode::FAILURE
+                }
+            };
+        }
+        // W4: render a profile against a recorded message and print what
+        // would go out, without sending anything. The difference between a
+        // config file you dare to edit and one you avoid.
+        Some("test") => {
+            let mut config_path = "config.toml".to_string();
+            let mut profile_name = String::new();
+            let mut input_path = String::new();
+            let mut i = 1;
+            while i < args.len() {
+                match args[i].as_str() {
+                    "--config" => config_path = args.get(i + 1).cloned().unwrap_or_default(),
+                    "--profile" => profile_name = args.get(i + 1).cloned().unwrap_or_default(),
+                    "--input" => input_path = args.get(i + 1).cloned().unwrap_or_default(),
+                    other => {
+                        eprintln!("unknown option '{other}'.\n{}", usage());
+                        return ExitCode::FAILURE;
+                    }
+                }
+                i += 2;
+            }
+            if profile_name.is_empty() || input_path.is_empty() {
+                eprintln!("{}", usage());
+                return ExitCode::FAILURE;
+            }
+
+            let config = match load(&config_path) {
+                Ok(c) => c,
+                Err(message) => {
+                    eprintln!("{message}");
+                    return ExitCode::FAILURE;
+                }
+            };
+            let Some(profile) = config.profiles.iter().find(|p| p.name == profile_name) else {
+                let names: Vec<&str> = config.profiles.iter().map(|p| p.name.as_str()).collect();
+                eprintln!(
+                    "{config_path}: there is no profile named '{profile_name}'. What now: pick one of: {}.",
+                    names.join(", ")
+                );
+                return ExitCode::FAILURE;
+            };
+            let payload = match std::fs::read(&input_path) {
+                Ok(bytes) => bytes,
+                Err(e) => {
+                    eprintln!(
+                        "{input_path}: cannot be read ({e}). What now: point --input at a file \
+                         holding one recorded message."
+                    );
+                    return ExitCode::FAILURE;
+                }
+            };
+
+            return match http_switchboard::translate::prepare(profile, &payload) {
+                Ok(delivery) => {
+                    match &delivery.target {
+                        http_switchboard::translate::Target::Url { url, method } => {
+                            println!("would send {method} {url}")
+                        }
+                        http_switchboard::translate::Target::KyuTopic { topic } => {
+                            println!("would publish to kyu topic {topic}")
+                        }
+                    }
+                    println!("content-type: {}", delivery.content_type);
+                    for name in delivery.headers.keys() {
+                        // The names, never the values: a header may carry a
+                        // token, and this output ends up in terminals and
+                        // pasted into chats.
+                        println!("header: {name}: ***");
+                    }
+                    println!("---");
+                    println!("{}", delivery.body);
+                    ExitCode::SUCCESS
+                }
+                Err(e) => {
+                    eprintln!("{e}");
                     ExitCode::FAILURE
                 }
             };
