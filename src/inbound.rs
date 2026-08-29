@@ -29,7 +29,8 @@ use axum::Router;
 
 use crate::adapters::{deliver_with_retry, Clock, Sink};
 use crate::config::{Config, Profile, Source};
-use crate::pump::Step;
+use crate::obs::Registry;
+use crate::pump::Health;
 use crate::translate;
 
 /// A body cap exists from day one even though the configurable limits of
@@ -47,16 +48,15 @@ pub struct Inbound {
     sink: Arc<dyn Sink>,
     clock: Arc<dyn Clock>,
     permits: Arc<tokio::sync::Semaphore>,
+    registry: Arc<Registry>,
 }
 
-/// One request's worth of outcome, for the log line and the metrics that
-/// L6 attaches.
-#[derive(Debug)]
-pub struct InboundReport {
-    pub steps: Vec<(String, Step)>,
-}
-
-pub fn router(config: &Config, sink: Arc<dyn Sink>, clock: Arc<dyn Clock>) -> Router {
+pub fn router(
+    config: &Config,
+    sink: Arc<dyn Sink>,
+    clock: Arc<dyn Clock>,
+    registry: Arc<Registry>,
+) -> Router {
     let mut by_path: BTreeMap<String, Vec<Arc<Profile>>> = BTreeMap::new();
     for profile in &config.profiles {
         if let Source::Http { path } = &profile.source {
@@ -75,10 +75,44 @@ pub fn router(config: &Config, sink: Arc<dyn Sink>, clock: Arc<dyn Clock>) -> Ro
             sink: Arc::clone(&sink),
             clock: Arc::clone(&clock),
             permits: Arc::clone(&permits),
+            registry: Arc::clone(&registry),
         });
         router = router.route(&path, post(handle).with_state(state));
     }
-    router.layer(DefaultBodyLimit::max(MAX_BODY_BYTES))
+
+    // AR11: the same listener, on paths the config refuses to let a
+    // profile claim. Neither answers anything a message put there.
+    let health_registry = Arc::clone(&registry);
+    let metrics_registry = Arc::clone(&registry);
+    router
+        .route(
+            "/healthz",
+            axum::routing::get(move || {
+                let registry = Arc::clone(&health_registry);
+                async move {
+                    let (healthy, body) = registry.healthz();
+                    let status = if healthy {
+                        StatusCode::OK
+                    } else {
+                        StatusCode::SERVICE_UNAVAILABLE
+                    };
+                    (status, [("content-type", "application/json")], body)
+                }
+            }),
+        )
+        .route(
+            "/metrics",
+            axum::routing::get(move || {
+                let registry = Arc::clone(&metrics_registry);
+                async move {
+                    (
+                        [("content-type", "text/plain; version=0.0.4")],
+                        registry.metrics(),
+                    )
+                }
+            }),
+        )
+        .layer(DefaultBodyLimit::max(MAX_BODY_BYTES))
 }
 
 async fn handle(
@@ -115,8 +149,12 @@ async fn handle(
 
     let mut failures = Vec::new();
     for profile in &state.profiles {
-        match translate::prepare(profile, &body) {
-            Err(e) => failures.push(format!("{e}")),
+        let started = std::time::Instant::now();
+        let (ok, attempts) = match translate::prepare(profile, &body) {
+            Err(e) => {
+                failures.push(format!("{e}"));
+                (false, 0)
+            }
             Ok(delivery) => {
                 let outcome = deliver_with_retry(
                     profile,
@@ -125,11 +163,29 @@ async fn handle(
                     state.clock.as_ref(),
                 )
                 .await;
-                if let Err(e) = outcome.result {
-                    failures.push(format!("profile '{}': {e}", profile.name));
+                let attempts = outcome.attempts;
+                match outcome.result {
+                    Ok(()) => (true, attempts),
+                    Err(e) => {
+                        failures.push(format!("profile '{}': {e}", profile.name));
+                        (false, attempts)
+                    }
                 }
             }
-        }
+        };
+        let duration_ms = started.elapsed().as_millis() as u64;
+        state.registry.record(&profile.name, ok, duration_ms);
+        state.registry.set_health(
+            &profile.name,
+            if ok { Health::Working } else { Health::Failing },
+        );
+        crate::obs::log_message(
+            &profile.name,
+            "http",
+            if ok { "delivered" } else { "failed" },
+            duration_ms,
+            attempts,
+        );
     }
 
     if failures.is_empty() {
