@@ -307,6 +307,7 @@ impl http_switchboard::adapters::Sink for FakeSink {
                 Err(http_switchboard::adapters::DeliverError::Status {
                     status: 503,
                     advice: "test".into(),
+                    answer: String::new(),
                 })
             }
         })

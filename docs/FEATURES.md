@@ -8,7 +8,7 @@ names, docs and forms forever.
 > plus the four mandatory items. The scale is the canonical one:
 > Essential · Desired · Later · Don't do.
 
-**Tally:** 21 Essential · 2 Desired · 2 Later · 0 Don't do (25 total).
+**Tally:** 21 Essential · 3 Desired · 2 Later · 0 Don't do (26 total). W12 was added on 2026-08-30 by mini-round MR2, after the freeze.
 
 Frozen at the Phase 2 gate on 2026-08-29: every item below, its rating
 and its test bar. Changes go through a mini-round only
@@ -47,6 +47,7 @@ and its test bar. Changes go through a mini-round only
 | W8 | Essential | **A token on the inbound side.** Raised Desired → Essential by Kenny. A profile with an HTTP source may require a shared token. Not urgent on the LAN, but it is the door that must exist before M4 can even be discussed. |
 | W9 | Later | **Size and rate limits.** A maximum body size and a per-profile rate cap, against a source that runs away. Becomes Essential the moment M4 happens. |
 | W10 | Later | **Config reload without restart.** Small gain — the service holds nothing, so a restart costs half a second and loses nothing by construction — against a second path along which the running service can break. |
+| W12 | Desired | **Forward the receiver's own error to the sender**, per profile, off by default (`forward_error_body`). Added 2026-08-30 by **mini-round MR2**, Kenny's idea at the Phase 7 gate: when a destination refuses, its own words often say in one sentence what a template got wrong. Bounded to 512 characters, stripped of control characters, and refused at startup on a kyu-source profile — a message from the hub has no sender waiting for an answer. Off by default because a receiver's error page is not ours and can carry its internal addresses: the same mistake this project had just fixed in the other direction. The status has always come back and still does; this is only about the text. Rated Desired, not Essential, because `http-switchboard test` already covers most of the same need. |
 | W11 | Essential | **Self-reported failures onto a topic.** Chosen by Kenny in M2: a delivery that fails for good is published as an event on its own topic (`switchboard.events` or similar — **not** under `kyu.*`, which the hub reserves for its own events and refuses publishes to with a 403), which hub-bridge turns into a house warning in HA. Known blind spot, accepted: if kyu itself is down this warning does not arrive either — W6 is the pull-based fallback for exactly that case. |
 
 ## Mandatory items (procedure Phase 2)

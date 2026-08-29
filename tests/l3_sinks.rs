@@ -56,6 +56,7 @@ fn delivery_to(url: &str, headers: &[(&str, &str)]) -> Delivery {
             .map(|(k, v)| ((*k).to_string(), Secret::new(*v)))
             .collect(),
         body: r#"{"x": 1}"#.to_string(),
+        forward_error_body: false,
     }
 }
 
@@ -109,6 +110,7 @@ async fn k4_publishing_to_a_kyu_topic_hits_the_publish_verb_with_the_token() {
         content_type: "application/json".to_string(),
         headers: Default::default(),
         body: r#"{"x": 1}"#.to_string(),
+        forward_error_body: false,
     };
 
     sink.deliver(&delivery).await.unwrap();
@@ -222,6 +224,7 @@ async fn k6_a_secret_header_value_appears_in_no_error_message() {
             .into_iter()
             .collect(),
         body: "{}".to_string(),
+        forward_error_body: false,
     };
 
     let err = sink.deliver(&delivery).await.unwrap_err();

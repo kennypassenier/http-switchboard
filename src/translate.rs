@@ -32,6 +32,8 @@ pub struct Delivery {
     pub content_type: String,
     pub headers: BTreeMap<String, Secret>,
     pub body: String,
+    /// W12: pass the receiver's own error text back to the sender.
+    pub forward_error_body: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -143,6 +145,7 @@ pub fn prepare_value(profile: &Profile, json: &serde_json::Value) -> Result<Deli
         content_type: profile.content_type.clone(),
         headers: profile.headers.clone(),
         body,
+        forward_error_body: profile.forward_error_body,
     })
 }
 

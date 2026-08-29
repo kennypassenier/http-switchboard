@@ -78,6 +78,13 @@ pub struct Profile {
     pub lease_ms: u64,
     pub max_attempts: u32,
     pub inbound_token: Option<Secret>,
+    /// W12 (mini-round MR2, 2026-08-30, Kenny's idea): include the
+    /// receiver's own error text in the answer to the sender. Off by
+    /// default and refused on a kyu source, where there is nobody to
+    /// answer — a receiver's error page is not ours and can carry its
+    /// internal addresses, which is the mistake this project just fixed
+    /// in the other direction.
+    pub forward_error_body: bool,
 }
 
 impl Profile {
@@ -154,6 +161,9 @@ pub enum ConfigError {
         profile: String,
         path: String,
     },
+
+    #[error("{file}, profile '{profile}': forward_error_body is set, but this profile's source is a kyu topic. What now: remove it — a message from the hub has no sender waiting for an answer, so there is nobody to forward anything to; the failure already reaches you through the log and the self-report events.")]
+    ForwardOnKyuSource { file: String, profile: String },
 
     #[error("{file}, profile '{profile}': inbound_token is set, but this profile's source is a kyu topic. What now: remove inbound_token, or change the source to an http_path — a token on a kyu source guards nothing, and leaving it there suggests a door that was never built.")]
     InboundTokenOnKyuSource { file: String, profile: String },
@@ -263,6 +273,7 @@ struct RawProfile {
     lease_ms: Option<u64>,
     max_attempts: Option<u32>,
     inbound_token: Option<String>,
+    forward_error_body: Option<bool>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -536,6 +547,14 @@ fn validate_profile(
     let lease_ms = rp.lease_ms.unwrap_or(DEFAULT_LEASE_MS);
     let max_attempts = rp.max_attempts.unwrap_or(DEFAULT_MAX_ATTEMPTS);
 
+    let forward_error_body = rp.forward_error_body.unwrap_or(false);
+    if forward_error_body && matches!(source, Source::Kyu { .. }) {
+        return Err(ConfigError::ForwardOnKyuSource {
+            file: file.to_string(),
+            profile: name,
+        });
+    }
+
     let profile = Profile {
         name: name.clone(),
         subscription,
@@ -549,6 +568,7 @@ fn validate_profile(
         lease_ms,
         max_attempts,
         inbound_token,
+        forward_error_body,
     };
 
     // AR8: the retry budget must fit inside the lease, with room for the

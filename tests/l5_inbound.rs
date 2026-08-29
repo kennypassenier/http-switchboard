@@ -369,3 +369,101 @@ body = '''{{"x": {{{{ x }}}}}}'''
         "past the bound the answer must be a refusal, not a queue: only {refusals} refusals"
     );
 }
+
+#[tokio::test]
+async fn w12_the_receivers_own_words_come_back_only_when_the_profile_asks() {
+    // Kenny's idea (mini-round MR2, 2026-08-30), and its guard rail. By
+    // default the receiver's text is not ours to hand on — a moment ago
+    // this same answer was leaking the destination address.
+    let receiver = TestServer::start(vec![400]).await;
+    let quiet = format!(
+        r#"
+[[profiles]]
+name = "hook"
+from = {{ http_path = "/hook" }}
+to = {{ url = "{}/in" }}
+content_type = "application/json"
+retries = 0
+body = '''{{"x": {{{{ x }}}}}}'''
+"#,
+        receiver.base_url
+    );
+    let base = serve(&quiet).await;
+    let (status, body) = post(&format!("{base}/hook"), r#"{"x": 1}"#, None).await;
+    assert_eq!(status, 502);
+    assert!(
+        !body.contains("It said:"),
+        "by default the receiver's answer stays with the receiver: {body}"
+    );
+    assert!(
+        body.contains("status 400"),
+        "the status still comes back: {body}"
+    );
+
+    let loud = format!(
+        "{}
+forward_error_body = true
+",
+        quiet.trim_end()
+    );
+    let base = serve(&loud).await;
+    let (status, body) = post(&format!("{base}/hook"), r#"{"x": 1}"#, None).await;
+    assert_eq!(status, 502);
+    assert!(body.contains("status 400"), "{body}");
+    assert!(body.contains("What now:"), "the remedy survives: {body}");
+}
+
+#[tokio::test]
+async fn w12_a_receiver_answer_is_bounded_and_stripped_of_control_characters() {
+    // The text is not ours and cannot be vouched for, so it is trimmed to
+    // one bounded line before it is repeated.
+    let receiver = TestServer::start(vec![400]).await;
+    let text = format!(
+        r#"
+[[profiles]]
+name = "hook"
+from = {{ http_path = "/hook" }}
+to = {{ url = "{}/in" }}
+content_type = "application/json"
+retries = 0
+forward_error_body = true
+body = '''{{"x": {{{{ x }}}}}}'''
+"#,
+        receiver.base_url
+    );
+    let base = serve(&text).await;
+
+    let (_, body) = post(&format!("{base}/hook"), r#"{"x": 1}"#, None).await;
+
+    assert!(
+        !body.contains('\r'),
+        "no control characters may be repeated: {body:?}"
+    );
+    assert!(
+        body.len() < 4096,
+        "and the answer stays bounded: {}",
+        body.len()
+    );
+}
+
+#[test]
+fn k10_forwarding_is_refused_where_there_is_nobody_to_answer() {
+    let text = r#"
+[kyu]
+base_url = "http://127.0.0.1:8080"
+
+[[profiles]]
+name = "from-hub"
+from = { kyu_topic = "alerts.raw" }
+to = { url = "http://127.0.0.1:9/x" }
+content_type = "application/json"
+forward_error_body = true
+body = "{}"
+"#;
+    let e = config::load("t.toml", text, &env(&[]))
+        .unwrap_err()
+        .to_string();
+    assert!(e.contains("What now:"), "no remedy: {e}");
+    assert!(e.contains("forward_error_body"), "{e}");
+    assert!(e.contains("nobody"), "the reason is named: {e}");
+}

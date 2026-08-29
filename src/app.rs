@@ -281,6 +281,7 @@ async fn report(sink: &dyn Sink, topic: &str, body: String, profile: &str) {
         content_type: "application/json".to_string(),
         headers: Default::default(),
         body,
+        forward_error_body: false,
     };
     if let Err(e) = sink.deliver(&delivery).await {
         // Logged and counted, never published: the report about a broken

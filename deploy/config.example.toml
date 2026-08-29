@@ -41,3 +41,25 @@ body = '''
  "instance": {{ alerts.0.labels.instance | default("unknown") }},
  "summary": {{ alerts.0.annotations.summary }}}
 '''
+
+# A second profile, on the HTTP ingress, showing the shape S2 proves: a
+# new coupling is a block of config, no code and no release.
+#
+# forward_error_body is what Kenny asked for at the Phase 7 gate (W12):
+# when the receiver refuses, its own words come back to whoever posted
+# here. Off unless you set it, and only worth setting when you control
+# both ends — an error page is not ours and can name internal addresses.
+#[[profiles]]
+#name = "uptime-kuma"
+#from = { http_path = "/uptime-kuma" }
+#to = { url = "http://homeassistant.lan:8123/api/webhook/ANOTHER-ID" }
+#content_type = "application/json"
+#inbound_token = "${HOOK_TOKEN}"
+#forward_error_body = true
+#body = '''
+#{"alert": {{ heartbeat.name | default("uptime-kuma") }},
+# "status": "firing",
+# "severity": "warning",
+# "instance": {{ monitor.name | default("unknown") }},
+# "summary": {{ msg | default("a check went red") }}}
+#'''

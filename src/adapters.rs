@@ -35,8 +35,17 @@ pub enum DeliverError {
     #[error("the destination did not answer within {timeout_ms} ms. What now: check whether the receiver is up and reachable from this container; if it is simply slow, raise timeout_ms for this profile — but keep the retry budget inside the kyu lease.")]
     Timeout { timeout_ms: u64 },
 
-    #[error("the destination refused the message with status {status}. What now: {advice}")]
-    Status { status: u16, advice: String },
+    #[error(
+        "the destination refused the message with status {status}.{answer} What now: {advice}"
+    )]
+    Status {
+        status: u16,
+        advice: String,
+        /// The receiver's own words, when the profile asked for them
+        /// (W12). Empty otherwise — a receiver's error page is not ours
+        /// to hand on by default.
+        answer: String,
+    },
 
     #[error("the destination could not be reached: {detail}. What now: check the address in the profile and whether this container can reach it — a name that does not resolve and a port nothing listens on look the same from here.")]
     Transport { detail: String },
@@ -71,6 +80,10 @@ pub trait Sink: Send + Sync {
 /// Delivery over HTTP: both to a plain URL and to a kyu topic, because
 /// publishing to the hub is an ordinary POST — one client, one timeout,
 /// one set of failure modes.
+/// How much of a receiver's error text is ever passed on. Bounded because
+/// it is text we did not write and cannot vouch for.
+const MAX_FORWARDED_ANSWER: usize = 512;
+
 pub struct HttpSink {
     client: reqwest::Client,
     kyu_base_url: Option<String>,
@@ -103,6 +116,24 @@ impl HttpSink {
     }
 }
 
+/// Trim a receiver's answer to something safe to repeat: bounded, one
+/// line, no control characters.
+fn readable_answer(raw: &str) -> String {
+    let cleaned: String = raw
+        .chars()
+        .map(|c| if c.is_control() { ' ' } else { c })
+        .collect();
+    let trimmed = cleaned.trim();
+    if trimmed.is_empty() {
+        return String::new();
+    }
+    let mut out: String = trimmed.chars().take(MAX_FORWARDED_ANSWER).collect();
+    if trimmed.chars().count() > MAX_FORWARDED_ANSWER {
+        out.push('…');
+    }
+    format!(" It said: {out}.")
+}
+
 impl Sink for HttpSink {
     fn deliver<'a>(&'a self, delivery: &'a Delivery) -> BoxFuture<'a, Result<(), DeliverError>> {
         Box::pin(async move {
@@ -133,9 +164,18 @@ impl Sink for HttpSink {
                     if (200..300).contains(&status) {
                         Ok(())
                     } else {
+                        // Only read the receiver's words when the profile
+                        // asked for them; otherwise they are not ours to
+                        // carry around (W12).
+                        let answer = if delivery.forward_error_body {
+                            readable_answer(&response.text().await.unwrap_or_default())
+                        } else {
+                            String::new()
+                        };
                         Err(DeliverError::Status {
                             status,
                             advice: advice_for(status),
+                            answer,
                         })
                     }
                 }
@@ -384,6 +424,7 @@ mod tests {
             let e = DeliverError::Status {
                 status,
                 advice: advice_for(status),
+                answer: String::new(),
             };
             let message = e.to_string();
             assert!(
@@ -415,7 +456,8 @@ mod tests {
             assert!(
                 DeliverError::Status {
                     status,
-                    advice: String::new()
+                    advice: String::new(),
+                    answer: String::new()
                 }
                 .is_retryable(),
                 "{status} should be retried"
@@ -425,7 +467,8 @@ mod tests {
             assert!(
                 !DeliverError::Status {
                     status,
-                    advice: String::new()
+                    advice: String::new(),
+                    answer: String::new()
                 }
                 .is_retryable(),
                 "{status} will not get better by asking again"
