@@ -15,9 +15,9 @@ gates hold from any session or terminal. After a fresh clone, run:
 
 | Field | Value |
 |---|---|
-| Current phase | 5 · Realization plan |
-| Last completed gate | Phase 4 architecture form (2026-08-29) — architecture frozen |
-| Next gate | Phase 5 plan form, then hooks + CI before L0 |
+| Current phase | 6 · Development loop (next: L1) |
+| Last completed gate | Phase 5 plan form (2026-08-29); L0 built, gates live |
+| Next gate | L1 milestone report form |
 | AFK mode | off |
 
 <!-- Update this block after every completed gate. -->
@@ -31,6 +31,14 @@ gates hold from any session or terminal. After a fresh clone, run:
 | docs/ARCHITECTURE_DECISIONS.md | frozen AR decisions incl. tech choice (Phases 3-4) |
 | docs/REALIZATION_PLAN.md | milestones + status table (Phase 5) |
 | docs/TEST_PLAN.md | what is proven where + accepted limitations (Phase 7) |
+
+## Repo
+
+`https://github.com/kennypassenier/http-switchboard` — public, MIT/Apache-2.0.
+Branch protection on `main` is ON: required check `fmt · clippy · tests`,
+strict (branch must be up to date), admins included, no force pushes, no
+deletions, **no pull request required** (single committer). The daily flow
+is therefore: work on a branch, wait for green, fast-forward.
 
 ## Gates (enforced)
 
