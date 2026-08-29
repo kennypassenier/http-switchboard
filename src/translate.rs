@@ -87,7 +87,12 @@ pub fn prepare(profile: &Profile, payload: &[u8]) -> Result<Delivery, RenderErro
             profile: profile.name.clone(),
             detail: e.to_string(),
         })?;
+    prepare_value(profile, &json)
+}
 
+/// The same, for a payload the hub already handed over parsed (AR8: the
+/// template's input is the parsed payload, never the envelope around it).
+pub fn prepare_value(profile: &Profile, json: &serde_json::Value) -> Result<Delivery, RenderError> {
     let mut env = Environment::new();
     env.set_undefined_behavior(UndefinedBehavior::Strict);
     let json_profile = is_json(&profile.content_type);
@@ -98,7 +103,7 @@ pub fn prepare(profile: &Profile, payload: &[u8]) -> Result<Delivery, RenderErro
     }
 
     let body = env
-        .render_str(&profile.body, &json)
+        .render_str(&profile.body, json)
         .map_err(|e| RenderError::Render {
             profile: profile.name.clone(),
             detail: describe(&e),

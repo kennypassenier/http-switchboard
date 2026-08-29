@@ -27,4 +27,11 @@ jobs:
       - name: Clippy
         run: cargo clippy --all-targets -- -D warnings
       - name: Tests
+        # The end-to-end suite runs against a REAL kyu in a container, not
+        # a mock: a fake hub has no leases, no redelivery and no dead
+        # letters, which are the three things L4 rests on. Locally it is
+        # opt-in through this variable; here it is always on, so "the E2E
+        # tests were skipped" cannot pass for green.
+        env:
+          KYU_IMAGE: ghcr.io/kennypassenier/kyu:2.0.0
         run: cargo test --all

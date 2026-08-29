@@ -194,3 +194,172 @@ pub async fn deliver_with_retry(
         }
     }
 }
+
+// ── the hub client ─────────────────────────────────────────────────────
+
+/// The three verbs plus the policy write, over plain HTTP. Contract
+/// measured against a running kyu 2.0.0 rather than read off a page:
+/// `204` means nothing was waiting, `404` means the topic does not exist
+/// yet, and `envelope=json` answers with `{id, payload, attempt, …}`.
+pub struct KyuHub {
+    client: reqwest::Client,
+    base_url: String,
+    token: Option<Secret>,
+    wait_s: u64,
+}
+
+impl KyuHub {
+    pub fn new(base_url: String, token: Option<Secret>, wait_s: u64) -> Self {
+        Self {
+            client: reqwest::Client::new(),
+            base_url: base_url.trim_end_matches('/').to_string(),
+            token,
+            wait_s,
+        }
+    }
+
+    fn authed(&self, req: reqwest::RequestBuilder) -> reqwest::RequestBuilder {
+        match &self.token {
+            Some(t) => req.header("authorization", format!("Bearer {}", t.expose())),
+            None => req,
+        }
+    }
+
+    async fn settle(&self, url: String) -> Result<(), crate::pump::HubError> {
+        let response = self
+            .authed(self.client.post(&url))
+            .timeout(Duration::from_secs(10))
+            .send()
+            .await
+            .map_err(|e| crate::pump::HubError::Unreachable {
+                detail: e.to_string(),
+            })?;
+        match response.status().as_u16() {
+            200..=299 => Ok(()),
+            401 | 403 => Err(crate::pump::HubError::Denied),
+            status => Err(crate::pump::HubError::Status { status }),
+        }
+    }
+}
+
+impl crate::pump::Hub for KyuHub {
+    fn next<'a>(
+        &'a self,
+        topic: &'a str,
+        subscription: &'a str,
+        from_beginning: bool,
+    ) -> BoxFuture<'a, Result<crate::pump::Poll, crate::pump::HubError>> {
+        use crate::pump::{HubError, HubMessage, Poll};
+        Box::pin(async move {
+            let mut url = format!(
+                "{}/t/{topic}/next?as={subscription}&envelope=json&wait={}",
+                self.base_url, self.wait_s
+            );
+            if from_beginning {
+                url.push_str("&from=beginning");
+            }
+
+            let response = self
+                .authed(self.client.get(&url))
+                // The long poll may legitimately take `wait_s`; the client
+                // timeout has to outlive it or every poll is a "failure".
+                .timeout(Duration::from_secs(self.wait_s + 10))
+                .send()
+                .await
+                .map_err(|e| HubError::Unreachable {
+                    detail: e.to_string(),
+                })?;
+
+            match response.status().as_u16() {
+                204 => Ok(Poll::Empty),
+                404 => Ok(Poll::UnknownTopic),
+                401 | 403 => Err(HubError::Denied),
+                200 => {
+                    // Parsed with serde_json rather than reqwest's json
+                    // feature: one fewer feature for one line of code.
+                    let raw = response.bytes().await.map_err(|e| HubError::Unreachable {
+                        detail: format!("the hub's answer could not be read: {e}"),
+                    })?;
+                    let envelope: serde_json::Value =
+                        serde_json::from_slice(&raw).map_err(|e| HubError::Unreachable {
+                            detail: format!("the hub's answer was not JSON: {e}"),
+                        })?;
+                    let id = envelope
+                        .get("id")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or_default()
+                        .to_string();
+                    match envelope.get("payload") {
+                        Some(payload) => Ok(Poll::Message(Box::new(HubMessage {
+                            id,
+                            payload: payload.clone(),
+                            attempt: envelope
+                                .get("attempt")
+                                .and_then(|v| v.as_u64())
+                                .unwrap_or(1) as u32,
+                        }))),
+                        // kyu hands a non-JSON body over as payload_base64;
+                        // no template can read that.
+                        None => Ok(Poll::NotJson { id }),
+                    }
+                }
+                status => Err(HubError::Status { status }),
+            }
+        })
+    }
+
+    fn ack<'a>(
+        &'a self,
+        topic: &'a str,
+        subscription: &'a str,
+        id: &'a str,
+    ) -> BoxFuture<'a, Result<(), crate::pump::HubError>> {
+        Box::pin(self.settle(format!(
+            "{}/t/{topic}/ack/{id}?as={subscription}",
+            self.base_url
+        )))
+    }
+
+    fn nack<'a>(
+        &'a self,
+        topic: &'a str,
+        subscription: &'a str,
+        id: &'a str,
+        dead: bool,
+    ) -> BoxFuture<'a, Result<(), crate::pump::HubError>> {
+        let dead = if dead { "&dead=true" } else { "" };
+        Box::pin(self.settle(format!(
+            "{}/t/{topic}/nack/{id}?as={subscription}{dead}",
+            self.base_url
+        )))
+    }
+
+    fn set_policy<'a>(
+        &'a self,
+        topic: &'a str,
+        subscription: &'a str,
+        lease_ms: u64,
+        max_attempts: u32,
+    ) -> BoxFuture<'a, Result<(), crate::pump::HubError>> {
+        Box::pin(async move {
+            let url = format!("{}/api/t/{topic}/subs/{subscription}/policy", self.base_url);
+            let response = self
+                .authed(self.client.put(&url))
+                .timeout(Duration::from_secs(10))
+                .header("content-type", "application/json")
+                .body(format!(
+                    r#"{{"lease_ms":{lease_ms},"max_attempts":{max_attempts}}}"#
+                ))
+                .send()
+                .await
+                .map_err(|e| crate::pump::HubError::Unreachable {
+                    detail: e.to_string(),
+                })?;
+            match response.status().as_u16() {
+                200..=299 => Ok(()),
+                401 | 403 => Err(crate::pump::HubError::Denied),
+                status => Err(crate::pump::HubError::Status { status }),
+            }
+        })
+    }
+}
