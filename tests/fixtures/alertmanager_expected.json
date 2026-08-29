@@ -1,0 +1,5 @@
+{"alert": "FilesystemFull",
+ "status": "firing",
+ "severity": "critical",
+ "instance": "10.10.10.6:9100",
+ "summary": "Filesystem 92% full on lxc-media"}

@@ -1,0 +1,37 @@
+# HTTPSwitchboard — example configuration.
+#
+# This file is loaded by the test suite (tests/l2_translate.rs), so it
+# cannot rot without a test going red. Secrets are references only; the
+# values come from the environment the service is started in.
+
+[kyu]
+base_url = "http://10.10.10.9:8080"
+token = "${KYU_TOKEN}"
+
+# Where this service publishes its own failure events (AR12). Never under
+# kyu.*, which the hub reserves for its own.
+[reporting]
+topic = "switchboard.events"
+
+# The first customer. Alertmanager publishes its fixed payload straight
+# onto the hub; this profile translates it into the shape the Home
+# Assistant alert automation expects, and publishes that for hub-bridge
+# to deliver.
+#
+# Note the templates are NOT wrapped in quotes: this profile delivers
+# JSON, so every value is emitted as a complete JSON value, escaped by
+# the engine. That is what stops a quote inside an alert summary from
+# rewriting the document.
+[[profiles]]
+name = "alertmanager"
+subscription = "switchboard"
+from = { kyu_topic = "alerts.raw" }
+to = { kyu_topic = "alerts.homelab" }
+content_type = "application/json"
+body = '''
+{"alert": {{ alerts.0.labels.alertname }},
+ "status": {{ alerts.0.status }},
+ "severity": {{ alerts.0.labels.severity | default("warning") }},
+ "instance": {{ alerts.0.labels.instance | default("unknown") }},
+ "summary": {{ alerts.0.annotations.summary }}}
+'''

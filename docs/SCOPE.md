@@ -245,11 +245,11 @@ name is never a mystery to a future reader.
                              "severity":"critical"},
                    "annotations":{"summary":"Filesystem 92% full on lxc-media"}}]}
 
-  out  {"alert":"{{ alerts.0.labels.alertname }}",
-        "status":"{{ alerts.0.status }}",
-        "severity":"{{ alerts.0.labels.severity | default('warning') }}",
-        "instance":"{{ alerts.0.labels.instance | default('unknown') }}",
-        "summary":"{{ alerts.0.annotations.summary }}"}
+  out  {"alert": {{ alerts.0.labels.alertname }},
+        "status": {{ alerts.0.status }},
+        "severity": {{ alerts.0.labels.severity | default("warning") }},
+        "instance": {{ alerts.0.labels.instance | default("unknown") }},
+        "summary": {{ alerts.0.annotations.summary }}}
 
   HA   condition: {{ trigger.json.status == 'firing' }}
        script.notification_dispatch
@@ -260,7 +260,16 @@ name is never a mystery to a future reader.
   ```
 
   `ack_id` is per alert name, so a repeat replaces its own notification
-  instead of stacking. Claude creates this automation through the HA
+  instead of stacking.
+
+  **Dated correction, 2026-08-29 (L2, following AR7):** the templates
+  above originally wrapped each value in quotes. With JSON autoescape
+  on — the mechanism AR7 chose over remembering `| tojson` — the
+  engine emits a complete JSON value, so `"{{ x }}"` produces doubled
+  quotes. Measured against minijinja 2.x, then made a startup error
+  so the mistake cannot reach a running service. A document that still
+  asked for the vulnerable form is how it would come back
+  (`FORM_PROTOCOL.md` §5.4), hence this note beside the fix. Claude creates this automation through the HA
   API on Kenny's explicit per-action go.
 
 - **C5 · Target platform is a Linux container in the homelab.**

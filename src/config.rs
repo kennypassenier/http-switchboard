@@ -189,6 +189,13 @@ pub enum ConfigError {
         var: String,
     },
 
+    #[error("{file}, profile '{profile}': {problem}")]
+    Template {
+        file: String,
+        profile: String,
+        problem: String,
+    },
+
     #[error("{file}, profile '{profile}': {problem}. What now: name exactly one endpoint per side — a source is either http_path or kyu_topic, a destination is either url or kyu_topic; anything else leaves it ambiguous where a message comes from or goes to.")]
     Shape {
         file: String,
@@ -433,6 +440,16 @@ fn validate_profile(
             file: file.to_string(),
             profile: name.clone(),
         })?;
+
+    // AR7: the shape mistake JSON autoescape invites is caught at startup,
+    // not on the first real message.
+    if let Err(problem) = crate::translate::check_template(&rp.body, &content_type) {
+        return Err(ConfigError::Template {
+            file: file.to_string(),
+            profile: name,
+            problem,
+        });
+    }
 
     let inbound_token = match (rp.inbound_token, &source) {
         (Some(_), Source::Kyu { .. }) => {

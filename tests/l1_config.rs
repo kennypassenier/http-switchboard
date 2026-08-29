@@ -65,7 +65,7 @@ from = { kyu_topic = "alerts.raw" }
 to = { kyu_topic = "alerts.homelab" }
 content_type = "application/json"
 body = '''
-{"alert": "{{ alerts.0.labels.alertname }}"}
+{"alert": {{ alerts.0.labels.alertname }}}
 '''
 
 [[profiles]]
@@ -350,4 +350,17 @@ fn k10_a_destination_that_is_not_an_http_address_is_refused() {
         r#"to = { url = "127.0.0.1:9999/hook" }"#,
     );
     assert_usable(&err(&text), &["uptime-kuma", "scheme"]);
+}
+
+#[test]
+fn k10_a_quoted_interpolation_in_a_json_profile_is_refused_at_startup() {
+    // AR7: with JSON autoescape on, the engine emits a complete JSON
+    // value, so "{{ x }}" produces doubled quotes. Measured against
+    // minijinja 2.x, then made a startup error rather than a surprise on
+    // the first real alert.
+    let text = GOOD.replace(
+        "{\"alert\": {{ alerts.0.labels.alertname }}}",
+        "{\"alert\": \"{{ alerts.0.labels.alertname }}\"}",
+    );
+    assert_usable(&err(&text), &["alertmanager", "quotes"]);
 }
