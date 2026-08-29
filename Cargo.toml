@@ -1,0 +1,13 @@
+[package]
+name = "http-switchboard"
+version = "0.0.0"
+edition = "2021"
+rust-version = "1.97"
+description = "Accepts a message in one shape and delivers it in another, where the configuration chooses the destination"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/kennypassenier/http-switchboard"
+
+[dependencies]
+
+[lints.rust]
+unsafe_code = "forbid"

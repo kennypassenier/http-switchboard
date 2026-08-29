@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Traceability gate (standing rule 4 / Phase 5 S3): every commit message
+# carries the IDs it implements — feat(L3): ... [K3, K6, W2] — and pure
+# infrastructure commits carry [meta].
+set -euo pipefail
+msg_file="$1"
+if ! grep -qE '\[(meta|[A-Za-z]{1,4}[0-9])[^]]*\]' "$msg_file"; then
+  {
+    echo "COMMIT BLOCKED — message lacks feature/milestone IDs (standing rule 4)."
+    echo "Add the IDs this commit implements, e.g.: feat(L3): sinks [K3, K6, W2]"
+    echo "Pure infrastructure commits use [meta]."
+  } >&2
+  exit 1
+fi

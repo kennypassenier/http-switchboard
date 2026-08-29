@@ -1,0 +1,10 @@
+# cargo-deny: advisories and licences (Phase 5 S1 / T5 — frugal
+# dependencies, each one justified in docs/ARCHITECTURE_DECISIONS.md).
+[advisories]
+yanked = "deny"
+
+[licenses]
+allow = ["MIT", "Apache-2.0", "Apache-2.0 WITH LLVM-exception", "BSD-3-Clause", "ISC", "Unicode-3.0", "Zlib"]
+
+[bans]
+multiple-versions = "warn"

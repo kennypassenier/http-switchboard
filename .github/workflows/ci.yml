@@ -1,0 +1,30 @@
+name: ci
+
+# Standing rule 6a: run on EVERY branch. Required status checks on a
+# workflow that only triggers on main locks the branch shut — the checks
+# protection waits for can never arrive, and the only road left is a pull
+# request, which rule 6 deliberately does not require.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  gates:
+    name: fmt · clippy · tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # rust-toolchain.toml pins the version; CI asks for that exact one
+      # rather than "stable" (standing rule 7).
+      - name: Show toolchain
+        run: rustc --version && cargo --version
+      - name: Format
+        run: cargo fmt --all -- --check
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+      - name: Tests
+        run: cargo test --all
