@@ -9,6 +9,7 @@
 //! is why it does not live in the pure half.
 
 pub mod adapters;
+pub mod app;
 pub mod config;
 pub mod inbound;
 pub mod obs;
