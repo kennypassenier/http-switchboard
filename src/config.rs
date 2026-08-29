@@ -189,6 +189,14 @@ pub enum ConfigError {
         var: String,
     },
 
+    #[error("{file}: profiles '{first}' and '{second}' share the path '{path}' but expect different inbound tokens. What now: give both the same inbound_token (or none) — one path is one door, and a request that satisfies one profile but not the other would be half-delivered.")]
+    PathTokenMismatch {
+        file: String,
+        path: String,
+        first: String,
+        second: String,
+    },
+
     #[error("{file}, profile '{profile}': {problem}")]
     Template {
         file: String,
@@ -337,6 +345,30 @@ pub fn load(file: &str, text: &str, env: &dyn EnvLookup) -> Result<Config, Confi
             });
         }
         profiles.push(profile);
+    }
+
+    // One path is one door: the inbound check happens once per request,
+    // so profiles sharing a path must agree on the token.
+    let mut door: BTreeMap<String, (&str, Option<String>)> = BTreeMap::new();
+    for p in &profiles {
+        let Source::Http { path } = &p.source else {
+            continue;
+        };
+        let token = p.inbound_token.as_ref().map(|t| t.expose().to_string());
+        match door.get(path) {
+            Some((first, expected)) if *expected != token => {
+                return Err(ConfigError::PathTokenMismatch {
+                    file: file.to_string(),
+                    path: path.clone(),
+                    first: (*first).to_string(),
+                    second: p.name.clone(),
+                })
+            }
+            Some(_) => {}
+            None => {
+                door.insert(path.clone(), (p.name.as_str(), token));
+            }
+        }
     }
 
     Ok(Config {

@@ -10,6 +10,7 @@
 
 pub mod adapters;
 pub mod config;
+pub mod inbound;
 pub mod obs;
 pub mod pump;
 pub mod secret;
