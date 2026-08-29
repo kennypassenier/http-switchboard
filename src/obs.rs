@@ -201,6 +201,24 @@ pub fn log_transition(profile: &str, from: Health, to: Health, detail: &str) {
     println!("{}", transition_line(profile, from, to, detail));
 }
 
+/// Something went wrong that is NOT a state change. Kept separate on
+/// purpose: the first version of this reported a failed self-report by
+/// logging a Working -> Failing transition that never happened, which is
+/// a log line lying about the state it exists to describe (found while
+/// smoke-testing the container image).
+pub fn log_warn(profile: &str, event: &str, detail: &str) {
+    println!("{}", warn_line(profile, event, detail));
+}
+
+pub fn warn_line(profile: &str, event: &str, detail: &str) -> String {
+    format!(
+        r#"{{"ts":{},"level":"warn","profile":{},"event":"{event}","detail":{}}}"#,
+        now_unix(),
+        json_string(profile),
+        json_string(detail)
+    )
+}
+
 pub fn transition_line(profile: &str, from: Health, to: Health, detail: &str) -> String {
     format!(
         r#"{{"ts":{},"level":"warn","profile":{},"event":"state_change","from":"{from:?}","to":"{to:?}","detail":{}}}"#,
@@ -295,6 +313,21 @@ mod tests {
             assert_eq!(parsed["to"], "Denied");
             assert_eq!(parsed["detail"], detail);
         }
+    }
+
+    #[test]
+    fn w7_a_warning_is_not_dressed_up_as_a_state_change() {
+        // The bug the container smoke test surfaced: a failed self-report
+        // was logged as a Working -> Failing transition that never
+        // happened.
+        let line = warn_line("p", "self_report_failed", "the hub refused");
+        let parsed: serde_json::Value = serde_json::from_str(&line).expect("valid JSON");
+        assert_eq!(parsed["event"], "self_report_failed");
+        assert!(
+            parsed.get("from").is_none(),
+            "no invented transition: {line}"
+        );
+        assert!(parsed.get("to").is_none(), "no invented transition: {line}");
     }
 
     #[test]

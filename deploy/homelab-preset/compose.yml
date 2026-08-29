@@ -1,0 +1,23 @@
+# The stack as the homelab orchestrator deploys it. The secrets are NOT
+# here: the orchestrator resolves them with `latch cat` at deploy time and
+# composes them into the container's environment from the host vault at
+# /var/lib/homelab/secrets/ (its D12). That is also why this file names
+# the variables without values.
+services:
+  http-switchboard:
+    image: ghcr.io/kennypassenier/http-switchboard:latest
+    restart: unless-stopped
+    environment:
+      - KYU_TOKEN
+    volumes:
+      - ./config.toml:/etc/http-switchboard/config.toml:ro
+    ports:
+      - "8080:8080"
+    # The image is distroless: no shell, no curl. The binary answers the
+    # healthcheck itself (AR13).
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/http-switchboard", "--healthcheck", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s

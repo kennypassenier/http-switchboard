@@ -230,10 +230,13 @@ async fn report(sink: &dyn Sink, topic: &str, body: String, profile: &str) {
         body,
     };
     if let Err(e) = sink.deliver(&delivery).await {
-        obs::log_transition(
+        // Logged and counted, never published: the report about a broken
+        // channel must not go down the broken channel (AR12). And it is a
+        // warning, not a transition — the profile's state did not change
+        // because we failed to talk about it.
+        obs::log_warn(
             profile,
-            Health::Working,
-            Health::Failing,
+            "self_report_failed",
             &format!("could not publish the self-report event: {e}"),
         );
     }
