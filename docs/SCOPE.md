@@ -196,8 +196,20 @@ name is never a mystery to a future reader.
   arrives as a preset in `~/Projects/homelab` for a new container. The
   concrete preset is a Phase 2 mandatory item.
 
-- **C2 · Secrets come from `latch run`.** The project never reads a
-  `.env` file itself.
+- **C2 · Secrets come from latch, never read by this project.** The
+  project never reads a `.env` file itself.
+
+  **Dated correction, 2026-08-29 (Phase 4 gate, AR13):** this clause
+  originally said the process is started under `latch run`. That is
+  not how it reaches the deployment chosen in C1. The homelab
+  orchestrator resolves secrets at *deploy* time with `latch cat` and
+  ships them into the host vault at `/var/lib/homelab/secrets/`
+  (root-only), which composes them into the container's environment.
+  So: still latch as the source of truth, still never in git, still
+  never read by this project — but the values do land on the host's
+  disk, deliberately, and the vault's permissions are the control.
+  This is also the only reading under which the container returns by
+  itself after a power cut.
   ↳ *latch = Kenny's encrypted .env manager; `latch run --env <env> --
   <cmd>` injects secrets into the child process without writing them to
   disk.*

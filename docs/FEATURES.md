@@ -8,7 +8,7 @@ names, docs and forms forever.
 > plus the four mandatory items. The scale is the canonical one:
 > Essential · Desired · Later · Don't do.
 
-**Tally:** 20 Essential · 3 Desired · 2 Later · 0 Don't do (25 total).
+**Tally:** 21 Essential · 2 Desired · 2 Later · 0 Don't do (25 total).
 
 Frozen at the Phase 2 gate on 2026-08-29: every item below, its rating
 and its test bar. Changes go through a mini-round only
@@ -39,7 +39,7 @@ and its test bar. Changes go through a mini-round only
 |---|---|---|
 | W1 | Essential | **Answer the sender honestly.** For an HTTP source, deliver first and answer afterwards: on failure the sender gets an error and retries with the message it still holds. Answering "accepted" up front and failing afterwards loses the message, because this service stores nothing (scope NG3). |
 | W2 | Essential | **A timeout per destination.** A receiver that neither refuses nor answers would otherwise occupy a profile forever. Default around ten seconds, per profile adjustable; an expired timeout is an ordinary error with a remedy, not a stalled service. |
-| W3 | Desired | **Retry with backoff.** Three attempts with growing pauses, for short hiccups. Complements the hub rather than replacing it: for a kyu source, giving up simply means not acknowledging (K2). Most valuable on the HTTP ingress, where no hub sits behind it. |
+| W3 | Essential | **Retry with backoff.** Three attempts with growing pauses, for short hiccups. Complements the hub rather than replacing it: for a kyu source, giving up simply means not acknowledging (K2). Most valuable on the HTTP ingress, where no hub sits behind it. **Amended 2026-08-29 (mini-round MR1 at the Phase 4 gate): Desired → Essential.** The critic pass showed the original rationale was wrong: without in-process retry inside the same claim, every failure burns one of kyu's five attempts, so ~2.5 minutes of destination downtime dead-letters the whole backlog — shorter than a routine Home Assistant restart. Retry is not a bonus on top of the hub; it is what stops the hub from giving up. AR8 leans on it. No built work affected: no code existed yet. |
 | W4 | Desired | **Dry-run a profile from the command line.** `http-switchboard test --profile alertmanager --input alert.json` prints what comes out and sends nothing. The difference between a config file you dare to edit and one you avoid. |
 | W5 | Essential | **`/healthz` for Uptime Kuma.** Raised Desired → Essential by Kenny. Without it, a dead switchboard is noticed only by an alert that never arrives — and an alert that does not arrive does not draw attention. |
 | W6 | Essential | **`/metrics` for Prometheus.** Raised Desired → Essential by Kenny. Counters per profile: received, delivered, failed, delivery duration. The loop closes: Alertmanager can alert on the switchboard dropping messages. Pull-based, so it still works when the hub is down — the fallback for W11. |

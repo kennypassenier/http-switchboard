@@ -15,9 +15,9 @@ gates hold from any session or terminal. After a fresh clone, run:
 
 | Field | Value |
 |---|---|
-| Current phase | 4 · Architecture |
-| Last completed gate | Phase 3 tech-choice form (2026-08-29) |
-| Next gate | Phase 4 architecture form (after the critic pass) |
+| Current phase | 5 · Realization plan |
+| Last completed gate | Phase 4 architecture form (2026-08-29) — architecture frozen |
+| Next gate | Phase 5 plan form, then hooks + CI before L0 |
 | AFK mode | off |
 
 <!-- Update this block after every completed gate. -->
