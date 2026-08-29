@@ -142,10 +142,15 @@ impl Sink for HttpSink {
                 Err(e) if e.is_timeout() => Err(DeliverError::Timeout {
                     timeout_ms: self.timeout_ms,
                 }),
-                // The message never carries the URL, so an error may name
-                // it; it never carries a header value, which may be secret.
+                // The URL is stripped before the error escapes. reqwest's
+                // Display appends "for url (…)", and this text travels back
+                // to whoever sent the message — who is not supposed to learn
+                // the destination at all, let alone a Home Assistant webhook
+                // id, which IS the credential. Found twice in the Phase 7
+                // pass: by the test-gap audit and by the security review,
+                // independently.
                 Err(e) => Err(DeliverError::Transport {
-                    detail: format!("{e}"),
+                    detail: format!("{}", e.without_url()),
                 }),
             }
         })
@@ -298,8 +303,9 @@ impl crate::pump::Hub for KyuHub {
                                 .and_then(|v| v.as_u64())
                                 .unwrap_or(1) as u32,
                         }))),
-                        // kyu hands a non-JSON body over as payload_base64;
-                        // no template can read that.
+                        // kyu hands a non-JSON body over under another key
+                        // (measured: payload_text for text bodies); either
+                        // way there is no `payload` for a template to read.
                         None => Ok(Poll::NotJson { id }),
                     }
                 }

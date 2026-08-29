@@ -332,7 +332,23 @@ pub fn load(file: &str, text: &str, env: &dyn EnvLookup) -> Result<Config, Confi
         None => None,
     };
 
-    let reporting = raw.reporting.map(|r| Reporting { topic: r.topic });
+    // The self-report topic is validated exactly like a profile's, and for
+    // the same reason: a name kyu refuses (or reserves) starts up green and
+    // then fails 403 on every publish, so the one feature whose job is to
+    // make silence visible would fail silently. Found in the Phase 7 audit.
+    let reporting = match raw.reporting {
+        Some(r) => {
+            check_topic(file, "[reporting]", &r.topic)?;
+            if kyu.is_none() {
+                return Err(ConfigError::MissingKyuSection {
+                    file: file.to_string(),
+                    profile: "[reporting]".to_string(),
+                });
+            }
+            Some(Reporting { topic: r.topic })
+        }
+        None => None,
+    };
 
     let mut seen: BTreeSet<String> = BTreeSet::new();
     let mut profiles = Vec::with_capacity(raw.profiles.len());

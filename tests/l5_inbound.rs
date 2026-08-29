@@ -272,3 +272,43 @@ body = "{}"
         "tokens must not be echoed: {err}"
     );
 }
+
+#[tokio::test]
+async fn w1_the_answer_never_tells_the_sender_where_the_message_was_going() {
+    // Phase 7, found twice independently — by the test-gap audit and by
+    // the security review. reqwest's error Display appends "for url (…)",
+    // and that text was travelling back to whoever POSTed. The shipped
+    // destination is a Home Assistant webhook whose id IS the credential.
+    // Port 9 (discard) with nothing listening: the delivery fails at the
+    // transport layer, which is the path that carried the URL.
+    let dead = "http://127.0.0.1:9".to_string();
+    let text = format!(
+        r#"
+[[profiles]]
+name = "hook"
+from = {{ http_path = "/hook" }}
+to = {{ url = "{dead}/api/webhook/SECRET-WEBHOOK-ID-abc123" }}
+content_type = "application/json"
+retries = 0
+timeout_ms = 500
+body = '''{{"x": {{{{ x }}}}}}'''
+"#
+    );
+    let base = serve(&text).await;
+
+    let (status, body) = post(&format!("{base}/hook"), r#"{"x": 1}"#, None).await;
+
+    assert_eq!(status, 502);
+    assert!(
+        !body.contains("SECRET-WEBHOOK-ID-abc123"),
+        "the destination leaked to the sender: {body}"
+    );
+    assert!(
+        !body.contains(&dead),
+        "the destination host leaked to the sender: {body}"
+    );
+    assert!(
+        body.contains("What now:"),
+        "the remedy must survive: {body}"
+    );
+}

@@ -118,7 +118,11 @@ impl App {
                     let duration_ms = started.elapsed().as_millis() as u64;
 
                     match &step {
-                        Step::Delivered { attempts, .. } => {
+                        Step::Delivered {
+                            attempts,
+                            ack_failed,
+                            ..
+                        } => {
                             registry.record(&profile.name, true, duration_ms);
                             obs::log_message(
                                 &profile.name,
@@ -127,10 +131,30 @@ impl App {
                                 duration_ms,
                                 *attempts,
                             );
+                            if *ack_failed {
+                                obs::log_warn(
+                                    &profile.name,
+                                    "ack_failed",
+                                    "the message was delivered but the hub would not take the \
+                                     acknowledgement, so it will be offered again. What now: \
+                                     expect one duplicate; if this repeats, the delivery is \
+                                     probably outlasting the lease — lower timeout_ms or \
+                                     retries, or raise lease_ms.",
+                                );
+                            }
                         }
-                        Step::HandedBack { .. } => {
+                        Step::HandedBack {
+                            attempts, reason, ..
+                        } => {
                             registry.record(&profile.name, false, duration_ms);
-                            obs::log_message(&profile.name, "kyu", "handed-back", duration_ms, 1);
+                            obs::log_message(
+                                &profile.name,
+                                "kyu",
+                                "handed-back",
+                                duration_ms,
+                                *attempts,
+                            );
+                            obs::log_warn(&profile.name, "delivery_failed", reason);
                         }
                         Step::DeadLettered { reason, .. } => {
                             registry.record(&profile.name, false, duration_ms);
@@ -138,7 +162,13 @@ impl App {
                             obs::log_transition(&profile.name, before, state.health, reason);
                         }
                         Step::Idle | Step::TopicMissing => {}
-                        Step::Denied | Step::HubDown => {}
+                        // The remedy in these carries the specifics — which
+                        // token to mint, or that the hub itself is away.
+                        Step::Denied { detail } | Step::HubDown { detail } => {
+                            if before != state.health {
+                                obs::log_warn(&profile.name, "hub_problem", detail);
+                            }
+                        }
                     }
 
                     // AR11: state changes are logged once, not per attempt —
@@ -173,7 +203,7 @@ impl App {
                         Step::Idle | Step::TopicMissing => {
                             clock.sleep(IDLE_PAUSE_MS).await;
                         }
-                        Step::Denied | Step::HubDown => {
+                        Step::Denied { .. } | Step::HubDown { .. } => {
                             clock.sleep(HUB_DOWN_PAUSE_MS).await;
                         }
                         _ => {}

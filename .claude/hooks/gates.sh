@@ -15,6 +15,14 @@ gate_tree_before=$(gate_tree_fingerprint)
 
 cargo fmt --all -- --check
 cargo clippy --all-targets -- -D warnings
+
+# The end-to-end suite runs against a REAL kyu container and skips itself
+# silently when KYU_IMAGE is unset — five tests, including the most
+# important ones, reporting "ok" in 0.00 s. That made a locally green gate
+# mean something weaker than a green CI run (Phase 7 audit, G14). The gate
+# sets it, so the two agree; if the image cannot be pulled the tests fail,
+# which is the honest outcome.
+export KYU_IMAGE="${KYU_IMAGE:-ghcr.io/kennypassenier/kyu:2.0.0}"
 cargo test --all
 
 if [ "$(gate_tree_fingerprint)" != "$gate_tree_before" ]; then

@@ -80,7 +80,8 @@ async fn k2_a_message_is_acknowledged_only_after_it_was_delivered() {
         step,
         Step::Delivered {
             id: "m1".into(),
-            attempts: 1
+            attempts: 1,
+            ack_failed: false
         }
     );
     let recorded = calls.lock().unwrap().clone();
@@ -114,7 +115,20 @@ async fn k2_a_refused_delivery_is_handed_back_and_never_acknowledged() {
 
     let step = pump_once(&p, &hub, &sink, &FakeClock::default(), &mut state).await;
 
-    assert_eq!(step, Step::HandedBack { id: "m1".into() });
+    match &step {
+        Step::HandedBack {
+            id,
+            attempts,
+            reason,
+        } => {
+            assert_eq!(id, "m1");
+            assert_eq!(*attempts, 1);
+            // The remedy travels with it now, instead of living only in
+            // the source (Phase 7 audit, G5).
+            assert!(reason.contains("What now:"), "no remedy: {reason}");
+        }
+        other => panic!("expected the message to be handed back, got {other:?}"),
+    }
     let recorded = calls.lock().unwrap().clone();
     assert!(
         recorded.iter().any(|c| c == "nack(m1, dead=false)"),
@@ -172,10 +186,13 @@ async fn ar8_a_refused_token_is_its_own_state_not_a_hub_outage() {
     );
     let mut state = PumpState::default();
 
-    assert_eq!(
-        pump_once(&p, &hub, &sink, &FakeClock::default(), &mut state).await,
-        Step::Denied
-    );
+    match pump_once(&p, &hub, &sink, &FakeClock::default(), &mut state).await {
+        Step::Denied { detail } => assert!(
+            detail.contains("Apps page"),
+            "the remedy AR8.4 asked for must travel with the step: {detail}"
+        ),
+        other => panic!("expected Denied, got {other:?}"),
+    }
     assert_eq!(state.health, Health::Denied);
 }
 
@@ -191,10 +208,10 @@ async fn ar8_an_unreachable_hub_is_a_state_the_pump_survives() {
     );
     let mut state = PumpState::default();
 
-    assert_eq!(
-        pump_once(&p, &hub, &sink, &FakeClock::default(), &mut state).await,
-        Step::HubDown
-    );
+    match pump_once(&p, &hub, &sink, &FakeClock::default(), &mut state).await {
+        Step::HubDown { detail } => assert!(detail.contains("What now:"), "no remedy: {detail}"),
+        other => panic!("expected HubDown, got {other:?}"),
+    }
     assert_eq!(state.health, Health::HubDown);
 
     assert_eq!(

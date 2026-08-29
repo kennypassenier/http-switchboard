@@ -132,11 +132,23 @@ pub enum Step {
     Delivered {
         id: String,
         attempts: u32,
+        /// The delivery landed but the hub would not take our
+        /// acknowledgement. AR4 calls this routine rather than exotic, and
+        /// it has to be visible: the message will come back, and without
+        /// this the log would say "delivered" and nothing would explain the
+        /// duplicate (Phase 7 audit).
+        ack_failed: bool,
     },
     /// Delivery failed; the message was handed back and the hub will
-    /// offer it again.
+    /// offer it again. Carries the attempt count, because a log line that
+    /// says "1" after three attempts misinforms exactly the person
+    /// debugging a retry (Phase 7 audit).
     HandedBack {
         id: String,
+        attempts: u32,
+        /// Why it failed, carrying the remedy from the delivery error —
+        /// which otherwise existed only in the source (Phase 7 audit).
+        reason: String,
     },
     /// The message can never work as it stands (it does not render, or it
     /// is not JSON); dead-lettered so it is visible instead of looping.
@@ -146,8 +158,14 @@ pub enum Step {
     },
     Idle,
     TopicMissing,
-    Denied,
-    HubDown,
+    /// The hub refused our credentials. The detail carries the remedy that
+    /// names kyu's Apps page — AR8.4 asked for it and nothing printed it.
+    Denied {
+        detail: String,
+    },
+    HubDown {
+        detail: String,
+    },
 }
 
 /// One turn: poll, translate, deliver, settle. Never more than one
@@ -188,13 +206,17 @@ pub async fn pump_once(
     }
 
     match poll {
-        Err(HubError::Denied) => {
+        Err(e @ HubError::Denied) => {
             state.health = Health::Denied;
-            Step::Denied
+            Step::Denied {
+                detail: e.to_string(),
+            }
         }
-        Err(_) => {
+        Err(e) => {
             state.health = Health::HubDown;
-            Step::HubDown
+            Step::HubDown {
+                detail: e.to_string(),
+            }
         }
         Ok(Poll::UnknownTopic) => {
             // Nothing has ever published here. Ask for the history on the
@@ -242,23 +264,32 @@ pub async fn pump_once(
                             // Ack failures are routine, not exotic: the
                             // hub may be busy. One retry, then let the
                             // lease do its work — at worst a duplicate,
-                            // which the chain tolerates.
+                            // which the chain tolerates. It is reported,
+                            // because an unexplained duplicate at 3 a.m. is
+                            // worse than a noisy line.
+                            let mut ack_failed = false;
                             if hub.ack(topic, subscription, &message.id).await.is_err() {
-                                let _ = hub.ack(topic, subscription, &message.id).await;
+                                ack_failed =
+                                    hub.ack(topic, subscription, &message.id).await.is_err();
                             }
                             state.health = Health::Working;
                             Step::Delivered {
                                 id: message.id,
                                 attempts: outcome.attempts,
+                                ack_failed,
                             }
                         }
-                        Err(_) => {
+                        Err(e) => {
                             // Hand it back at once rather than sitting on
                             // the claim: the hub's own backoff is better
                             // at waiting than we are.
                             let _ = hub.nack(topic, subscription, &message.id, false).await;
                             state.health = Health::Failing;
-                            Step::HandedBack { id: message.id }
+                            Step::HandedBack {
+                                id: message.id,
+                                attempts: outcome.attempts,
+                                reason: e.to_string(),
+                            }
                         }
                     }
                 }

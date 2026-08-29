@@ -295,8 +295,43 @@ fn k10_a_kyu_endpoint_without_a_kyu_section_is_refused() {
             "[kyu]\nbase_url = \"http://127.0.0.1:8080\"\ntoken = \"${KYU_TOKEN}\"\n",
             "",
         )
+        .replace("[reporting]\ntopic = \"switchboard.events\"\n", "")
         .replace(r#"headers = { authorization = "${KYU_TOKEN}" }"#, "");
     assert_usable(&err(&text), &["alertmanager", "base_url"]);
+}
+
+#[test]
+fn k10_the_self_report_topic_is_validated_like_any_other() {
+    // Phase 7 audit, G6: it was not validated at all, so a name kyu
+    // reserves started up green and then 403'd on every publish — the one
+    // feature whose job is to make silence visible, failing silently.
+    let reserved = GOOD.replace(
+        r#"topic = "switchboard.events""#,
+        r#"topic = "kyu.switchboard""#,
+    );
+    assert_usable(&err(&reserved), &["kyu.switchboard", "403"]);
+
+    let bad_name = GOOD.replace(
+        r#"topic = "switchboard.events""#,
+        r#"topic = "Switch Board!!""#,
+    );
+    assert_usable(&err(&bad_name), &["Switch Board!!"]);
+
+    let no_hub = GOOD
+        .replace(
+            "[kyu]\nbase_url = \"http://127.0.0.1:8080\"\ntoken = \"${KYU_TOKEN}\"\n",
+            "",
+        )
+        .replace(
+            r#"from = { kyu_topic = "alerts.raw" }"#,
+            r#"from = { http_path = "/am" }"#,
+        )
+        .replace(
+            r#"to = { kyu_topic = "alerts.homelab" }"#,
+            r#"to = { url = "http://127.0.0.1:9/x" }"#,
+        )
+        .replace(r#"headers = { authorization = "${KYU_TOKEN}" }"#, "");
+    assert_usable(&err(&no_hub), &["reporting", "base_url"]);
 }
 
 #[test]
