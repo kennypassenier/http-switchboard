@@ -43,7 +43,7 @@ the first line of feature code.
 ## Carried into later phases
 
 - **Phase 2 mandatory items:** update/distribution mechanism,
-  ecosystem integration (mailbox, latch, homelab preset), backup &
+  ecosystem integration (kyu, latch, homelab preset), backup &
   restore — plus the postponed **inbound-from-internet** round from
   NG5, which needs its own design (Cloudflare Access service token vs
   bypass with own token/signature checks).

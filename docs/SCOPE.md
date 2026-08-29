@@ -7,6 +7,12 @@ were reopened in a second round and are marked *(amended at the gate)*.
 Frozen except through a mini-round (`FORM_PROTOCOL.md` §5) once later
 phases are under way.
 
+**Naming note, 2026-08-29:** the hub was renamed `mailbox` → `kyu`
+(version 2.0.0) on the same day this document was written; every
+mention here follows the new name. The HTTP verbs, the address
+(`10.10.10.9:8080`) and the contract are unchanged — only names moved
+(`MAILBOX_*` → `KYU_*`). No decision in this document changed.
+
 ## Naming
 
 **HTTPSwitchboard** (Kenny, 2026-08-29, after three rounds). A
@@ -46,9 +52,9 @@ name is never a mystery to a future reader.
   notification.
 
 - **G3 · Two shapes of source, two shapes of destination.** A profile's
-  source is either an incoming HTTP request on a path, or a mailbox
+  source is either an incoming HTTP request on a path, or a kyu
   topic it subscribes to. Its destination is either a URL it POSTs to,
-  or a mailbox topic it publishes to. The mailbox side is what gives
+  or a kyu topic it publishes to. The kyu side is what gives
   the chain a persistence layer without this service owning one.
 
 - **G4 · The translation is a Jinja template.** Field mapping,
@@ -60,20 +66,20 @@ name is never a mystery to a future reader.
 - **G5 · The whole envelope is translatable, not just the body.**
   Method, target URL or path, headers, content-type and body. That
   includes authentication headers the source cannot set itself — a
-  Bearer token for mailbox, an API key for a receiver. Secret values
+  Bearer token for kyu, an API key for a receiver. Secret values
   come from the environment via `latch run`; the config file holds only
-  the name (`${MAILBOX_TOKEN}`), never the value.
+  the name (`${KYU_TOKEN}`), never the value.
 
 - **G6 · The first customer, end to end** *(amended at the gate)*.
   Alertmanager does not POST to this service at all: it publishes its
-  fixed `alerts` JSON **straight onto a mailbox topic**, which its
+  fixed `alerts` JSON **straight onto a kyu topic**, which its
   webhook config supports (a free-form URL plus a bearer token). The
   chain is:
 
   ```
-  Alertmanager      →  mailbox topic  alerts.raw
+  Alertmanager      →  kyu topic  alerts.raw
   HTTPSwitchboard   →  subscribes, translates
-                    →  mailbox topic  alerts.homelab
+                    →  kyu topic  alerts.homelab
   hub-bridge        →  new HA webhook →  script.notification_dispatch
   ```
 
@@ -88,7 +94,7 @@ name is never a mystery to a future reader.
   HTTP ingress, so both source shapes are proven.
 
 - **G7 · Acknowledge only after delivery** *(added at the gate, Kenny's
-  find)*. When a profile's source is a mailbox topic, a message is
+  find)*. When a profile's source is a kyu topic, a message is
   acknowledged only after the destination accepted it. A refused
   delivery is left unacknowledged, so the hub redelivers it and, after
   its retries are exhausted, leaves it visibly as a dead letter.
@@ -118,7 +124,7 @@ name is never a mystery to a future reader.
 - **NG3 · No storage of its own: no queue, no database, no spool.** The
   service is stateless by construction, so `kill -9` at any moment
   costs nothing by definition and there is no state to back up.
-  Durability, redelivery and dead letters are mailbox's job, which is
+  Durability, redelivery and dead letters are kyu's job, which is
   why it sits in the chain.
 
 - **NG4 · Not a poller.** It never goes out on a timer to fetch
@@ -148,7 +154,7 @@ name is never a mystery to a future reader.
   A transformer that knows about the house is no longer a transformer.
 
 - **NG7 · No web dashboard in v1.** The config file is the
-  documentation, and logs plus mailbox's own dashboard are where
+  documentation, and logs plus kyu's own dashboard are where
   traffic is observed.
 
 ## Success criteria
@@ -166,7 +172,7 @@ name is never a mystery to a future reader.
 
 - **S3 · A hard kill loses nothing.** `kill -9` at any moment, restart,
   and the only possible damage is a duplicate delivery — never a loss —
-  because the service holds nothing and mailbox holds the position.
+  because the service holds nothing and kyu holds the position.
 
 - **S4 · Nothing disappears quietly.** A destination that refuses does
   not swallow a message: it is either already durable on the hub or the
@@ -184,7 +190,7 @@ name is never a mystery to a future reader.
 
 - **C1 · It runs in the homelab as a new managed guest.** The homelab
   orchestrator refuses to manage pre-existing guests, so this cannot be
-  deployed onto CT 113 (Prometheus) or LXC 109 (mailbox) by it.
+  deployed onto CT 113 (Prometheus) or LXC 109 (kyu) by it.
   ↳ *A1 = the orchestrator's whitelist-only rule with a hardcoded
   NO_TOUCH list (VMID 100-107, 111, 201-203).* Deployment therefore
   arrives as a preset in `~/Projects/homelab` for a new container. The
@@ -202,13 +208,13 @@ name is never a mystery to a future reader.
   release; the token beside it is a reference latch fills in:
 
   ```yaml
-  mailbox:
+  kyu:
     base_url: http://10.10.10.9:8080
-    token: ${MAILBOX_TOKEN}
+    token: ${KYU_TOKEN}
   ```
 
   The default is today's instance, `10.10.10.9:8080`, over the three
-  verbs mailbox promises in 1.0.0. That instance is a plain binary
+  verbs kyu promises in 2.0.0. That instance is a plain binary
   under systemd on LXC 109, not a container of the orchestrator, so
   nothing may assume its preset is running. Delivery is at-least-once,
   so every consumer in this chain tolerates a duplicate.
@@ -248,7 +254,7 @@ name is never a mystery to a future reader.
 - **C5 · Target platform is a Linux container in the homelab.**
   Language, libraries and runtime are a Phase 3 decision and are
   deliberately not settled here — including the obvious-looking one:
-  mailbox and hub-bridge are Rust and `minijinja` is a Rust crate, but
+  kyu and hub-bridge are Rust and `minijinja` is a Rust crate, but
   obvious is not the same as decided.
 
 - **C6 · A destination never comes from the incoming message.** Only
