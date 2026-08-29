@@ -256,3 +256,52 @@ name is never a mystery to a future reader.
   outward-facing profile turns this service into an open relay that a
   stranger can aim anywhere. It holds now, and it is what makes the
   postponed inbound-from-internet round survivable later.
+
+## Build vs buy — the Phase 1 record
+
+Researched 2026-08-29 and put to Kenny as a decision form, one item per
+credible alternative. **All six were answered "build our own".** The
+reasons are recorded here because a rejected alternative that is not
+written down comes back as a question every six months.
+
+- **Home Assistant does it itself.** HA's webhook trigger exposes the
+  whole payload as `trigger.json`, so a new automation could parse
+  Alertmanager directly — no new software at all. Rejected because it
+  only ever solves couplings that END at Home Assistant, the mapping
+  would live in HA's automation store instead of git, and S5 (a pinned
+  real payload as a regression fixture) becomes impossible. Recorded
+  honestly: if this project were only about Alertmanager → HA, this
+  alternative would have won.
+
+- **Bento** (MIT fork of Benthos, actively maintained). Covers roughly
+  80% of the scope: HTTP in, HTTP out, YAML config in git, small
+  footprint. Rejected on two counts — Bloblang would be the second
+  template language G4 exists to avoid, and its input → pipeline →
+  output model cannot express G7: there is no "do this after the
+  output, if the output succeeded", which is exactly what
+  ack-after-delivery is. **If G7 is ever dropped, Bento is the first
+  thing to re-examine.**
+
+- **Vector** (MPL-2.0, Rust, Datadog). Same two objections, plus it is
+  built for telemetry: it batches by default and is tuned for volume,
+  not for single alerts that must each be delivered and acknowledged
+  individually. Worth remembering for a future Loki/log pipeline.
+
+- **Node-RED** (Apache-2.0). The only bought option that CAN express
+  the poll → deliver → ack loop. Rejected on maintainability: its
+  config is a coordinate-laden JSON flow that git cannot meaningfully
+  diff, the logic lives in a GUI rather than a text file, testing is
+  manual, and it is a second automation platform beside Home Assistant.
+
+- **n8n.** Rejected on licence (Sustainable Use Licence, not open
+  source) and size (2 GB RAM documented as the minimum, PostgreSQL for
+  production webhooks) for a job that amounts to reshaping a message.
+
+- **A throwaway script on the hub.** The option Kenny explicitly
+  refused at the start: twenty lines with no tests, no gates and no
+  documentation, that breaks quietly in three months on a renamed
+  field, and whose second coupling is a second script.
+
+**Decisive finding.** The sharpest filter was not the template language
+but G7. Poll-then-acknowledge-only-after-successful-delivery is an
+ordering most off-the-shelf pipelines structurally cannot express.

@@ -15,9 +15,9 @@ gates hold from any session or terminal. After a fresh clone, run:
 
 | Field | Value |
 |---|---|
-| Current phase | 1 · Inventory & exploration |
-| Last completed gate | Phase 0 approval form (2026-08-29) |
-| Next gate | Phase 1 build-vs-buy decision form |
+| Current phase | 2 · Features |
+| Last completed gate | Phase 1 build-vs-buy form (2026-08-29) |
+| Next gate | Phase 2 rating forms (2 rounds) + freeze |
 | AFK mode | off |
 
 <!-- Update this block after every completed gate. -->
