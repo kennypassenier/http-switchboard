@@ -18,7 +18,7 @@ gates hold from any session or terminal. After a fresh clone, run:
 | Current phase | 6 · Development loop (next: L1) |
 | Last completed gate | Phase 5 plan form (2026-08-29); L0 built, gates live |
 | Next gate | L1 milestone report form |
-| AFK mode | off |
+| AFK mode | ON — building L1-L6, combined report on return (2026-08-29) |
 
 <!-- Update this block after every completed gate. -->
 
