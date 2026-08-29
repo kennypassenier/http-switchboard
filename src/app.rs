@@ -174,30 +174,28 @@ impl App {
                     // AR11: state changes are logged once, not per attempt —
                     // an hour of hub downtime should produce two lines, not
                     // thousands.
-                    if before != state.health {
-                        registry.set_health(&profile.name, state.health);
-                        let detail = match state.health {
-                            Health::Denied => "the hub refused our credentials",
-                            Health::HubDown => "the hub could not be reached",
-                            Health::Failing => "deliveries are failing; messages wait on the hub",
-                            Health::Working => "back to normal",
-                            Health::Starting => "starting",
-                        };
-                        obs::log_transition(&profile.name, before, state.health, detail);
-
-                        // W11 / AR12: one event when a profile falls over,
-                        // one when it recovers — never one per message. HA
-                        // down for twenty minutes with a backlog would
-                        // otherwise produce a burst of warnings in a house
-                        // whose dispatcher exists to prevent exactly that.
-                        if let Some(topic) = &reporting {
-                            if let Some(event) =
-                                transition_event(&profile.name, before, state.health, detail)
-                            {
-                                report(sink.as_ref(), topic, event, &profile.name).await;
-                            }
-                        }
-                    }
+                    // W11 / AR12: one event when a profile falls over, one
+                    // when it recovers — never one per message. HA down for
+                    // twenty minutes with a backlog would otherwise produce
+                    // a burst of warnings in a house whose dispatcher exists
+                    // to prevent exactly that.
+                    let detail = match state.health {
+                        Health::Denied => "the hub refused our credentials",
+                        Health::HubDown => "the hub could not be reached",
+                        Health::Failing => "deliveries are failing; messages wait on the hub",
+                        Health::Working => "back to normal",
+                        Health::Starting => "starting",
+                    };
+                    note_transition(
+                        registry.as_ref(),
+                        sink.as_ref(),
+                        reporting.as_deref(),
+                        &profile.name,
+                        before,
+                        state.health,
+                        detail,
+                    )
+                    .await;
 
                     match step {
                         Step::Idle | Step::TopicMissing => {
@@ -221,6 +219,31 @@ impl App {
         // being cut off mid-poll costs at worst a duplicate (S3).
         let _ = stop_tx.send(());
         result
+    }
+}
+
+/// Note one transition for a profile: update the registry, log it once,
+/// and — when the transition is worth telling the house about — publish
+/// one event. Shared by the pump loop and the inbound handler, because
+/// AR12 makes no exception for the source kind and the first version
+/// covered only the kyu side (Phase 7 audit, G3).
+pub async fn note_transition(
+    registry: &Registry,
+    sink: &dyn Sink,
+    reporting: Option<&str>,
+    profile: &str,
+    before: Health,
+    now: Health,
+    detail: &str,
+) {
+    if before == now {
+        return;
+    }
+    registry.set_health(profile, now);
+    obs::log_transition(profile, before, now, detail);
+    if let (Some(topic), Some(event)) = (reporting, transition_event(profile, before, now, detail))
+    {
+        report(sink, topic, event, profile).await;
     }
 }
 

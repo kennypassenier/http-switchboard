@@ -312,3 +312,60 @@ body = '''{{"x": {{{{ x }}}}}}'''
         "the remedy must survive: {body}"
     );
 }
+
+#[tokio::test]
+async fn ar3_a_burst_gets_clean_refusals_instead_of_an_unbounded_queue() {
+    // Phase 7, G5: the bound and its 503 were reached by no test at all,
+    // while L5's exit criterion claimed a burst gives clean refusals.
+    //
+    // Honest about what this proves: the semaphore is acquired AFTER the
+    // body has been read, so what it bounds is concurrent DELIVERIES, not
+    // the memory held by bodies in flight. The exit criterion's wording
+    // was looser than the code; this test pins the code.
+    let hanging = TestServer::start(vec![0]).await; // never answers
+    let text = format!(
+        r#"
+[[profiles]]
+name = "hook"
+from = {{ http_path = "/hook" }}
+to = {{ url = "{}/in" }}
+content_type = "application/json"
+retries = 0
+timeout_ms = 30000
+body = '''{{"x": {{{{ x }}}}}}'''
+"#,
+        hanging.base_url
+    );
+    let base = serve(&text).await;
+
+    // More requests than the bound, all of which will occupy a permit
+    // because the receiver never answers.
+    let mut handles = Vec::new();
+    for _ in 0..(http_switchboard::inbound::MAX_IN_FLIGHT + 8) {
+        let url = format!("{base}/hook");
+        handles.push(tokio::spawn(async move {
+            post(&url, r#"{"x": 1}"#, None).await
+        }));
+    }
+
+    let mut refusals = 0;
+    for handle in handles {
+        let (status, body) = handle.await.unwrap();
+        if status == 503 {
+            refusals += 1;
+            assert!(
+                body.contains("What now:"),
+                "a refusal must say what to do: {body}"
+            );
+            assert!(
+                body.contains("not a loss"),
+                "and must not read as a lost message: {body}"
+            );
+        }
+    }
+
+    assert!(
+        refusals >= 8,
+        "past the bound the answer must be a refusal, not a queue: only {refusals} refusals"
+    );
+}

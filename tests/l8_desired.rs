@@ -213,3 +213,42 @@ fn w4_an_unknown_profile_lists_the_ones_that_exist() {
     assert!(stderr.contains("What now:"), "no remedy: {stderr}");
     assert!(stderr.contains("alertmanager"), "{stderr}");
 }
+
+#[test]
+fn k7_awkward_values_in_a_templated_path_stay_one_segment() {
+    // Phase 7, G7: the table covered the obvious hostile shapes; these are
+    // the awkward ones — empty, structured, and with line breaks in.
+    let p = profile(r#"{ url = "http://127.0.0.1:9/devices/{{ id }}/state" }"#);
+
+    let empty = translate::prepare(&p, br#"{"id": ""}"#).unwrap();
+    let Target::Url { url, .. } = &empty.target else {
+        panic!("expected a URL target")
+    };
+    assert_eq!(
+        url, "http://127.0.0.1:9/devices//state",
+        "an empty value must not silently vanish into the path"
+    );
+
+    for payload in [
+        &br#"{"id": {"a": 1}}"#[..],
+        &br#"{"id": [1, 2]}"#[..],
+        &br#"{"id": "line\r\nInjected: header"}"#[..],
+        &br#"{"id": "?query=1"}"#[..],
+        &br##"{"id": "#fragment"}"##[..],
+    ] {
+        let d = translate::prepare(&p, payload).unwrap();
+        let Target::Url { url, .. } = &d.target else {
+            panic!("expected a URL target")
+        };
+        assert!(
+            url.starts_with("http://127.0.0.1:9/devices/") && url.ends_with("/state"),
+            "the shape of the address must survive: {url}"
+        );
+        for forbidden in ['\r', '\n', '?', '#'] {
+            assert!(
+                !url.contains(forbidden),
+                "{forbidden:?} must be encoded, not passed through: {url}"
+            );
+        }
+    }
+}

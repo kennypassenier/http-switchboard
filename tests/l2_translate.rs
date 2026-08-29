@@ -200,9 +200,26 @@ fn k14_no_payload_can_change_where_its_translation_goes() {
 }
 
 #[test]
-fn k14_a_non_json_profile_still_escapes_nothing_and_stays_on_target() {
-    let p = profile_with("{{ x }}", "text/plain");
-    let d = translate::prepare(&p, br#"{"x": "plain <b> text"}"#).unwrap();
-    assert_eq!(d.body, "plain <b> text");
-    assert_eq!(d.content_type, "text/plain");
+fn ar7_a_profile_we_cannot_escape_safely_is_refused_at_startup() {
+    // Phase 7, G8. Escaping is a mechanism only for JSON; a text/plain
+    // profile would interpolate values raw, so a message could append
+    // content of its own. Refused rather than started — the same
+    // fail-closed rule as every other config check.
+    let text = r#"
+[[profiles]]
+name = "t"
+from = { http_path = "/t" }
+to = { url = "http://127.0.0.1:9/hook" }
+content_type = "text/plain"
+body = "{{ x }}"
+"#;
+    let e = config::load("t.toml", text, &env(&[]))
+        .unwrap_err()
+        .to_string();
+    assert!(e.contains("What now:"), "no remedy: {e}");
+    assert!(e.contains("text/plain"), "{e}");
+    assert!(
+        e.contains("application/json"),
+        "the remedy names the way out: {e}"
+    );
 }

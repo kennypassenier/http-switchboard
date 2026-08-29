@@ -81,22 +81,35 @@ async fn w5_healthz_answers_without_a_token_and_lists_the_profiles() {
 }
 
 #[tokio::test]
-async fn w5_a_failing_profile_turns_healthz_red_while_the_process_runs_on() {
-    // The whole reason W5 was raised to Essential: a liveness-only check
-    // stays green while the thing quietly stops doing its job.
+async fn w5_a_failing_profile_is_visible_without_restarting_the_container() {
+    // Phase 7, G2. Two callers want different answers from one fact:
+    //  * the container's healthcheck asks "is this process alive" — it
+    //    must stay 200 while Home Assistant is down, or the orchestrator
+    //    restarts us for someone else's outage, and every restart resets
+    //    the pump state (turning AR12's one failure event into one per
+    //    restart);
+    //  * Uptime Kuma asks "is it doing its job" and wants a non-2xx.
     let receiver = TestServer::start(vec![500]).await;
     let (base, _registry) = serve(&receiver.base_url).await;
 
     assert_eq!(get(&format!("{base}/healthz")).await.0, 200);
+    assert_eq!(get(&format!("{base}/healthz?strict=1")).await.0, 200);
 
     assert_eq!(post(&format!("{base}/hook"), r#"{"x": 1}"#).await, 502);
 
-    let (status, body) = get(&format!("{base}/healthz")).await;
+    let (liveness, body) = get(&format!("{base}/healthz")).await;
     assert_eq!(
-        status, 503,
+        liveness, 200,
+        "liveness must not go red because a receiver is down: {body}"
+    );
+    assert!(body.contains(r#""status":"degraded""#), "{body}");
+    assert!(body.contains(r#""state":"failing""#), "{body}");
+
+    let (strict, body) = get(&format!("{base}/healthz?strict=1")).await;
+    assert_eq!(
+        strict, 503,
         "Uptime Kuma has to see this without reading the body: {body}"
     );
-    assert!(body.contains(r#""state":"failing""#), "{body}");
 }
 
 #[tokio::test]

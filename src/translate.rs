@@ -80,6 +80,11 @@ pub fn check_template(body: &str, content_type: &str) -> Result<(), String> {
 }
 
 fn is_json(content_type: &str) -> bool {
+    is_json_content_type(content_type)
+}
+
+/// Public so the config check can refuse what this module cannot escape.
+pub fn is_json_content_type(content_type: &str) -> bool {
     content_type.starts_with("application/json") || content_type.ends_with("+json")
 }
 

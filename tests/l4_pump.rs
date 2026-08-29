@@ -469,3 +469,61 @@ async fn ar8_e2e_the_policy_is_in_force_after_the_first_successful_poll() {
     );
     assert!(state.policy_pushed, "and the pump must know it succeeded");
 }
+
+#[tokio::test]
+async fn k2_e2e_a_message_that_can_never_work_is_settled_not_looped() {
+    // Phase 7, G4: the dead-letter road was proven only against a fake
+    // hub — which has no leases, no redelivery and no dead letters, the
+    // three things the E2E layer exists for. Two shapes that can never
+    // work: a body that is not JSON at all, and JSON whose field the
+    // template needs is absent.
+    require_hub!(hub_container);
+    let receiver = TestServer::start(vec![200]).await;
+    let p = kyu_profile(
+        &hub_container.base_url,
+        "dead.raw",
+        &format!(r#"{{ url = "{}/hook" }}"#, receiver.base_url),
+        r#"{"alert": {{ name }}}"#,
+    );
+    let hub = KyuHub::new(hub_container.base_url.clone(), None, 2);
+    let sink = HttpSink::new(None, None, 2_000);
+    let mut state = PumpState::default();
+
+    // Create the subscription first, then publish what cannot work.
+    pump_once(&p, &hub, &sink, &FakeClock::default(), &mut state).await;
+    reqwest::Client::new()
+        .post(format!("{}/t/dead.raw", hub_container.base_url))
+        .header("content-type", "text/plain")
+        .body("this is not json at all")
+        .send()
+        .await
+        .unwrap();
+    hub_container
+        .publish("dead.raw", r#"{"something_else": 1}"#)
+        .await;
+
+    let mut dead = 0;
+    for _ in 0..8 {
+        if let Step::DeadLettered { reason, .. } =
+            pump_once(&p, &hub, &sink, &FakeClock::default(), &mut state).await
+        {
+            assert!(reason.len() > 10, "the event says why: {reason}");
+            dead += 1;
+        }
+    }
+
+    assert_eq!(
+        dead, 2,
+        "both messages must be dead-lettered exactly once, not cycled"
+    );
+    assert!(
+        receiver.received().is_empty(),
+        "and neither may reach the destination"
+    );
+
+    // Settled means settled: nothing comes back.
+    for _ in 0..3 {
+        let step = pump_once(&p, &hub, &sink, &FakeClock::default(), &mut state).await;
+        assert_eq!(step, Step::Idle, "a settled message must not return");
+    }
+}

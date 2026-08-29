@@ -49,6 +49,10 @@ pub struct Inbound {
     clock: Arc<dyn Clock>,
     permits: Arc<tokio::sync::Semaphore>,
     registry: Arc<Registry>,
+    /// Where this service reports its own failures. An inbound profile
+    /// falls over exactly as a kyu one does, and AR12 makes no exception
+    /// for the source kind (Phase 7 audit, G3).
+    reporting: Option<String>,
 }
 
 pub fn router(
@@ -76,6 +80,7 @@ pub fn router(
             clock: Arc::clone(&clock),
             permits: Arc::clone(&permits),
             registry: Arc::clone(&registry),
+            reporting: config.reporting.as_ref().map(|r| r.topic.clone()),
         });
         router = router.route(&path, post(handle).with_state(state));
     }
@@ -87,18 +92,30 @@ pub fn router(
     router
         .route(
             "/healthz",
-            axum::routing::get(move || {
-                let registry = Arc::clone(&health_registry);
-                async move {
-                    let (healthy, body) = registry.healthz();
-                    let status = if healthy {
-                        StatusCode::OK
-                    } else {
-                        StatusCode::SERVICE_UNAVAILABLE
-                    };
-                    (status, [("content-type", "application/json")], body)
-                }
-            }),
+            axum::routing::get(
+                move |axum::extract::Query(q): axum::extract::Query<
+                    std::collections::HashMap<String, String>,
+                >| {
+                    let registry = Arc::clone(&health_registry);
+                    async move {
+                        let (healthy, body) = registry.healthz();
+                        // Plain /healthz answers liveness: the process is
+                        // up and can serve. ?strict=1 answers "is every
+                        // profile doing its job", for a monitor that should
+                        // alarm rather than restart (Phase 7, G2).
+                        let strict = matches!(
+                            q.get("strict").map(String::as_str),
+                            Some("1" | "true" | "yes")
+                        );
+                        let status = if healthy || !strict {
+                            StatusCode::OK
+                        } else {
+                            StatusCode::SERVICE_UNAVAILABLE
+                        };
+                        (status, [("content-type", "application/json")], body)
+                    }
+                },
+            ),
         )
         .route(
             "/metrics",
@@ -175,10 +192,26 @@ async fn handle(
         };
         let duration_ms = started.elapsed().as_millis() as u64;
         state.registry.record(&profile.name, ok, duration_ms);
-        state.registry.set_health(
+
+        let before = state
+            .registry
+            .health_of(&profile.name)
+            .unwrap_or(Health::Starting);
+        let now = if ok { Health::Working } else { Health::Failing };
+        crate::app::note_transition(
+            state.registry.as_ref(),
+            state.sink.as_ref(),
+            state.reporting.as_deref(),
             &profile.name,
-            if ok { Health::Working } else { Health::Failing },
-        );
+            before,
+            now,
+            if ok {
+                "back to normal"
+            } else {
+                "deliveries are failing"
+            },
+        )
+        .await;
         crate::obs::log_message(
             &profile.name,
             "http",

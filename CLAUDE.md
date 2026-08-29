@@ -15,9 +15,9 @@ gates hold from any session or terminal. After a fresh clone, run:
 
 | Field | Value |
 |---|---|
-| Current phase | 6 · Development loop — L0-L9 built, deployment pending |
-| Last completed gate | L1-L6 report (2026-08-30); L6b added there and built |
-| Next gate | L6b-L9 report form + the deployment decisions |
+| Current phase | 7 · Hardening — gaps closed, deployment drill pending |
+| Last completed gate | Phase 7 gap form (2026-08-30) |
+| Next gate | Phase 8 documentation (per-document approval) |
 | AFK mode | off (L1-L6 AFK run closed 2026-08-30) |
 
 <!-- Update this block after every completed gate. -->

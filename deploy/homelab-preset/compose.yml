@@ -14,7 +14,11 @@ services:
     ports:
       - "8080:8080"
     # The image is distroless: no shell, no curl. The binary answers the
-    # healthcheck itself (AR13).
+    # healthcheck itself (AR13). Deliberately the PLAIN /healthz: this asks
+    # whether the process is alive, not whether Home Assistant is up —
+    # restarting this container because someone else is down would reset
+    # the pump state on every loop. Uptime Kuma watches
+    # /healthz?strict=1 instead, which is the one that goes red.
     healthcheck:
       test: ["CMD", "/usr/local/bin/http-switchboard", "--healthcheck", "http://127.0.0.1:8080/healthz"]
       interval: 30s

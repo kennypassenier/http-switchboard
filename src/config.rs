@@ -489,6 +489,22 @@ fn validate_profile(
             profile: name.clone(),
         })?;
 
+    // Phase 7, G8: escaping is a mechanism only for JSON. A profile that
+    // delivers anything else would interpolate values raw, so a message
+    // could append fields of its own — the exact class AR7 exists to
+    // close. Refused rather than started, the same rule as every other
+    // check here; if a non-JSON destination is ever needed, it needs a
+    // safe escaping rule first, and that is a mini-round.
+    if !crate::translate::is_json_content_type(&content_type) {
+        return Err(ConfigError::Template {
+            file: file.to_string(),
+            profile: name,
+            problem: format!(
+                "content_type is '{content_type}', and only JSON is supported today.                  What now: use application/json — values are escaped by the engine there,                  which is what stops a message from adding fields of its own. A non-JSON                  destination needs an escaping rule of its own first."
+            ),
+        });
+    }
+
     // AR7: the shape mistake JSON autoescape invites is caught at startup,
     // not on the first real message.
     if let Err(problem) = crate::translate::check_template(&rp.body, &content_type) {

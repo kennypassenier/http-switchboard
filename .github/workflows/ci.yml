@@ -36,6 +36,64 @@ jobs:
           KYU_IMAGE: ghcr.io/kennypassenier/kyu:2.0.0
         run: cargo test --all
 
+  # The wrapping, not the app (Phase 7, G9). The image, its self-check and
+  # the CA trust store were claims in comments until this job executed
+  # them. Not a required check today — adding one changes branch
+  # protection, which is Kenny's call — but it runs on every push.
+  image:
+    name: container image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: docker build -t http-switchboard:ci .
+      - name: It starts and answers for itself
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/hsw
+          cat > /tmp/hsw/config.toml <<'CFG'
+          [[profiles]]
+          name = "smoke"
+          from = { http_path = "/smoke" }
+          to = { url = "https://example.com/" }
+          content_type = "application/json"
+          retries = 0
+          timeout_ms = 10000
+          body = "{\"x\": {{ x }}}"
+          CFG
+          docker run -d --name hsw -p 127.0.0.1:8080:8080 \
+            -v /tmp/hsw/config.toml:/etc/http-switchboard/config.toml:ro \
+            http-switchboard:ci
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:8080/healthz >/dev/null && break
+            sleep 1
+          done
+          curl -sf http://127.0.0.1:8080/healthz
+          # The binary's own healthcheck, from inside a distroless image
+          # that has neither a shell nor curl (AR13).
+          docker exec hsw /usr/local/bin/http-switchboard --healthcheck http://127.0.0.1:8080/healthz
+      - name: An https destination really works from inside the image
+        run: |
+          set -euo pipefail
+          # The Dockerfile claims the CA bundle is there. This executes the
+          # claim instead of arguing it: the delivery must come back with a
+          # STATUS, not a certificate or transport error.
+          code=$(curl -s -o /tmp/body -w '%{http_code}' -XPOST \
+            -H 'content-type: application/json' -d '{"x":1}' \
+            http://127.0.0.1:8080/smoke)
+          cat /tmp/body
+          if grep -qiE "certificate|could not be reached" /tmp/body; then
+            echo "the image cannot speak https — the CA claim is false" >&2
+            exit 1
+          fi
+          test "$code" = "200" || test "$code" = "502"
+      - name: Logs
+        if: always()
+        run: docker logs hsw || true
+      - name: Stop
+        if: always()
+        run: docker rm -f hsw || true
+
   # Informational only, and deliberately NOT a required status check:
   # a coverage number is a thermometer, not a gate. Phase 7 asks for the
   # measurement to exist so gaps are visible, not for a percentage to

@@ -70,13 +70,31 @@ impl Registry {
             .health = Some(health);
     }
 
+    /// The state a profile is in right now, so a caller can tell a
+    /// transition from a repeat.
+    pub fn health_of(&self, profile: &str) -> Option<Health> {
+        self.profiles
+            .lock()
+            .unwrap()
+            .get(profile)
+            .and_then(|s| s.health)
+    }
+
     pub fn snapshot(&self) -> BTreeMap<String, ProfileStats> {
         self.profiles.lock().unwrap().clone()
     }
 
-    /// `(healthy, body)`. Unhealthy means at least one profile is not
-    /// doing its job — the caller turns that into a non-2xx so Uptime
-    /// Kuma notices without anyone reading the body.
+    /// `(healthy, body)`. `healthy` means every profile is doing its job.
+    ///
+    /// The caller decides what to do with that, and the two callers want
+    /// different things (Phase 7 audit, G2): the container's own
+    /// healthcheck asks "is this process alive", and must not restart the
+    /// service because Home Assistant is down — each restart would reset
+    /// the pump state and turn AR12's "exactly one failure event" into one
+    /// per restart. Uptime Kuma asks "is it doing its job", and wants a
+    /// non-2xx it can alarm on. Hence `/healthz` (liveness, always 200
+    /// while the process answers) and `/healthz?strict=1` (503 when any
+    /// profile is failing, denied or cut off).
     pub fn healthz(&self) -> (bool, String) {
         let snapshot = self.snapshot();
         let now = now_unix();
