@@ -38,6 +38,24 @@ agreed as drafted, and every enforcement question answered (S1-S7).
   2026-08-29), so the repo-scoped Phase 7 review can run.
 - **S7 · The remaining standing rules** apply unchanged, as Kenny's rules.
 
+## Deployment sequence (Kenny, 2026-08-30)
+
+Decided at the L6b-L9 report gate, and it changes the ORDER rather than
+the destination:
+
+1. When everything is finished and testable, deploy onto a **scratch
+   LXC** ourselves and test it there.
+2. If it holds up, **delete that LXC again**.
+3. Walk the rest of the procedure (phases 7, 8, 9).
+4. **Just before the retrospective**, fold the project into **Homelab
+   Rust** — the preset and its building blocks land in
+   `~/Projects/homelab`, so the orchestrator owns the deployment from
+   then on.
+
+So the preset proposal in `deploy/homelab-preset/` stays a proposal
+until step 4, and the real deployment is deliberately the last thing
+that happens, not the first.
+
 ## Gate log (from Phase 7 onward; standing rule 5)
 
 | Gate | Date | Decision | Recorded |

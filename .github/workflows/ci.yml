@@ -35,3 +35,20 @@ jobs:
         env:
           KYU_IMAGE: ghcr.io/kennypassenier/kyu:2.0.0
         run: cargo test --all
+
+  # Informational only, and deliberately NOT a required status check:
+  # a coverage number is a thermometer, not a gate. Phase 7 asks for the
+  # measurement to exist so gaps are visible, not for a percentage to
+  # block a commit.
+  coverage:
+    name: coverage (informational)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install cargo-llvm-cov
+        run: cargo install cargo-llvm-cov --locked
+      - name: Measure
+        env:
+          KYU_IMAGE: ghcr.io/kennypassenier/kyu:2.0.0
+        run: cargo llvm-cov --all --summary-only

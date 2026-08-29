@@ -164,19 +164,30 @@ pub async fn pump_once(
     };
     let subscription = &profile.subscription;
 
-    if !state.policy_pushed {
-        // Best effort: the lease and attempt budget this profile was
-        // validated against should be the one actually in force.
-        if hub
+    let poll = hub.next(topic, subscription, state.replay_next).await;
+
+    // The policy is written AFTER a successful poll, never before. A kyu
+    // subscription starts existing when it first polls, so a policy write
+    // beforehand is refused for a subscription that does not exist yet —
+    // measured against a real hub during the Phase 7 sweep, where the
+    // effective lease turned out to be the hub's default 30 s and not the
+    // 60 s this profile was validated against. Residual, and small: a
+    // message that arrives on the very first poll (only possible on the
+    // replay path) is still claimed under the default lease.
+    if !state.policy_pushed
+        && matches!(
+            poll,
+            Ok(Poll::Empty | Poll::Message(_) | Poll::NotJson { .. })
+        )
+        && hub
             .set_policy(topic, subscription, profile.lease_ms, profile.max_attempts)
             .await
             .is_ok()
-        {
-            state.policy_pushed = true;
-        }
+    {
+        state.policy_pushed = true;
     }
 
-    match hub.next(topic, subscription, state.replay_next).await {
+    match poll {
         Err(HubError::Denied) => {
             state.health = Health::Denied;
             Step::Denied
