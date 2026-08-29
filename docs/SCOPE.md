@@ -93,6 +93,32 @@ name is never a mystery to a future reader.
   exercise the HTTP ingress. The S2 proof profile therefore uses the
   HTTP ingress, so both source shapes are proven.
 
+  **Dated amendment, 2026-08-30 (mini-round M1 at the L7 gate).** The
+  chain drops one hop:
+
+  ```
+  Alertmanager      →  kyu topic  alerts.raw
+  HTTPSwitchboard   →  subscribes, translates
+                    →  Home Assistant webhook  →  script.notification_dispatch
+  ```
+
+  Two findings forced it. Measured: hub-bridge is not deployed — kyu is
+  active on LXC 109, no hub-bridge service exists there, and that project
+  is still waiting on its own ratification round and release. Reasoned,
+  and the real point: since Alertmanager publishes straight onto the hub,
+  *this* service is the kyu consumer that acknowledges only after the
+  destination accepted, which is precisely the guarantee hub-bridge would
+  have added. The second hop added a component, not a guarantee.
+  Nothing is closed off: a second profile publishing to `alerts.homelab`
+  can be added later for other consumers, and both destination kinds are
+  built and tested.
+
+  **Delivered live on 2026-08-30**, on Kenny's explicit go:
+  `automation.homelab_alert_webhook` (webhook id `homelab-alerts-d07bb8c4`,
+  `local_only`, POST only, `mode: queued`). Proven with two test posts —
+  a `firing` alert ran to completion and dispatched, a `resolved` alert
+  stopped at the condition and did nothing.
+
 - **G7 · Acknowledge only after delivery** *(added at the gate, Kenny's
   find)*. When a profile's source is a kyu topic, a message is
   acknowledged only after the destination accepted it. A refused

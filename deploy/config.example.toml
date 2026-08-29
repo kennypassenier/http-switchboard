@@ -22,11 +22,17 @@ topic = "switchboard.events"
 # JSON, so every value is emitted as a complete JSON value, escaped by
 # the engine. That is what stops a quote inside an alert summary from
 # rewriting the document.
+# The destination is the Home Assistant alert webhook. Replace the id
+# below with your own: the real one is deployment configuration, and this
+# file is public. The chain is deliberately short — this service is
+# already a kyu consumer that acknowledges only after Home Assistant
+# accepted the message, so a second hop through the hub would add a
+# component without adding a guarantee (mini-round M1, 2026-08-30).
 [[profiles]]
 name = "alertmanager"
 subscription = "switchboard"
 from = { kyu_topic = "alerts.raw" }
-to = { kyu_topic = "alerts.homelab" }
+to = { url = "http://homeassistant.lan:8123/api/webhook/REPLACE-WITH-YOUR-WEBHOOK-ID" }
 content_type = "application/json"
 body = '''
 {"alert": {{ alerts.0.labels.alertname }},

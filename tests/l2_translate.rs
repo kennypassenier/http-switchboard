@@ -61,8 +61,9 @@ fn k12_the_recorded_alertmanager_payload_renders_byte_for_byte() {
     assert_eq!(delivery.body, expected);
     assert_eq!(
         delivery.target,
-        Target::KyuTopic {
-            topic: "alerts.homelab".into()
+        Target::Url {
+            url: "http://homeassistant.lan:8123/api/webhook/REPLACE-WITH-YOUR-WEBHOOK-ID".into(),
+            method: "POST".into()
         }
     );
     assert_eq!(delivery.content_type, "application/json");
