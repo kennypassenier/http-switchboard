@@ -15,6 +15,7 @@ use crate::adapters::{Clock, HttpSink, KyuHub, Sink};
 use crate::config::{Config, Source};
 use crate::obs::{self, Registry};
 use crate::pump::{pump_once, Health, Hub, PumpState, Step};
+use crate::translate::{Delivery, Target};
 
 /// How long to wait after an idle poll before asking again. The hub's own
 /// long poll does the waiting, so this is only about not hammering it when
@@ -96,6 +97,7 @@ impl App {
             let sink = Arc::clone(&self.sink);
             let clock = Arc::clone(&self.clock);
             let registry = Arc::clone(&self.registry);
+            let reporting = self.config.reporting.as_ref().map(|r| r.topic.clone());
             let mut stop = stop_tx.subscribe();
             tokio::spawn(async move {
                 let mut state = PumpState::default();
@@ -144,20 +146,27 @@ impl App {
                     // thousands.
                     if before != state.health {
                         registry.set_health(&profile.name, state.health);
-                        obs::log_transition(
-                            &profile.name,
-                            before,
-                            state.health,
-                            match state.health {
-                                Health::Denied => "the hub refused our credentials",
-                                Health::HubDown => "the hub could not be reached",
-                                Health::Failing => {
-                                    "deliveries are failing; messages wait on the hub"
-                                }
-                                Health::Working => "back to normal",
-                                Health::Starting => "starting",
-                            },
-                        );
+                        let detail = match state.health {
+                            Health::Denied => "the hub refused our credentials",
+                            Health::HubDown => "the hub could not be reached",
+                            Health::Failing => "deliveries are failing; messages wait on the hub",
+                            Health::Working => "back to normal",
+                            Health::Starting => "starting",
+                        };
+                        obs::log_transition(&profile.name, before, state.health, detail);
+
+                        // W11 / AR12: one event when a profile falls over,
+                        // one when it recovers — never one per message. HA
+                        // down for twenty minutes with a backlog would
+                        // otherwise produce a burst of warnings in a house
+                        // whose dispatcher exists to prevent exactly that.
+                        if let Some(topic) = &reporting {
+                            if let Some(event) =
+                                transition_event(&profile.name, before, state.health, detail)
+                            {
+                                report(sink.as_ref(), topic, event, &profile.name).await;
+                            }
+                        }
                     }
 
                     match step {
@@ -182,5 +191,50 @@ impl App {
         // being cut off mid-poll costs at worst a duplicate (S3).
         let _ = stop_tx.send(());
         result
+    }
+}
+
+/// Which transitions are worth telling the house about. Starting up is
+/// not news; falling over and coming back are.
+fn transition_event(profile: &str, from: Health, to: Health, detail: &str) -> Option<String> {
+    let broken = |h: Health| matches!(h, Health::Failing | Health::Denied | Health::HubDown);
+    let event = match (broken(from), broken(to)) {
+        (false, true) => "profile.failing",
+        (true, false) if to == Health::Working => "profile.recovered",
+        _ => return None,
+    };
+    let state = match to {
+        Health::Starting => "starting",
+        Health::Working => "working",
+        Health::Failing => "failing",
+        Health::Denied => "denied",
+        Health::HubDown => "hub-down",
+    };
+    Some(format!(
+        r#"{{"event":"{event}","profile":{},"state":"{state}","detail":{}}}"#,
+        serde_json::Value::String(profile.to_string()),
+        serde_json::Value::String(detail.to_string())
+    ))
+}
+
+/// Publish one self-report. A failure to publish a failure is logged and
+/// counted — never published, or the report about the broken channel goes
+/// down the broken channel (AR12).
+async fn report(sink: &dyn Sink, topic: &str, body: String, profile: &str) {
+    let delivery = Delivery {
+        target: Target::KyuTopic {
+            topic: topic.to_string(),
+        },
+        content_type: "application/json".to_string(),
+        headers: Default::default(),
+        body,
+    };
+    if let Err(e) = sink.deliver(&delivery).await {
+        obs::log_transition(
+            profile,
+            Health::Working,
+            Health::Failing,
+            &format!("could not publish the self-report event: {e}"),
+        );
     }
 }
