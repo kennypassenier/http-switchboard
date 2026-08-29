@@ -173,21 +173,41 @@ impl Registry {
 /// on. Per-attempt detail belongs at debug level; this is the summary.
 pub fn log_message(profile: &str, source: &str, outcome: &str, duration_ms: u64, attempts: u32) {
     println!(
+        "{}",
+        message_line(profile, source, outcome, duration_ms, attempts)
+    );
+}
+
+/// The line itself, so a test can assert it is valid JSON with the fixed
+/// fields — W7's bar, which cannot be checked on something that only ever
+/// goes to stdout.
+pub fn message_line(
+    profile: &str,
+    source: &str,
+    outcome: &str,
+    duration_ms: u64,
+    attempts: u32,
+) -> String {
+    format!(
         r#"{{"ts":{},"level":"info","profile":{},"source":"{source}","outcome":"{outcome}","duration_ms":{duration_ms},"attempts":{attempts}}}"#,
         now_unix(),
         json_string(profile)
-    );
+    )
 }
 
 /// A state change, logged once rather than on every attempt: a hub that
 /// is away for an hour should produce two lines, not thousands.
 pub fn log_transition(profile: &str, from: Health, to: Health, detail: &str) {
-    println!(
+    println!("{}", transition_line(profile, from, to, detail));
+}
+
+pub fn transition_line(profile: &str, from: Health, to: Health, detail: &str) -> String {
+    format!(
         r#"{{"ts":{},"level":"warn","profile":{},"event":"state_change","from":"{from:?}","to":"{to:?}","detail":{}}}"#,
         now_unix(),
         json_string(profile),
         json_string(detail)
-    );
+    )
 }
 
 fn now_unix() -> u64 {
@@ -249,6 +269,32 @@ mod tests {
             text.contains(r#"switchboard_delivery_duration_ms_total{profile="a"} 42"#),
             "the duration W6 asks for is missing: {text}"
         );
+    }
+
+    #[test]
+    fn w7_every_log_line_is_valid_json_with_the_fixed_fields() {
+        // W7's bar. A line that its own data can break is a line you
+        // cannot query, so the awkward cases are in here on purpose.
+        for (profile, detail) in [
+            ("alertmanager", "plain"),
+            (r#"quote"and\backslash"#, "line\nbreak and \"quotes\""),
+        ] {
+            let line = message_line(profile, "kyu", "delivered", 12, 2);
+            let parsed: serde_json::Value =
+                serde_json::from_str(&line).unwrap_or_else(|e| panic!("not JSON: {line} ({e})"));
+            assert_eq!(parsed["profile"], profile);
+            assert_eq!(parsed["outcome"], "delivered");
+            assert_eq!(parsed["duration_ms"], 12);
+            assert_eq!(parsed["attempts"], 2);
+            assert!(parsed["ts"].is_number());
+
+            let line = transition_line(profile, Health::Working, Health::Denied, detail);
+            let parsed: serde_json::Value =
+                serde_json::from_str(&line).unwrap_or_else(|e| panic!("not JSON: {line} ({e})"));
+            assert_eq!(parsed["from"], "Working");
+            assert_eq!(parsed["to"], "Denied");
+            assert_eq!(parsed["detail"], detail);
+        }
     }
 
     #[test]
