@@ -15,9 +15,9 @@ gates hold from any session or terminal. After a fresh clone, run:
 
 | Field | Value |
 |---|---|
-| Current phase | 7 · Hardening — gaps closed, deployment drill pending |
-| Last completed gate | Phase 7 gap form (2026-08-30) |
-| Next gate | Phase 8 documentation (per-document approval) |
+| Current phase | 8 · Documentation |
+| Last completed gate | Mini-round MR2 (2026-08-30): W12 added, Desired, built |
+| Next gate | Phase 8 per-document approval form |
 | AFK mode | off (L1-L6 AFK run closed 2026-08-30) |
 
 <!-- Update this block after every completed gate. -->
@@ -31,6 +31,10 @@ gates hold from any session or terminal. After a fresh clone, run:
 | docs/ARCHITECTURE_DECISIONS.md | frozen AR decisions incl. tech choice (Phases 3-4) |
 | docs/REALIZATION_PLAN.md | milestones + status table (Phase 5) |
 | docs/TEST_PLAN.md | what is proven where + accepted limitations (Phase 7) |
+| docs/USER_GUIDE.md | how to use it, per feature, with the test that proves each claim (Phase 8) |
+| docs/DEBUGGING_GUIDE.md | the evidence trail and a symptom→cause table (Phase 8) |
+| docs/OPERATIONS_RUNBOOK.md | numbered procedures, including what has NOT been drilled (Phase 8) |
+| docs/ARCHITECTURE_REFERENCE.md | the system as built, module by module (Phase 8) |
 
 ## Repo
 

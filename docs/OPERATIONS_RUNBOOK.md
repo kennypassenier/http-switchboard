@@ -37,13 +37,20 @@ docker run --rm --entrypoint /usr/local/bin/http-switchboard \
 ## 3 · Is it working, and what does "working" mean here
 
 ```bash
-curl -s http://<host>:8080/healthz | jq
+curl -s http://<host>:8080/healthz | jq            # is the process alive?
+curl -si http://<host>:8080/healthz?strict=1 | head -1   # is it doing its job?
 ```
 
-`200` with `"status":"ok"` means every profile is doing its job. `503`
-with `"status":"degraded"` means at least one profile is failing, denied
-or cut off from the hub — the body names which, and how long ago it last
-succeeded. Uptime Kuma only needs the status code.
+Two questions, two answers, on purpose. Plain `/healthz` is **liveness**:
+200 while the process can serve, whatever the profiles are doing. That is
+what the container's own healthcheck asks, so the orchestrator never
+restarts this service because Home Assistant is down — and every such
+restart would reset the pump state, turning one failure event into one
+per restart.
+
+`?strict=1` is the one that goes **503** when any profile is failing,
+denied or cut off. **Point Uptime Kuma at that one.** Either way the body
+names each profile, its state and how long ago it last succeeded.
 
 Counters, including delivery duration, are at `/metrics` in Prometheus
 format. Neither endpoint ever echoes message content.
@@ -79,3 +86,33 @@ preset.
 > to the homelab repository. Until that drill is done, this is a plan and
 > not a proven procedure, which is exactly the distinction M3 was written
 > to force.
+
+## 6 · The container, when there is no shell to help you
+
+The image is distroless: no shell, no curl, no `ps`. Three things still
+work from outside it:
+
+```bash
+docker logs <container>                    # JSON lines, one per message
+docker exec <container> /usr/local/bin/http-switchboard --healthcheck \
+  http://127.0.0.1:8080/healthz            # the binary asks itself
+docker run --rm --entrypoint /usr/local/bin/http-switchboard \
+  -v /path/config.toml:/c.toml:ro -v /path/message.json:/m.json:ro \
+  <image> test --config /c.toml --profile <name> --input /m.json
+```
+
+A container that restarts in a loop is almost always refusing its
+config — the reason is the last line on stderr in `docker logs`, and it
+names the file, the profile and the remedy.
+
+## 7 · Rotating the hub token
+
+The service reads secrets once, at startup, on purpose. So:
+
+1. Mint a new app token on kyu's Apps page.
+2. Put it in the environment the service starts in (on the homelab, the
+   orchestrator composes it into the container from the host vault).
+3. Redeploy or restart.
+
+Forgetting step 3 shows up as `state: "denied"` on every profile, with a
+log line naming the Apps page. It is not silent.
