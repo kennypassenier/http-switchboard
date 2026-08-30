@@ -5,12 +5,26 @@ All notable changes to HTTPSwitchboard. The format is loosely
 where the promise is about the **config file format**, the two HTTP
 endpoints and the CLI verbs — not about the internals.
 
-## Unreleased
+## 1.0.0 — 2026-08-30
 
-Everything below is the first version. It is not released yet: the
-service has not been deployed, no genuine Alertmanager alert has
-travelled the whole chain, and the restore procedure has not been
-drilled (see `docs/TEST_PLAN.md`, "not covered, by decision").
+The first version. 1.0.0 is a promise about the **config file format**,
+the two HTTP endpoints and the CLI verbs; breaking any of those means
+2.0.0. The internals are not part of it.
+
+Proven on real hardware before this release (the field test, 2026-08-30):
+on a throwaway container on Proxmox the service refused to start without
+its token — with the remedy — then ran under systemd, picked a message
+off the **real kyu hub**, translated it and delivered it to Home
+Assistant in 7 ms, where the automation ran to completion. The container
+was then destroyed and rebuilt from nothing and a second message flowed
+again.
+
+**What is still not true, and is not claimed:** Alertmanager itself is
+not deployed, so no *genuine* alert has travelled the chain — the
+project's flagship criterion stays open until it is. Deployment through
+the homelab preset is likewise unproven; the drill installed the binary
+by hand. `docs/TEST_PLAN.md` lists both, and the operations runbook says
+which of its steps have been executed.
 
 ### The service
 

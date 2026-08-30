@@ -1,6 +1,6 @@
 [package]
 name = "http-switchboard"
-version = "0.0.0"
+version = "1.0.0"
 edition = "2021"
 rust-version = "1.97"
 description = "Accepts a message in one shape and delivers it in another, where the configuration chooses the destination"
