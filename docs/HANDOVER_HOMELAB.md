@@ -10,15 +10,41 @@ with a **mini-round in that project**, not with an edit.
 
 ## What lands there
 
-`deploy/homelab-preset/` in this repository holds the proposal:
+`deploy/homelab-preset/` in this repository holds the proposal, and it
+was **rewritten on 2026-08-30 to match how that project's presets are
+actually shaped** — read against `presets/kyu/`, which is the closest
+real example, and against `client/src/scaffold.rs::PresetMeta`. The first
+draft was written from the outside and got five things wrong; they are
+listed below so the same guesses do not come back.
 
-- `compose.yml` — the service as the orchestrator would run it. Image:
-  `ghcr.io/kennypassenier/http-switchboard:1.0.0` (published, and pullable
-  anonymously — verified 2026-08-30). Environment: `KYU_TOKEN`. Config
-  mounted read-only at `/etc/http-switchboard/config.toml`.
-- `preset.yml` — 256 MB, 1 core, 4 GB. A **new** managed guest: A1
-  forbids the orchestrator managing a pre-existing one, so it cannot be
-  placed on CT 113 (Prometheus) or LXC 109 (kyu).
+- `preset.yml` — `description`, `ram_mb: 256`, `cores: 1`, `disk_gb: 4`.
+  A **new** managed guest: A1 forbids the orchestrator managing a
+  pre-existing one, so it cannot be placed on CT 113 (Prometheus) or
+  LXC 109 (kyu).
+- `http-switchboard/docker-compose.yml` — the app directory inside the
+  preset, which is the layout every real preset uses.
+  Image `ghcr.io/kennypassenier/http-switchboard:latest` (1.0.0 is
+  published and pullable anonymously — verified 2026-08-30).
+
+**What the first draft had wrong**, all five found by reading the real
+presets rather than by reasoning:
+
+1. A flat `compose.yml` instead of `<app>/docker-compose.yml`.
+2. `preset.yml` keys `name:` and `env:`, which are not in `PresetMeta`.
+   Unknown keys are dropped silently, so the file would have loaded and
+   simply not meant what it said.
+3. No `__STACK___net` external network block, which every preset has.
+4. A relative `./config.toml` bind instead of the `/appdata/__STACK__/…`
+   host bind the scaffolder creates and restic backs up.
+5. `environment: [KYU_TOKEN]` instead of `env_file: .env`. This one
+   matters beyond formatting: it means my claim in point 2 below is only
+   half right — the secret arrives as an app `.env` pushed from the
+   client's vault, and `/var/lib/homelab/secrets/` is not the thing the
+   compose file reads.
+
+It also answers a question this handover previously left open: **the real
+config lives in `/appdata/<stack>/http-switchboard-config/`**, not in
+either repository. That is also where restic finds it.
 
 ## Three things that session needs to know
 

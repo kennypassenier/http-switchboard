@@ -1,13 +1,13 @@
 # Preset for ~/Projects/homelab. Adding it there is a change to THAT
 # project and belongs in a session opened in its directory — its feature
 # list is frozen and its own gates apply. This file is the proposal.
-name: http-switchboard
-description: Translates a message from one shape into another and delivers it where the config says
+#
+# The schema is client/src/scaffold.rs::PresetMeta (description, ram_mb,
+# cores, disk_gb, features, unprivileged, gpu, vpn) — see that project's
+# docs/PRESET_GUIDE.md. Unknown keys are silently dropped, so an earlier
+# draft of this file that carried `name:` and `env:` would have looked
+# fine and quietly meant nothing.
+description: "HTTPSwitchboard — reshapes a message and delivers it where the config says"
 ram_mb: 256
-disk_gb: 4
 cores: 1
-# A1 forbids managing pre-existing guests, so this is a NEW container —
-# it cannot be placed on CT 113 (Prometheus) or LXC 109 (kyu) by the
-# orchestrator (scope C1).
-env:
-  - KYU_TOKEN
+disk_gb: 4

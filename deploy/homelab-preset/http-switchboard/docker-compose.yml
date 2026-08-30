@@ -1,0 +1,54 @@
+# HTTPSwitchboard (G9): deployed like any other of Kenny's own Rust
+# services. It brokers nothing and stores nothing — it takes a message in
+# one shape and hands it to a destination in another.
+#
+# Before deploying, put this in the app's .env (secrets vault, not git):
+#   KYU_TOKEN=<the hub token>
+# and write the profile config to /appdata/<stack>/http-switchboard-config/
+# config.toml. That config names the Home Assistant webhook id, which is
+# the credential for the notification dispatcher, so it belongs in appdata
+# — never in this repository or in the homelab repository. Both are public.
+services:
+  http-switchboard:
+    image: ghcr.io/kennypassenier/http-switchboard:latest
+    container_name: http-switchboard
+    restart: unless-stopped
+    volumes:
+      # A host bind, like kyu's: restic backs up /appdata, and a named
+      # volume would be invisible to it. The service keeps no state of its
+      # own — this holds only its config.
+      - /appdata/__STACK__/http-switchboard-config:/etc/http-switchboard:ro
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    healthcheck:
+      # The image is distroless: no shell, no curl. The binary answers its
+      # own healthcheck (AR13). Deliberately the PLAIN /healthz, which asks
+      # whether this process is alive. /healthz?strict=1 asks whether it is
+      # doing its job and goes 503 when Home Assistant is down — wiring
+      # that here would make the orchestrator restart this service because
+      # someone else broke, and every restart resets the state behind
+      # "exactly one event per outage". Uptime Kuma watches the strict one.
+      test: ["CMD", "/usr/local/bin/http-switchboard", "--healthcheck", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    labels:
+      # Same reasoning as kyu: unattended updates are safe here because the
+      # homelab rolls back on a failed health check, and this service's
+      # health check is honest about whether it starts. What would flip
+      # this to manual is a release that changes the config schema — the
+      # service fails closed on an unknown key, which is a correct refusal
+      # but an unattended one.
+      - com.homelab.update.policy=auto
+      # No com.homelab.backup.pause: there is no database to catch
+      # mid-write. Nothing is stored, by design (AR2).
+    networks:
+      - __STACK___net
+
+networks:
+  __STACK___net:
+    external: true
+    name: __STACK___net
