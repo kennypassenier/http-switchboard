@@ -114,7 +114,9 @@ name is never a mystery to a future reader.
   built and tested.
 
   **Delivered live on 2026-08-30**, on Kenny's explicit go:
-  `automation.homelab_alert_webhook` (webhook id `homelab-alerts-d07bb8c4`,
+  `automation.homelab_alert_webhook` (its webhook id is deployment
+  configuration and is deliberately not written down here — this repo is
+  public; the id lives in the HA automation and in the deployed config,
   `local_only`, POST only, `mode: queued`). Proven with two test posts —
   a `firing` alert ran to completion and dispatched, a `resolved` alert
   stopped at the condition and did nothing.
