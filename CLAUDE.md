@@ -15,9 +15,9 @@ gates hold from any session or terminal. After a fresh clone, run:
 
 | Field | Value |
 |---|---|
-| Current phase | 9 · Release & lifecycle (after the deployment drill) |
-| Last completed gate | Phase 8 documents approved (2026-08-30) |
-| Next gate | Deployment drill on a scratch LXC, then the Phase 9 "Tag & release?" form |
+| Current phase | 10 · Retrospective (after folding into Homelab Rust) |
+| Last completed gate | Phase 9 release (2026-08-30): **v1.0.0 tagged and published** |
+| Next gate | Phase 10 retrospective form (two-way, incl. ecosystem candidacy) |
 | AFK mode | off (L1-L6 AFK run closed 2026-08-30) |
 
 <!-- Update this block after every completed gate. -->
