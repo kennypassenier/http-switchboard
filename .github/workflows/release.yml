@@ -1,0 +1,54 @@
+name: release
+
+# Runs on a tag. The tag is always Kenny's explicit act — nothing here
+# publishes on a push to main.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The gates again, on the exact commit being released. A tag is not
+      # a reason to trust an earlier run.
+      - name: Gates
+        env:
+          KYU_IMAGE: ghcr.io/kennypassenier/kyu:2.0.0
+        run: |
+          cargo fmt --all -- --check
+          cargo clippy --all-targets -- -D warnings
+          cargo test --all
+
+      - name: Build the static binary
+        run: |
+          docker build -t http-switchboard:release .
+          id=$(docker create http-switchboard:release)
+          docker cp "$id:/usr/local/bin/http-switchboard" ./http-switchboard
+          docker rm "$id"
+
+      - name: Checksum manifest
+        run: sha256sum http-switchboard > SHA256SUMS
+
+      - name: Publish the image
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          version="${GITHUB_REF_NAME#v}"
+          docker tag http-switchboard:release "ghcr.io/${{ github.repository_owner }}/http-switchboard:$version"
+          docker tag http-switchboard:release "ghcr.io/${{ github.repository_owner }}/http-switchboard:latest"
+          docker push "ghcr.io/${{ github.repository_owner }}/http-switchboard:$version"
+          docker push "ghcr.io/${{ github.repository_owner }}/http-switchboard:latest"
+
+      - name: GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            http-switchboard
+            SHA256SUMS
+          body_path: CHANGELOG.md
