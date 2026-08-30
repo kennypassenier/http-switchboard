@@ -15,10 +15,10 @@ gates hold from any session or terminal. After a fresh clone, run:
 
 | Field | Value |
 |---|---|
-| Current phase | 10 · Retrospective (after folding into Homelab Rust) |
-| Last completed gate | Phase 9 release (2026-08-30): **v1.0.0 tagged and published** |
-| Next gate | Phase 10 retrospective form (two-way, incl. ecosystem candidacy) |
-| AFK mode | off (L1-L6 AFK run closed 2026-08-30) |
+| Current phase | **Done** — all 11 phases walked (2026-08-30) |
+| Last completed gate | Phase 10 retrospective: six lessons + the ecosystem entry committed to `~/Projects/dev-procedure` |
+| Next gate | none here. The preset is adopted in a **separate session in `~/Projects/homelab`** — start it from `docs/HANDOVER_HOMELAB.md` |
+| AFK mode | off |
 
 <!-- Update this block after every completed gate. -->
 
@@ -35,6 +35,7 @@ gates hold from any session or terminal. After a fresh clone, run:
 | docs/DEBUGGING_GUIDE.md | the evidence trail and a symptom→cause table (Phase 8) |
 | docs/OPERATIONS_RUNBOOK.md | numbered procedures, including what has NOT been drilled (Phase 8) |
 | docs/ARCHITECTURE_REFERENCE.md | the system as built, module by module (Phase 8) |
+| docs/HANDOVER_HOMELAB.md | what the homelab session needs to adopt the preset (Phase 10) |
 
 ## Repo
 

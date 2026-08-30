@@ -69,3 +69,20 @@ that happens, not the first.
 | L7 · Home Assistant | 2026-08-30 | Kenny's explicit go for `automation.homelab_alert_webhook`; created through the HA API and proven live — a firing alert dispatched, a resolved alert stopped at the condition. Mini-round M1 shortened the chain: the switchboard delivers straight to HA, since it is already the kyu consumer that acks only after delivery, and hub-bridge is not deployed | SCOPE.md G6 amendment |
 | L1-L6 · report | 2026-08-30 | All six milestones signed off with their evidence; coverage confirmed with no silent gaps; the five build-time decisions ratified (dead-letter on an unrenderable message, headers config-only, inbound payload must be JSON, 60 s default lease, KYU_IMAGE gating); **L6b added** because assembly was missing from the plan | this document + FEATURES.md |
 | L1-L6 · AFK build | 2026-08-30 | built, tested and landed on `main` with green CI per milestone; combined report form pending | commits 368401f…8098d65 |
+
+### Phase 10 · Retrospective — 2026-08-30
+
+Kenny adopted all six lessons, the ecosystem entry, and a separate
+session for the homelab preset. The outcome is a committed diff on
+`~/Projects/dev-procedure` (`cdf5872`): the shipped defaults must pass
+their own config validation in a test (Phase 2), one milestone is always
+assembly (Phase 5), the reasoned-vs-measured sweep covers the *order* of
+the first live calls (Phase 7), the pre-gate scanner runs over all
+documents and hunts for ids the assistant itself wrote down (Phase 8), a
+form pill's value is written from Kenny's side (form protocol), and the
+architecture critic always asks which question a health endpoint answers.
+
+With that, all eleven phases are walked. What is deliberately not done:
+the preset is adopted in the homelab project's own mini-round, and
+Alertmanager — the reason this exists — is still on hold, so S1 remains
+unmet and unclaimed.
