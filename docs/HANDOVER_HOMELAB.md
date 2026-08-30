@@ -35,12 +35,17 @@ with a **mini-round in that project**, not with an edit.
    container's environment. The scope document carries a dated correction
    saying exactly this — an earlier version claimed `latch run`, which
    cannot work for a distroless container started by compose.
-3. **The deployed config must not go into a public repository.** The
+3. **The deployed config must not go into a public repository — and
+   `kennypassenier/homelab` is public too** (checked, 2026-08-30). The
    profile that matters names the Home Assistant webhook id, and that id
    is the credential for the notification dispatcher. This project's own
-   repo is public, so its example config carries a placeholder. Check
-   where the homelab repo actually stores per-stack config before writing
-   the real one.
+   repo is public as well, which is why its example config carries a
+   placeholder. So the real config needs somewhere that is neither: the
+   host vault beside the secrets, or latch, or a private path — that
+   choice belongs to the mini-round, and it should be made deliberately
+   rather than by whoever writes the file first. This exact class of
+   mistake already happened once in this project: the webhook id was
+   written into a public SCOPE.md and only the pre-gate scan caught it.
 
 ## What the drill proved, and what it did not
 
