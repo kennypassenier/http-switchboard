@@ -7,13 +7,16 @@ shape it happens to speak; HTTPSwitchboard translates it and delivers it
 where *our* configuration says — the sender never knows the receiver, and
 the receiver never knows the sender.
 
-> **Status, 2026-08-30: built and tested, not yet deployed.** Every
-> feature on the frozen list is implemented, with 99 tests green
-> including six end-to-end suites against a real kyu message hub in a
-> container. The service has **not** been deployed to a real machine, no
-> genuine Alertmanager alert has travelled the whole chain, and the
-> restore procedure has not been drilled. `docs/TEST_PLAN.md` says which
-> claims rest on what.
+> **Status, 2026-08-30: built, tested, and drilled on real hardware —
+> not yet released.** Every feature on the frozen list is implemented,
+> with 99 tests green including six end-to-end suites against a real kyu
+> message hub. On 2026-08-30 the whole chain ran on real machines: a
+> message published on the production hub was translated by this service
+> on a throwaway container and arrived in Home Assistant, and the
+> restore-from-zero procedure was drilled. What is still missing is
+> **Alertmanager itself**, which is not deployed, so the flagship
+> criterion — a *genuine* alert travelling the chain — is not claimed.
+> `docs/TEST_PLAN.md` says which claims rest on what.
 
 The first customer is Prometheus Alertmanager, whose webhook format is
 fixed and does not fit Home Assistant's receiver:

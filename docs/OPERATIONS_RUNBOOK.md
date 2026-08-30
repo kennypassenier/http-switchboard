@@ -80,12 +80,19 @@ There is no state to restore beyond that: the service stores nothing
 (NG3). The config lives in git, the secret in latch, the container in the
 preset.
 
-> **Honest status, 2026-08-30.** Steps 1, 4 and 5 have been run in the
-> test suite and by hand; steps 2 and 3 have NOT — the container has not
-> been deployed to Kenny's Proxmox yet, and the preset has not been added
-> to the homelab repository. Until that drill is done, this is a plan and
-> not a proven procedure, which is exactly the distinction M3 was written
-> to force.
+> **Drilled on 2026-08-30 — this is a proven procedure, not a plan.**
+> On a scratch container (`192-scratch-http-switchboard`, 10.10.10.92,
+> deleted afterwards) the whole thing was destroyed and rebuilt from
+> nothing: `pct destroy`, recreate, push the binary, the config, the unit
+> and the secret, `systemctl enable --now`, and one message published on
+> the real hub arrived at Home Assistant again. Timings from that run:
+> the rebuilt service was active within 5 seconds and the message was
+> delivered on its first poll.
+>
+> One step remains untested: deploying **through the homelab preset**
+> rather than by hand. That belongs to the homelab project, which is
+> where the preset lands (Kenny's sequence: fold it in just before the
+> retrospective).
 
 ## 6 · The container, when there is no shell to help you
 

@@ -52,17 +52,23 @@ dependency, it silently deletes classes of behaviour (standing rule 9).
 
 ## Not covered, by decision
 
-- **S1, the flagship criterion, is not met and is not claimed.** "A
-  genuine Alertmanager alert travels the whole chain" cannot be proven
-  until the service is deployed; what exists today is the Home Assistant
-  half, proven with two test posts, and every hop before it proven
-  separately. Kenny's decision at the Phase 7 gate (2026-08-30): **Later**
-  — it belongs to the deployment drill on the scratch LXC, and until then
-  S1 stays open. The gate log and the operations runbook say the same
-  thing, so no document reads as though it were done.
-- **The restore drill (M3) has not been run.** The runbook's procedure 5
-  states which of its steps have never been executed. It closes with the
-  same deployment drill.
+- **S1, the flagship criterion, is still not met — but the gap is now one
+  hop, not five.** The deployment drill of 2026-08-30 ran the whole chain
+  on real machines: a message published on the **real kyu hub** was picked
+  up by the service on a scratch container, translated, delivered to the
+  Home Assistant webhook, and the automation ran to completion (traces at
+  09:30:06 and, after the restore, 09:31:29). What is still missing is
+  **Alertmanager itself**, which is not deployed — that is the homelab
+  project's metrics round, deliberately on hold. So: the chain is proven;
+  the *genuine Alertmanager alert* S1 asks for is not, and is not claimed.
+- **The restore drill (M3) HAS now been run** (2026-08-30) and the runbook
+  records it as a proven procedure. One step within it remains untested:
+  deploying through the homelab preset rather than by hand, which belongs
+  to the homelab project.
+- **Deployment through the homelab orchestrator is unproven.** The drill
+  installed the static binary under systemd; the container image is
+  proven by the CI job, and the preset is a proposal until the homelab
+  project adopts it.
 - **A non-JSON destination is refused rather than supported.** Escaping
   is a mechanism only for JSON; supporting another content type needs a
   safe escaping rule first, and that is a mini-round rather than a quiet
