@@ -15,9 +15,9 @@ gates hold from any session or terminal. After a fresh clone, run:
 
 | Field | Value |
 |---|---|
-| Current phase | 8 · Documentation |
-| Last completed gate | Mini-round MR2 (2026-08-30): W12 added, Desired, built |
-| Next gate | Phase 8 per-document approval form |
+| Current phase | 9 · Release & lifecycle (after the deployment drill) |
+| Last completed gate | Phase 8 documents approved (2026-08-30) |
+| Next gate | Deployment drill on a scratch LXC, then the Phase 9 "Tag & release?" form |
 | AFK mode | off (L1-L6 AFK run closed 2026-08-30) |
 
 <!-- Update this block after every completed gate. -->

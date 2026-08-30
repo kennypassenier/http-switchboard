@@ -116,3 +116,17 @@ The service reads secrets once, at startup, on purpose. So:
 
 Forgetting step 3 shows up as `state: "denied"` on every profile, with a
 log line naming the Apps page. It is not silent.
+
+### The Home Assistant webhook id, and one accepted exposure
+
+The alert automation's webhook id is deployment configuration and is
+deliberately not written down in this repository, which is public.
+
+**Accepted, by Kenny's decision at the Phase 8 gate (2026-08-30):** the
+id was written into `docs/SCOPE.md` when the automation was first
+recorded, and that commit was pushed before the mistake was caught. It
+has been removed from the file, but it remains in the pushed history.
+Kenny chose **not** to rotate it: the automation is `local_only`, so the
+id is only usable from inside the LAN. Recorded here rather than left as
+a silent hole — if the trigger ever loses `local_only`, rotating it is
+the first thing to do.
