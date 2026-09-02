@@ -96,3 +96,48 @@ project's flagship criterion: **Alertmanager is not deployed**. That is
 the homelab project's own metrics round (`node_exporter`, `alertmanager`,
 `smartctl_exporter`), on hold since 2026-08-29 waiting for exactly this
 service to exist. It exists now.
+
+---
+
+## Request from the homelab project — 2026-09-02: it only speaks when something is wrong
+
+Measured on the running service (CT 109, `109-app-kyu`), not inferred:
+
+```
+journalctl -u http-switchboard --since "24 hours ago" | wc -l   →  9
+```
+
+Nine lines in a day, and all nine are `level=warn`. They are good lines — the
+hub going down at 00:41 and coming back thirty seconds later is exactly what
+somebody would want to know, and the messages carry a "What now:" sentence,
+which is better than most. The problem is what is missing between them.
+
+For comparison on the same container: `kyu` writes 454 lines in 24 h,
+`kyu-runner` 30.
+
+**What the homelab cannot answer today:** did the switchboard translate
+anything at all today, and how much? A day where it forwards 200 messages and
+a day where it is wedged and forwards none look identical from outside —
+both produce silence. The 00:41 hub outage was noticed by nobody at the time,
+and would have been noticed by nobody later either, because there is no
+baseline of normal activity to compare it against.
+
+**The request, and it is a request:** something at INFO on the successful
+path. One line per delivered message would be plenty, or a periodic summary
+(`translated 37 messages in the last hour, 0 failures`) if per-message is too
+noisy for a service that may burst. You know the traffic shape and we do not.
+
+**Why now.** Kenny looked at the Grafana dashboards on 2026-09-02 and found
+"no data" everywhere for this container. Two causes underneath: CT 109 runs no
+promtail at all, so nothing reaches Loki — that half is ours and we are fixing
+it. The other half is that even with promtail, nine warning lines a day is not
+a picture of a working service. His words: *"kijk is of die daadwerkelijk logs
+schrijven, als dit gewenst is kan de software daarop aangepast worden."*
+
+**If the answer is no,** that is a real answer: a translator that is silent by
+design when nothing needs saying is a defensible choice, and we will write it
+down as deliberate quiet rather than as a gap. Say so and we will record it
+that way.
+
+No session for this project was running when this was written, which is why it
+is a note in the repository rather than a message.
