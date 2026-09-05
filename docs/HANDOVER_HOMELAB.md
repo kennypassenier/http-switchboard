@@ -1,5 +1,14 @@
 # Handover — folding HTTPSwitchboard into Homelab Rust
 
+> **2.0.0 (chassis migration, 2026-09-05):** the compose preset described
+> below is retired and `deploy/homelab-preset/` is gone. The switchboard now
+> deploys like every chassis service: native binary at
+> `/opt/http-switchboard/bin/http-switchboard`, the hardened unit in
+> `deploy/http-switchboard.service`, and the homelab stack file
+> `deploy/service.yml` (with `update_cmd`, since self-update is on). The
+> Alertmanager and homelab-preset questions below stay open as questions;
+> their delivery vehicle changed. See CHANGELOG 2.0.0 → Migration.
+
 Written 2026-08-30 for a session opened in `~/Projects/homelab`. Kenny's
 sequence: the deployment drill first (done), then the rest of the
 procedure (done), and **just before the retrospective, fold this project

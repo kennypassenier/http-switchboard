@@ -42,9 +42,12 @@ fn l6b_a_broken_config_stops_the_binary_with_a_remedy() {
     let path = dir.join("broken.toml");
     std::fs::write(&path, "[[profiles]]\nname = \"a\"\n").unwrap();
 
+    // 2.0.0: the kit's --check; the state dir is the kit's probe target.
     let out = std::process::Command::new(binary())
-        .arg("--check-config")
+        .args(["--check", "--config"])
         .arg(&path)
+        .arg("--state-dir")
+        .arg(&dir)
         .output()
         .expect("the binary must be built");
 
@@ -61,9 +64,16 @@ fn l6b_a_broken_config_stops_the_binary_with_a_remedy() {
 fn l6b_the_shipped_example_config_passes_the_check() {
     // The config that ships with the project is checked by the binary
     // itself, not only by a unit test that happens to parse it.
+    let state = std::env::temp_dir().join(format!("hsw-check-{}", std::process::id()));
+    std::fs::create_dir_all(&state).unwrap();
     let out = std::process::Command::new(binary())
-        .arg("--check-config")
-        .arg("deploy/config.example.toml")
+        .args([
+            "--check",
+            "--config",
+            "deploy/config.example.toml",
+            "--state-dir",
+        ])
+        .arg(&state)
         .env("KYU_TOKEN", "vault-value")
         .output()
         .expect("the binary must be built");

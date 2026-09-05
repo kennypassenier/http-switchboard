@@ -11,6 +11,7 @@
 //! Essential against.
 
 use std::collections::BTreeMap;
+use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -258,6 +259,51 @@ fn now_unix() -> u64 {
 /// broken by its own data is a log line you cannot query.
 fn json_string(value: &str) -> String {
     serde_json::Value::String(value.to_string()).to_string()
+}
+
+// ── chassis glue (2.0.0) ─────────────────────────────────────────────────
+
+/// One `/healthz` subsystem per profile: the kit renders
+/// `{"ok","detail"}` and answers 503 while any profile is failing, denied
+/// or cut off from the hub — the old `?strict=1` semantics, now the only
+/// ones (a plain liveness poll uses `--healthcheck`, which counts 503 as
+/// alive).
+pub struct ProfileSubsystem {
+    name: String,
+    registry: Arc<Registry>,
+}
+
+impl ProfileSubsystem {
+    pub fn new(name: &str, registry: Arc<Registry>) -> Self {
+        Self {
+            name: name.to_string(),
+            registry,
+        }
+    }
+}
+
+impl chassis::Subsystem for ProfileSubsystem {
+    fn name(&self) -> &str {
+        &self.name
+    }
+    fn check(&self) -> chassis::SubsystemStatus {
+        match self.registry.health_of(&self.name) {
+            None | Some(Health::Starting) => chassis::SubsystemStatus::ok("starting"),
+            Some(Health::Working) => chassis::SubsystemStatus::ok("working"),
+            Some(Health::Failing) => chassis::SubsystemStatus::failing("failing"),
+            Some(Health::Denied) => chassis::SubsystemStatus::failing("denied"),
+            Some(Health::HubDown) => chassis::SubsystemStatus::failing("hub-down"),
+        }
+    }
+}
+
+/// The `switchboard_*` metrics, appended verbatim to the kit's `/metrics`.
+pub struct RegistryMetrics(pub Arc<Registry>);
+
+impl chassis::ScrapeSource for RegistryMetrics {
+    fn scrape(&self) -> String {
+        self.0.metrics()
+    }
 }
 
 #[cfg(test)]

@@ -5,6 +5,56 @@ All notable changes to HTTPSwitchboard. The format is loosely
 where the promise is about the **config file format**, the two HTTP
 endpoints and the CLI verbs — not about the internals.
 
+## 2.0.0 — 2026-09-05 (unreleased; branch `chassis-migration`)
+
+Built on [chassis-rs](https://github.com/kennypassenier/chassis-rs) v1.1.0.
+The switchboard — profiles, translation, sinks, the hub pump, the per-path
+`inbound_token` door, the in-flight bound — is unchanged; the kit now owns
+the command line, configuration layers, logging of its own layers,
+`/healthz`, `/metrics`, the graceful shutdown and signed self-update. This
+breaks the CLI verbs and the `/healthz` body, hence 2.0.0.
+
+### Migration
+
+- **Command line.** `http-switchboard <config.toml> --listen …` becomes
+  `http-switchboard --config <config.toml> --listen …` (or
+  `HTTP_SWITCHBOARD_CONFIG` / `HTTP_SWITCHBOARD_LISTEN` in the environment
+  file; the default config path is `<state_dir>/config.toml`);
+  `--check-config <path>` becomes `--check --config <path>`; `--healthcheck`
+  keeps its flag (503 now counts as alive: the process answers); `test …`
+  is unchanged. An unknown argument exits 1.
+- **A state directory is required** (`HTTP_SWITCHBOARD_STATE_DIR`, default
+  `/var/lib/http-switchboard`): `--check` refuses a missing or unwritable
+  one; it holds the self-update state only — the switchboard itself still
+  stores nothing.
+- **`/healthz`** answers the kit's shape, one subsystem per profile:
+  `{"status","version","subsystems":{<profile>:{"ok","detail"}}}`, and
+  **503 whenever a profile is failing, denied or cut off from the hub** —
+  the old `?strict=1` semantics are now the only ones (Uptime Kuma already
+  probes with `?strict=1`; the query is ignored). A plain liveness poll is
+  `--healthcheck`. `/metrics` keeps every `switchboard_*` series and gains
+  the kit's build-info, uptime and request counters.
+- **The config file is shared** with the kit's knobs (`listen`, `log`, …);
+  the switchboard strips them before its own `deny_unknown_fields` parse.
+  `${VAR}` references, `[kyu]`, `[reporting]` and `[[profiles]]` are
+  unchanged.
+- **Deployment.** Install path `/opt/http-switchboard/bin/http-switchboard`,
+  the hardened `Type=notify` unit in `deploy/http-switchboard.service`
+  (fixed user, no `DynamicUser`), environment file
+  `/etc/http-switchboard/http-switchboard.env`, homelab stack file
+  `deploy/service.yml` with `update_cmd`; the never-adopted compose preset
+  under `deploy/homelab-preset/` is gone. The container image is the kit's
+  Dockerfile (Debian trixie, glibc).
+- **Self-update is on.** Releases are glibc binaries named
+  `http-switchboard` with `SHA256SUMS`, `SHA256SUMS.minisig` (trusted comment
+  `kennypassenier/http-switchboard v<version>`) and `VERSION`; the release
+  workflow is the kit's, signing is `scripts/sign-release.sh`. FEATURES M1
+  ("no self-update, by decision") is amended.
+- **Logging.** The switchboard's own JSON event lines still go to stdout as
+  before; the kit's access lines and lifecycle lines go to stderr
+  (`HTTP_SWITCHBOARD_LOG_FORMAT=json` for one object per line). Folding the
+  switchboard's lines into the kit's logger is a follow-up decision.
+
 ## 1.0.0 — 2026-08-30
 
 The first version. 1.0.0 is a promise about the **config file format**,

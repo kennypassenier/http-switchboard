@@ -1,0 +1,24 @@
+# The homelab's stack file for a native service (AR18; `homelab adopt`).
+# http-switchboard is a native service of the `kyu` stack on CT 109
+# (hostname 109-app-kyu); the authoritative copy lives in the homelab repo at
+# stacks/kyu/http-switchboard/service.yml — this is what the kit renders for it.
+# vmid and hostname are filled in at adoption: the hostname MUST be
+# <vmid>-app-<stack>, the homelab validates it. update_cmd reproduces the
+# unit line for line — same user, working directory and EnvironmentFile —
+# and waits for the result (critic #7), so "already current" is exit 0
+# without a restart and a failure carries its stderr.
+stack_name: http-switchboard
+vmid: 109
+hostname: 109-app-kyu
+unit: http-switchboard
+binary: /opt/http-switchboard/bin/http-switchboard
+env_file: /etc/http-switchboard/http-switchboard.env
+data_dirs:
+  - /var/lib/http-switchboard
+update_cmd: >-
+  systemd-run --wait --pipe --collect --uid=http-switchboard --gid=http-switchboard
+  --property=EnvironmentFile=/etc/http-switchboard/http-switchboard.env
+  --property=WorkingDirectory=/var/lib/http-switchboard
+  /opt/http-switchboard/bin/http-switchboard update
+release_repo: kennypassenier/http-switchboard
+release_asset: http-switchboard

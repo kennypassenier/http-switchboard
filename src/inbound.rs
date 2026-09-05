@@ -55,7 +55,10 @@ pub struct Inbound {
     reporting: Option<String>,
 }
 
-pub fn router(
+/// The profile paths only — what the kit merges as public routes (2.0.0).
+/// The per-path `inbound_token` check and the in-flight bound stay in the
+/// handler; the body cap is the kit's (`max_body_bytes`, same default).
+pub fn profile_router(
     config: &Config,
     sink: Arc<dyn Sink>,
     clock: Arc<dyn Clock>,
@@ -84,6 +87,19 @@ pub fn router(
         });
         router = router.route(&path, post(handle).with_state(state));
     }
+    router
+}
+
+/// The pre-2.0.0 stand-alone router: profile paths plus `/healthz`,
+/// `/metrics` and the body cap. Kept for the in-process suites; the binary
+/// gets these three from the kit.
+pub fn router(
+    config: &Config,
+    sink: Arc<dyn Sink>,
+    clock: Arc<dyn Clock>,
+    registry: Arc<Registry>,
+) -> Router {
+    let router = profile_router(config, sink, clock, Arc::clone(&registry));
 
     // AR11: the same listener, on paths the config refuses to let a
     // profile claim. Neither answers anything a message put there.

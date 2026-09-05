@@ -1,6 +1,6 @@
 [package]
 name = "http-switchboard"
-version = "1.0.0"
+version = "2.0.0"
 edition = "2021"
 rust-version = "1.97"
 description = "Accepts a message in one shape and delivers it in another, where the configuration chooses the destination"
@@ -8,6 +8,9 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/kennypassenier/http-switchboard"
 
 [dependencies]
+# The shared foundation (chassis-rs): command line, config layers, logging,
+# /healthz, /metrics, shutdown, signed self-update. Pinned to a tag.
+chassis = { git = "https://github.com/kennypassenier/chassis-rs", tag = "v1.1.0", default-features = false, features = ["core", "self-update"] }
 axum = { version = "0.8.9", default-features = false, features = ["http1", "tokio", "query"] }
 minijinja = { version = "2.24.0", features = ["json"] }
 reqwest = { version = "0.13.4", default-features = false, features = ["rustls"] }

@@ -6,7 +6,7 @@ should work; anything not yet exercised says so.
 ## 1 · Check a config before restarting anything
 
 ```bash
-http-switchboard --check-config /etc/http-switchboard/config.toml
+http-switchboard --check --config /etc/http-switchboard/config.toml
 ```
 
 Exit 0 and a profile count means it would start. Any other exit prints
@@ -28,7 +28,7 @@ values) and the rendered body. Nothing is sent. Inside the container,
 which has no shell:
 
 ```bash
-docker run --rm --entrypoint /usr/local/bin/http-switchboard \
+docker run --rm --entrypoint /opt/http-switchboard/bin/http-switchboard \
   -v /path/config.toml:/c.toml:ro -v /path/message.json:/m.json:ro \
   ghcr.io/kennypassenier/http-switchboard:latest \
   test --config /c.toml --profile alertmanager --input /m.json
@@ -67,12 +67,16 @@ startup, on purpose.
 
 **Not yet exercised — see the note at the end.** The intended procedure:
 
+> **2.0.0:** "the preset" below is history — the switchboard deploys as a
+> native chassis service (`deploy/service.yml` + `deploy/http-switchboard.service`,
+> install path `/opt/http-switchboard/bin`). The verification steps still hold.
+
 1. `git clone` this repository.
 2. Deploy the preset from `~/Projects/homelab` onto a NEW container (A1
    forbids the orchestrator managing an existing guest).
 3. The orchestrator resolves `KYU_TOKEN` with `latch cat` and composes it
    into the container's environment from the host vault.
-4. Copy the deployment config into place and run `--check-config`.
+4. Copy the deployment config into place and run `--check --config <path>`.
 5. Publish one recorded alert onto `alerts.raw` and confirm it arrives in
    Home Assistant.
 
@@ -101,9 +105,9 @@ work from outside it:
 
 ```bash
 docker logs <container>                    # JSON lines, one per message
-docker exec <container> /usr/local/bin/http-switchboard --healthcheck \
+docker exec <container> /opt/http-switchboard/bin/http-switchboard --healthcheck \
   http://127.0.0.1:8080/healthz            # the binary asks itself
-docker run --rm --entrypoint /usr/local/bin/http-switchboard \
+docker run --rm --entrypoint /opt/http-switchboard/bin/http-switchboard \
   -v /path/config.toml:/c.toml:ro -v /path/message.json:/m.json:ro \
   <image> test --config /c.toml --profile <name> --input /m.json
 ```

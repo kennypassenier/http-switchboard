@@ -26,8 +26,12 @@ fn free_port() -> u16 {
 }
 
 fn spawn(config: &std::path::Path, port: u16) -> Child {
+    // 2.0.0: the kit's argv; the config's directory doubles as the state dir.
     Command::new(binary())
+        .arg("--config")
         .arg(config)
+        .arg("--state-dir")
+        .arg(config.parent().expect("the config lives in a directory"))
         .arg("--listen")
         .arg(format!("127.0.0.1:{port}"))
         .stdout(Stdio::null())

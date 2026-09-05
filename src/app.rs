@@ -64,27 +64,19 @@ impl App {
         }
     }
 
-    /// Run until `shutdown` resolves: one pump task per kyu profile, one
-    /// HTTP listener for the inbound profiles and the two endpoints.
-    pub async fn run(
-        self,
-        listen: SocketAddr,
-        shutdown: impl Future<Output = ()> + Send + 'static,
-    ) -> Result<(), String> {
-        let router = crate::inbound::router(
+    /// The inbound routes only (profile paths), for the kit to merge as
+    /// public routes; `/healthz` and `/metrics` are the kit's since 2.0.0.
+    pub fn profile_router(&self) -> axum::Router {
+        crate::inbound::profile_router(
             &self.config,
             Arc::clone(&self.sink),
             Arc::clone(&self.clock),
             Arc::clone(&self.registry),
-        );
+        )
+    }
 
-        let listener = tokio::net::TcpListener::bind(listen).await.map_err(|e| {
-            format!(
-                "cannot listen on {listen}: {e}. What now: check that nothing else holds that \
-                 address, and that the container publishes it."
-            )
-        })?;
-
+    /// Start one pump task per kyu profile; the returned sender stops them.
+    pub fn spawn_pumps(&self) -> tokio::sync::broadcast::Sender<()> {
         let (stop_tx, _) = tokio::sync::broadcast::channel::<()>(1);
         for profile in &self.config.profiles {
             let Source::Kyu { .. } = &profile.source else {
@@ -209,6 +201,32 @@ impl App {
                 }
             });
         }
+
+        stop_tx
+    }
+
+    /// Run until `shutdown` resolves: one pump task per kyu profile, one
+    /// HTTP listener for the inbound profiles and the two endpoints.
+    pub async fn run(
+        self,
+        listen: SocketAddr,
+        shutdown: impl Future<Output = ()> + Send + 'static,
+    ) -> Result<(), String> {
+        let router = crate::inbound::router(
+            &self.config,
+            Arc::clone(&self.sink),
+            Arc::clone(&self.clock),
+            Arc::clone(&self.registry),
+        );
+
+        let listener = tokio::net::TcpListener::bind(listen).await.map_err(|e| {
+            format!(
+                "cannot listen on {listen}: {e}. What now: check that nothing else holds that \
+                 address, and that the container publishes it."
+            )
+        })?;
+
+        let stop_tx = self.spawn_pumps();
 
         let result = axum::serve(listener, router)
             .with_graceful_shutdown(shutdown)

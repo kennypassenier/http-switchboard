@@ -73,16 +73,20 @@ body = '''{{"x": {{{{ x }}}}}}'''
         .output()
         .unwrap();
     assert!(!out.status.success(), "a dead service must fail the check");
+    let said = String::from_utf8_lossy(&out.stderr);
+    // 2.0.0: the kit's --healthcheck words it "… failed … What now: …".
     assert!(
-        String::from_utf8_lossy(&out.stderr).contains("unhealthy"),
-        "and say so: {}",
-        String::from_utf8_lossy(&out.stderr)
+        said.contains("unhealthy") || said.contains("failed"),
+        "and say so: {said}"
     );
 
     // Live.
     let _child = Killed(
         Command::new(binary())
+            .args(["--config"])
             .arg(&config)
+            .args(["--state-dir"])
+            .arg(&dir)
             .arg("--listen")
             .arg(format!("127.0.0.1:{port}"))
             .stdout(Stdio::null())
@@ -139,7 +143,10 @@ body = '''{{"x": {{{{ x }}}}}}'''
 
     let port = free_port();
     let child = Command::new(binary())
+        .args(["--config"])
         .arg(&config)
+        .args(["--state-dir"])
+        .arg(&dir)
         .arg("--listen")
         .arg(format!("127.0.0.1:{port}"))
         .env("TEST_HEADER_SECRET", "Bearer never-print-this-value")
@@ -195,13 +202,16 @@ fn k10_the_command_line_fails_closed_and_says_what_to_do() {
     // here lands in the emergency path (Phase 7, G7).
     let dir = tempdir("cli");
 
-    // No arguments: usage, non-zero.
-    let out = Command::new(binary()).output().unwrap();
+    // An unknown argument: the kit refuses with the usage, exit 1.
+    let out = Command::new(binary()).arg("--frobnicate").output().unwrap();
     assert!(!out.status.success());
-    assert!(String::from_utf8_lossy(&out.stderr).contains("http-switchboard"));
+    assert!(String::from_utf8_lossy(&out.stderr).contains("--help"));
 
     // A config file that does not exist.
     let out = Command::new(binary())
+        .args(["--state-dir"])
+        .arg(&dir)
+        .arg("--config")
         .arg(dir.join("nowhere.toml"))
         .output()
         .unwrap();
@@ -225,7 +235,10 @@ body = '''{"x": 1}'''
     )
     .unwrap();
     let out = Command::new(binary())
+        .args(["--config"])
         .arg(&config)
+        .args(["--state-dir"])
+        .arg(&dir)
         .args(["--listen", "not-an-address"])
         .output()
         .unwrap();

@@ -72,7 +72,7 @@ Three habits worth knowing before writing a profile:
 
 ```bash
 http-switchboard /etc/http-switchboard/config.toml
-http-switchboard --check-config /etc/http-switchboard/config.toml
+http-switchboard --check --config /etc/http-switchboard/config.toml
 http-switchboard test --profile alertmanager --input recorded.json
 http-switchboard --healthcheck http://127.0.0.1:8080/healthz
 ```
