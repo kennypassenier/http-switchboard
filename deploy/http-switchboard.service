@@ -11,12 +11,12 @@
 # Install: install -D -m755 http-switchboard /opt/http-switchboard/bin/http-switchboard (the
 # service owns that directory: chown -R http-switchboard: /opt/http-switchboard), copy
 # this file to /etc/systemd/system/http-switchboard.service, create the user
-# (http-switchboard), the state dir (/var/lib/http-switchboard) and the env file
-# (/etc/http-switchboard/http-switchboard.env, 0640 root:http-switchboard), then
+# (http-switchboard), the state dir (/appdata/kyu/http-switchboard-config) and the env file
+# (/appdata/kyu/http-switchboard-config/token.env, 0640 root:http-switchboard), then
 # systemctl enable --now http-switchboard.
 
 [Unit]
-Description=http-switchboard — Accepts a message in one shape and delivers it in another, where the configuration chooses the destination
+Description=http-switchboard — Translates message shapes between webhooks and the kyu hub
 Wants=network-online.target
 After=network-online.target
 StartLimitIntervalSec=0
@@ -26,8 +26,8 @@ StartLimitBurst=0
 Type=notify
 User=http-switchboard
 Group=http-switchboard
-EnvironmentFile=/etc/http-switchboard/http-switchboard.env
-WorkingDirectory=/var/lib/http-switchboard
+EnvironmentFile=/appdata/kyu/http-switchboard-config/token.env
+WorkingDirectory=/appdata/kyu/http-switchboard-config
 ExecStartPre=/opt/http-switchboard/bin/http-switchboard --check
 ExecStart=/opt/http-switchboard/bin/http-switchboard
 Restart=always
@@ -37,6 +37,10 @@ KillSignal=SIGTERM
 # is the one that decides, not systemd's.
 TimeoutStopSec=60
 # Mirrored so `--check` can warn when the shutdown timeout would outlive it (critic #20).
+# Explicit, not the binary's compiled-in default (CF-6 d, 2026-09-06): the
+# unit says where the state lives, so a binary built with another default
+# still runs against this machine's measured directory.
+Environment=HTTP_SWITCHBOARD_STATE_DIR=/appdata/kyu/http-switchboard-config
 Environment=HTTP_SWITCHBOARD_TIMEOUT_STOP_SECS=60
 NoNewPrivileges=yes
 PrivateTmp=yes
@@ -45,7 +49,7 @@ ProtectHome=yes
 ProtectKernelTunables=yes
 ProtectControlGroups=yes
 RestrictSUIDSGID=yes
-ReadWritePaths=/var/lib/http-switchboard /var/lib/http-switchboard-pre-update /opt/http-switchboard/bin
+ReadWritePaths=/appdata/kyu/http-switchboard-config /appdata/kyu/http-switchboard-config-pre-update /opt/http-switchboard/bin
 # S2: the swap needs write access to the binary's OWN directory only; a
 # code-execution bug can then replace this service's binary, not latch or
 # its neighbours. The rest is systemd's free hardening for a network daemon.

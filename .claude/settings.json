@@ -1,5 +1,4 @@
 {
-  "//": "Merge into <project>/.claude/settings.json (Phase 5). Requires .claude/hooks/check-commit.sh and gates.sh in the project.",
   "hooks": {
     "PreToolUse": [
       {

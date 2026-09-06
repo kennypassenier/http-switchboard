@@ -1,1 +1,16 @@
-/target
+# Build output
+/target/
+/target-trixie/
+
+# Local secrets and scratch — never committed (standing rule 10)
+.env
+.env.*
+!.env.example
+/dist/
+
+# Editor noise
+*.swp
+.idea/
+.vscode/
+
+# --- project additions below (kept by chassis sync) ---

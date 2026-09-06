@@ -1,12 +1,6 @@
 #!/usr/bin/env bash
-# Git-native gate (standing rule 19): holds from any session, tool or
-# terminal, not only from a Claude Code session. Runs the project's
-# gates in the repo the commit actually targets.
+# Repo-scoped quality gate (standing rule 7): fires for EVERY commit in
+# this repository — any session, any terminal, any tool.
+# Enable in a fresh clone with:  git config core.hooksPath .githooks
 set -euo pipefail
-root=$(git rev-parse --show-toplevel)
-gates="$root/.claude/hooks/gates.sh"
-[ -x "$gates" ] || exit 0
-if ! (cd "$root" && "$gates"); then
-  echo "COMMIT BLOCKED — gates failed (standing rule 7). Fix, then retry." >&2
-  exit 1
-fi
+exec "$(git rev-parse --show-toplevel)/.claude/hooks/gates.sh"

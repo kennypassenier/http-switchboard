@@ -7,6 +7,15 @@ endpoints and the CLI verbs — not about the internals.
 
 ## [Unreleased]
 
+### Changed
+
+- **chassis-rs 1.1.0 → 1.7.1** and the scaffold synced (http-switchboard's
+  turn, 2026-09-06): the kit's CI, hooks, `deny.toml`, Dockerfile and deploy
+  files come from `chassis sync --write`; the real-kyu end-to-end suite
+  (`KYU_IMAGE`) is the project gate in `.claude/hooks/gates.project.sh`;
+  `.chassis.toml` records CT 109's measured config dir, token env file and
+  vmid 109. No behaviour change in the switchboard.
+
 ## [2.0.0] - 2026-09-06
 
 Built on [chassis-rs](https://github.com/kennypassenier/chassis-rs) v1.1.0.
