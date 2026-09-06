@@ -7,6 +7,8 @@ endpoints and the CLI verbs — not about the internals.
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-09-06
+
 Built on [chassis-rs](https://github.com/kennypassenier/chassis-rs) v1.1.0.
 The switchboard — profiles, translation, sinks, the hub pump, the per-path
 `inbound_token` door, the in-flight bound — is unchanged; the kit now owns
