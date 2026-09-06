@@ -150,6 +150,9 @@ body = '''{{"x": {{{{ x }}}}}}'''
         .arg("--listen")
         .arg(format!("127.0.0.1:{port}"))
         .env("TEST_HEADER_SECRET", "Bearer never-print-this-value")
+        // D-H1: the switchboard's own events and the kit's lines share one
+        // JSON shape; this test reads that shape.
+        .env("HTTP_SWITCHBOARD_LOG_FORMAT", "json")
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
@@ -190,6 +193,25 @@ body = '''{{"x": {{{{ x }}}}}}'''
         !printed.contains("never-print-this-value"),
         "a secret reached the log of the running service: {printed}"
     );
+    // D-H1: every line the running service printed is one JSON object of
+    // the kit's shape, and the switchboard's delivery event is among them
+    // with its fields under `fields` — one shape for Loki.
+    let objects: Vec<serde_json::Value> = printed
+        .lines()
+        .filter(|l| l.starts_with('{'))
+        .map(|l| serde_json::from_str(l).unwrap_or_else(|e| panic!("not JSON: {e}\n{l}")))
+        .collect();
+    assert!(
+        !objects.is_empty(),
+        "json mode must emit JSON lines: {printed}"
+    );
+    let delivery = objects
+        .iter()
+        .find(|o| o["fields"]["outcome"] == "failed")
+        .unwrap_or_else(|| panic!("no delivery event with fields.outcome=failed: {printed}"));
+    assert_eq!(delivery["fields"]["profile"], "hook");
+    assert!(delivery["level"].is_string(), "{delivery}");
+    assert!(delivery["timestamp"].is_string(), "{delivery}");
     assert!(
         printed.contains(r#""outcome":"failed""#),
         "the failure should have been logged at all: {printed}"

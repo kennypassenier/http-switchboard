@@ -188,36 +188,36 @@ impl Registry {
     }
 }
 
-/// One line per message — the K11 contract, and what a Loki query filters
-/// on. Per-attempt detail belongs at debug level; this is the summary.
+/// One event per message — the K11 contract, and what a Loki query filters
+/// on. Since 2.0.0 (D-H1) these ride the kit's subscriber as structured
+/// fields, so `HTTP_SWITCHBOARD_LOG_FORMAT=json` yields ONE shape for the
+/// kit's lines and the switchboard's: `fields.profile`, `fields.outcome`,
+/// … under the target `http_switchboard::events`. Per-attempt detail
+/// belongs at debug level; this is the summary.
 pub fn log_message(profile: &str, source: &str, outcome: &str, duration_ms: u64, attempts: u32) {
-    println!(
-        "{}",
-        message_line(profile, source, outcome, duration_ms, attempts)
+    tracing::info!(
+        target: "http_switchboard::events",
+        profile,
+        source,
+        outcome,
+        duration_ms,
+        attempts,
+        "message"
     );
-}
-
-/// The line itself, so a test can assert it is valid JSON with the fixed
-/// fields — W7's bar, which cannot be checked on something that only ever
-/// goes to stdout.
-pub fn message_line(
-    profile: &str,
-    source: &str,
-    outcome: &str,
-    duration_ms: u64,
-    attempts: u32,
-) -> String {
-    format!(
-        r#"{{"ts":{},"level":"info","profile":{},"source":"{source}","outcome":"{outcome}","duration_ms":{duration_ms},"attempts":{attempts}}}"#,
-        now_unix(),
-        json_string(profile)
-    )
 }
 
 /// A state change, logged once rather than on every attempt: a hub that
 /// is away for an hour should produce two lines, not thousands.
 pub fn log_transition(profile: &str, from: Health, to: Health, detail: &str) {
-    println!("{}", transition_line(profile, from, to, detail));
+    tracing::warn!(
+        target: "http_switchboard::events",
+        profile,
+        event = "state_change",
+        from = ?from,
+        to = ?to,
+        detail,
+        "state change"
+    );
 }
 
 /// Something went wrong that is NOT a state change. Kept separate on
@@ -226,25 +226,7 @@ pub fn log_transition(profile: &str, from: Health, to: Health, detail: &str) {
 /// a log line lying about the state it exists to describe (found while
 /// smoke-testing the container image).
 pub fn log_warn(profile: &str, event: &str, detail: &str) {
-    println!("{}", warn_line(profile, event, detail));
-}
-
-pub fn warn_line(profile: &str, event: &str, detail: &str) -> String {
-    format!(
-        r#"{{"ts":{},"level":"warn","profile":{},"event":"{event}","detail":{}}}"#,
-        now_unix(),
-        json_string(profile),
-        json_string(detail)
-    )
-}
-
-pub fn transition_line(profile: &str, from: Health, to: Health, detail: &str) -> String {
-    format!(
-        r#"{{"ts":{},"level":"warn","profile":{},"event":"state_change","from":"{from:?}","to":"{to:?}","detail":{}}}"#,
-        now_unix(),
-        json_string(profile),
-        json_string(detail)
-    )
+    tracing::warn!(target: "http_switchboard::events", profile, event, detail, "warning");
 }
 
 fn now_unix() -> u64 {
@@ -254,20 +236,10 @@ fn now_unix() -> u64 {
         .unwrap_or(0)
 }
 
-/// Quote a value the way JSON needs it. Profile names are already
-/// restricted to a safe charset by the config, but a log line that can be
-/// broken by its own data is a log line you cannot query.
 fn json_string(value: &str) -> String {
     serde_json::Value::String(value.to_string()).to_string()
 }
 
-// ── chassis glue (2.0.0) ─────────────────────────────────────────────────
-
-/// One `/healthz` subsystem per profile: the kit renders
-/// `{"ok","detail"}` and answers 503 while any profile is failing, denied
-/// or cut off from the hub — the old `?strict=1` semantics, now the only
-/// ones (a plain liveness poll uses `--healthcheck`, which counts 503 as
-/// alive).
 pub struct ProfileSubsystem {
     name: String,
     registry: Arc<Registry>,
@@ -351,47 +323,6 @@ mod tests {
             text.contains(r#"switchboard_delivery_duration_ms_total{profile="a"} 42"#),
             "the duration W6 asks for is missing: {text}"
         );
-    }
-
-    #[test]
-    fn w7_every_log_line_is_valid_json_with_the_fixed_fields() {
-        // W7's bar. A line that its own data can break is a line you
-        // cannot query, so the awkward cases are in here on purpose.
-        for (profile, detail) in [
-            ("alertmanager", "plain"),
-            (r#"quote"and\backslash"#, "line\nbreak and \"quotes\""),
-        ] {
-            let line = message_line(profile, "kyu", "delivered", 12, 2);
-            let parsed: serde_json::Value =
-                serde_json::from_str(&line).unwrap_or_else(|e| panic!("not JSON: {line} ({e})"));
-            assert_eq!(parsed["profile"], profile);
-            assert_eq!(parsed["outcome"], "delivered");
-            assert_eq!(parsed["duration_ms"], 12);
-            assert_eq!(parsed["attempts"], 2);
-            assert!(parsed["ts"].is_number());
-
-            let line = transition_line(profile, Health::Working, Health::Denied, detail);
-            let parsed: serde_json::Value =
-                serde_json::from_str(&line).unwrap_or_else(|e| panic!("not JSON: {line} ({e})"));
-            assert_eq!(parsed["from"], "Working");
-            assert_eq!(parsed["to"], "Denied");
-            assert_eq!(parsed["detail"], detail);
-        }
-    }
-
-    #[test]
-    fn w7_a_warning_is_not_dressed_up_as_a_state_change() {
-        // The bug the container smoke test surfaced: a failed self-report
-        // was logged as a Working -> Failing transition that never
-        // happened.
-        let line = warn_line("p", "self_report_failed", "the hub refused");
-        let parsed: serde_json::Value = serde_json::from_str(&line).expect("valid JSON");
-        assert_eq!(parsed["event"], "self_report_failed");
-        assert!(
-            parsed.get("from").is_none(),
-            "no invented transition: {line}"
-        );
-        assert!(parsed.get("to").is_none(), "no invented transition: {line}");
     }
 
     #[test]
