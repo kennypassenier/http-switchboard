@@ -1,0 +1,11 @@
+# Written by `chassis new`; read by `chassis sync` and `chassis release`.
+# Added by hand for the migrated project (MIGRATION.md §10 step 1).
+name = "http-switchboard"
+description = "Translates message shapes between webhooks and the kyu hub"
+repo = "kennypassenier/http-switchboard"
+toolchain = "1.97"
+chassis_tag = "v1.1.0"
+chassis_repo = "https://github.com/kennypassenier/chassis-rs"
+kp_themes = "3.1.0"
+state_dir = "/var/lib/http-switchboard"
+latch = false

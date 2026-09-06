@@ -5,7 +5,7 @@ All notable changes to HTTPSwitchboard. The format is loosely
 where the promise is about the **config file format**, the two HTTP
 endpoints and the CLI verbs — not about the internals.
 
-## 2.0.0 — 2026-09-05 (unreleased; branch `chassis-migration`)
+## [Unreleased]
 
 Built on [chassis-rs](https://github.com/kennypassenier/chassis-rs) v1.1.0.
 The switchboard — profiles, translation, sinks, the hub pump, the per-path
