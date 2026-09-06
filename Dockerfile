@@ -13,7 +13,11 @@ RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends ca-cert
     && mkdir -p /var/lib/http-switchboard && chown http-switchboard:http-switchboard /var/lib/http-switchboard
 COPY --from=build /src/target/release/http-switchboard /usr/local/bin/http-switchboard
 USER http-switchboard
-ENV HTTP_SWITCHBOARD_LISTEN=0.0.0.0:8080 HTTP_SWITCHBOARD_STATE_DIR=/var/lib/http-switchboard
+# The config keeps its 1.0.0 mount point (/etc/http-switchboard/config.toml,
+# what the CI smoke test and every compose file bind) instead of the kit's
+# default <state_dir>/config.toml — found by CI: the container exited
+# because the kit looked in /var/lib for a file mounted under /etc.
+ENV HTTP_SWITCHBOARD_LISTEN=0.0.0.0:8080 HTTP_SWITCHBOARD_STATE_DIR=/var/lib/http-switchboard HTTP_SWITCHBOARD_CONFIG=/etc/http-switchboard/config.toml
 EXPOSE 8080
 VOLUME ["/var/lib/http-switchboard"]
 # Self-update is off inside an image by detection (AR8); updates are a new image.
