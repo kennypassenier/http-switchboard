@@ -7,6 +7,8 @@ endpoints and the CLI verbs — not about the internals.
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-09-09
+
 Built on [chassis-rs](https://github.com/kennypassenier/chassis-rs) v1.8.0.
 The inbound door is the kit's now. Everything that makes this service what
 it is — profiles, translation, sinks, the hub pump, the deliver-then-ack
