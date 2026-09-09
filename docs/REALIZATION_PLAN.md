@@ -120,3 +120,29 @@ dashboard makes `HTTP_SWITCHBOARD_TOKEN` and `HTTP_SWITCHBOARD_SECRET_KEY`
 mandatory; the unit's `ExecStartPre=--check` refuses without them. CT 109
 still runs 1.x. The deploy is the Homelab Rust session's (V6) and the
 order that works is the banner at the top of `docs/HANDOVER_HOMELAB.md`.
+
+### Release 3.0.0 and the retrospective — 2026-09-09
+
+| Gate | Date | What Kenny decided | Where it landed |
+|---|---|---|---|
+| Release report · 3.0.0 | 2026-09-09 | R1–R4 and R6 **Akkoord**; R5 **Akkoord** with a request — a prompt the Homelab Rust session can be handed for the CT 109 upgrade; R7 **"Claude tot de handtekening"**. | Tag `v3.0.0` = `f400d57` = `origin/main`, all five checks green on that sha, GitHub release with the binary and `SHA256SUMS`; `docs/HOMELAB_UPGRADE_PROMPT.md` |
+| Signature | 2026-09-09 | Kenny ran `scripts/sign-release.sh v3.0.0`. | `SHA256SUMS.minisig` + `VERSION` on the release. Verified end to end: `minisign -V` against `RELEASE_PUBKEY` as compiled into the shipped software → "Signature and comment signature verified", trusted comment `kennypassenier/http-switchboard v3.0.0`; the published binary matches the signed manifest |
+| Phase 10 · retrospective | 2026-09-09 | All five lessons, the ecosystem entry and U1 **Opnemen** / "alles samen vastleggen"; **C2 Klopt**, all nine fields as written. | `~/Projects/dev-procedure` commit `829a45e` (that repo has no remote, so the commit is local). C2's measure: `tests/l11_health_claims.rs` |
+
+**What the release gate caught before the tag.** Reading the health
+documentation against a running 3.0.0 showed three documents describing
+the 1.x `/healthz` split, which the kit removed in 2.0.0 — and the
+homelab handover had turned that description into an instruction to probe
+`/healthz`, which would restart the service every time Home Assistant is
+down. The tag was not cut until those were corrected. Correction C2.
+
+**The one live-found fault that was mine and not the product's.** C1's
+field 3 answered "nowhere else" after measuring only command lines, when
+the fault was "a document claims behaviour nothing executes". C2 was that
+same fault in prose, two hours later. Both lessons went into the
+procedure.
+
+**Deliberately still open, and not this project's work.** CT 109 runs
+1.x; the upgrade belongs to the Homelab Rust session (V6) and starts from
+`docs/HOMELAB_UPGRADE_PROMPT.md`. Alertmanager is not deployed, so S1 —
+a genuine alert travelling the whole chain — remains unmet and unclaimed.
