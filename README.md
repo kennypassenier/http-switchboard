@@ -90,10 +90,13 @@ to the binary so this block cannot drift away from it again.
 variable, its default and what it means, before any configuration is
 opened.
 
-`/healthz` answers 200 while the process is alive and carries the state
-of every profile; `/healthz?strict=1` answers 503 when a profile is
-failing, which is what a monitor should watch. `/metrics` is Prometheus
-text. Neither ever echoes message content.
+`/healthz` carries the state of every profile and answers **503 as soon
+as one is failing** — that is the endpoint a monitor watches. It is *not*
+the one a container healthcheck should call: `--healthcheck` is the
+liveness answer, and it exits 0 while a profile is failing, so the
+orchestrator never restarts this service because the receiver is down.
+`/metrics` is Prometheus text. Neither endpoint ever echoes message
+content.
 
 ## Development
 

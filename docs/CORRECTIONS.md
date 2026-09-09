@@ -52,3 +52,55 @@ record.
 9. **When the measure is reviewed.** At the next kit upgrade that changes
    the command line — the next `chassis sync` that reports drift on the
    CLI surface.
+
+## C2 · Three documents described health endpoints the service no longer has
+
+**Awaiting Kenny's sign-off** (found 2026-09-09, during the 3.0.0 release
+gate; the documents themselves are already corrected because they were
+simply wrong).
+
+1. **What went wrong.** `README.md`, `docs/OPERATIONS_RUNBOOK.md` and
+   `docs/HANDOVER_HOMELAB.md` all described the 1.x split: plain
+   `/healthz` as lenient liveness, `?strict=1` as strict readiness.
+   Measured against a running 3.0.0 on 2026-09-09:
+   `curl -o /dev/null -w %{http_code} /healthz` → **503** with one
+   profile failing, identical to `?strict=1`. The handover went furthest
+   and told the homelab session to point the container healthcheck at
+   `/healthz` — which would restart this service every time Home
+   Assistant is down, the exact failure that point was written to
+   prevent.
+2. **Which gate let it through.** The 2.0.0 release gate, where the kit
+   took the endpoint over; and then correction C1 in this same round,
+   whose sweep answered "nowhere else" after measuring only *commands*.
+3. **Where else the same fault sits.** The fault is not "the health docs
+   are stale". It is **a document making a claim about behaviour that
+   nothing executes** — commands are one surface of that, prose is
+   another, and C1 fixed only the surface the fault first appeared on.
+   That is the trap FORM_PROTOCOL §8 field 3 names. Measured now across
+   all documents: the health claims were the remaining instance; the
+   shipped `Dockerfile` and `deploy/service.yml` were always correct.
+4. **How recurrence is prevented.** The proposal: extend
+   `tests/l10_docs.rs` from "every documented command parses" to "every
+   documented claim about a status code is true" — the test starts the
+   service, and for each documented `curl … /healthz` line with a stated
+   status, asserts the service really answers it. Concretely: a table in
+   the test of (path, condition, expected status) that the documents and
+   the test share, so a document and the binary cannot drift apart
+   silently.
+5. **What the remedy costs.** Roughly 60 more lines of test and a running
+   service inside it (the harness of T1 already provides one). It also
+   constrains how the documents state a status: as a number, next to the
+   path.
+6. **Who or what enforces it.** Code: the same suite the gate and CI
+   already run.
+7. **How and when it is measured.** At the first commit after this one
+   that touches a health claim in any document — the new assertion must
+   be red before that document is corrected and green after. Until that
+   measurement has happened this stays open in this project.
+8. **The fallback if the measurement fails.** If tying prose to status
+   codes proves too brittle to keep honest, the narrower fallback is a
+   single test asserting that no document contains the string
+   `?strict=1` — the marker of the retired split — written down as a
+   reduced list rather than quietly applied.
+9. **When the measure is reviewed.** At the next kit upgrade that changes
+   what `/healthz` answers.

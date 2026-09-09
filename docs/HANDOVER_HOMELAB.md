@@ -78,13 +78,23 @@ either repository. That is also where restic finds it.
 
 ## Three things that session needs to know
 
-1. **The healthcheck must use plain `/healthz`, not `?strict=1`.**
-   Liveness answers "is this process alive"; `?strict=1` answers "is it
-   doing its job" and goes 503 when *Home Assistant* is down. Wiring the
-   container healthcheck to the strict one makes the orchestrator restart
-   this service because someone else is broken — and each restart resets
-   the pump state, turning "exactly one failure event" into one per
-   restart. Uptime Kuma watches the strict one; the container does not.
+1. **The healthcheck is `--healthcheck`, never an HTTP probe on
+   `/healthz`** (measured 2026-09-09 against a running 3.0.0; this point
+   said the opposite until today and the opposite is now wrong).
+
+   Since the kit took over that endpoint, **plain `/healthz` answers 503
+   as soon as any profile is failing** — the 1.x split between a lenient
+   `/healthz` and a strict `?strict=1` is gone; both are strict. So an
+   orchestrator that probes `/healthz` over HTTP restarts this service
+   whenever *Home Assistant* is down, and every such restart resets the
+   pump state, turning "exactly one failure event" into one per restart.
+
+   The liveness answer lives in the binary instead:
+   `http-switchboard --healthcheck` prints `alive=true status=degraded`
+   and **exits 0** while a profile is failing. That is what the shipped
+   `Dockerfile` HEALTHCHECK and `deploy/service.yml` already call, and it
+   is what the orchestrator must keep calling. Uptime Kuma watches
+   `/healthz` over HTTP; nothing that can restart the service does.
 2. **The secret path is D12**, not `latch run`: the client resolves
    `KYU_TOKEN` with `latch cat` at deploy time and ships it into the host
    vault at `/var/lib/homelab/secrets/`, which composes it into the

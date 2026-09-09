@@ -75,6 +75,16 @@ ordering — is unchanged.
 - The README documented `http-switchboard <config.toml>`, which 2.0.0
   refuses; and claimed "not yet released" after 2.0.0 shipped. Both
   corrected, and a test now runs what the documents claim.
+- **The health endpoints were described wrongly in three documents**
+  (correction C2). Since 2.0.0 the kit owns `/healthz` and it answers
+  **503 as soon as any profile is failing**, with or without
+  `?strict=1`; the README, the operations runbook and the homelab
+  handover all still described the 1.x split, and the handover went as
+  far as telling the orchestrator to probe `/healthz` — which would
+  restart this service every time Home Assistant is down. The shipped
+  `Dockerfile` and `deploy/service.yml` were always right (they call
+  `--healthcheck`, which exits 0 while a profile is failing); only the
+  prose was wrong. Measured against a running 3.0.0 before the release.
 
 ## [2.0.0] - 2026-09-06
 

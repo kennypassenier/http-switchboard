@@ -37,16 +37,27 @@ docker run --rm --entrypoint /opt/http-switchboard/bin/http-switchboard \
 ## 3 · Is it working, and what does "working" mean here
 
 ```bash
-curl -s http://<host>:8080/healthz | jq            # is the process alive?
-curl -si http://<host>:8080/healthz?strict=1 | head -1   # is it doing its job?
+curl -si http://<host>:8080/healthz | head -1      # is it doing its job?
+curl -s  http://<host>:8080/healthz | jq           # which profile, and why
+http-switchboard --healthcheck                     # is the process alive?
 ```
 
-Two questions, two answers, on purpose. Plain `/healthz` is **liveness**:
-200 while the process can serve, whatever the profiles are doing. That is
-what the container's own healthcheck asks, so the orchestrator never
-restarts this service because Home Assistant is down — and every such
-restart would reset the pump state, turning one failure event into one
-per restart.
+Two questions, two answers — **but they no longer live on the same
+endpoint** (corrected 2026-09-09, measured against a running 3.0.0). The
+kit owns `/healthz` since 2.0.0 and it answers **503 as soon as any
+profile is failing**, with or without `?strict=1`. This runbook claimed
+the 1.x split for two releases; it was wrong.
+
+- `/healthz` over HTTP is **readiness**. It is what a monitor watches and
+  what it alarms on.
+- `--healthcheck` is **liveness**. It prints `alive=true status=degraded`
+  and exits 0 while a profile is failing, which is exactly what a
+  container healthcheck must do: never restart this service because Home
+  Assistant is down, since each restart resets the pump state and turns
+  one failure event into one per restart.
+
+Anything that can restart the service calls `--healthcheck`. The shipped
+`Dockerfile` and `deploy/service.yml` already do.
 
 `?strict=1` is the one that goes **503** when any profile is failing,
 denied or cut off. **Point Uptime Kuma at that one.** Either way the body
