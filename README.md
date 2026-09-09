@@ -95,6 +95,20 @@ as one is failing** — that is the endpoint a monitor watches. It is *not*
 the one a container healthcheck should call: `--healthcheck` is the
 liveness answer, and it exits 0 while a profile is failing, so the
 orchestrator never restarts this service because the receiver is down.
+
+<!-- health-table:start -->
+| Probe | Every profile working | One profile failing |
+|---|---|---|
+| `GET /healthz` | 200 | 503 |
+| `GET /healthz?strict=1` | 200 | 503 |
+| `--healthcheck` | exit 0 | exit 0 |
+<!-- health-table:end -->
+This table is not written by hand. `tests/l11_health_claims.rs` measures
+every cell against a running service and then refuses to pass unless this
+document carries exactly what it measured — the fix for correction C2,
+where three documents described a split that had been gone for two
+releases.
+
 `/metrics` is Prometheus text. Neither endpoint ever echoes message
 content.
 

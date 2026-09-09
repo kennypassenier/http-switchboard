@@ -7,6 +7,14 @@ endpoints and the CLI verbs — not about the internals.
 
 ## [Unreleased]
 
+### Added
+
+- `tests/l11_health_claims.rs` — the measure of correction C2. It measures
+  what `/healthz`, `/healthz?strict=1` and `--healthcheck` answer with
+  every profile working and with one failing, and then requires the README
+  and the operations runbook to carry exactly that table. The binary writes
+  the document's table, so a document cannot silently drift from it.
+
 ## [3.0.0] - 2026-09-09
 
 Built on [chassis-rs](https://github.com/kennypassenier/chassis-rs) v1.8.0.

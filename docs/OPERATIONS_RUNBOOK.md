@@ -59,6 +59,20 @@ the 1.x split for two releases; it was wrong.
 Anything that can restart the service calls `--healthcheck`. The shipped
 `Dockerfile` and `deploy/service.yml` already do.
 
+<!-- health-table:start -->
+| Probe | Every profile working | One profile failing |
+|---|---|---|
+| `GET /healthz` | 200 | 503 |
+| `GET /healthz?strict=1` | 200 | 503 |
+| `--healthcheck` | exit 0 | exit 0 |
+<!-- health-table:end -->
+This table is not written by hand. `tests/l11_health_claims.rs` measures
+every cell against a running service and then refuses to pass unless this
+document carries exactly what it measured — the fix for correction C2,
+where three documents described a split that had been gone for two
+releases.
+
+
 `?strict=1` is the one that goes **503** when any profile is failing,
 denied or cut off. **Point Uptime Kuma at that one.** Either way the body
 names each profile, its state and how long ago it last succeeded.

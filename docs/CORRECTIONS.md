@@ -55,9 +55,10 @@ record.
 
 ## C2 · Three documents described health endpoints the service no longer has
 
-**Awaiting Kenny's sign-off** (found 2026-09-09, during the 3.0.0 release
-gate; the documents themselves are already corrected because they were
-simply wrong).
+**Signed off by Kenny 2026-09-09 ("Klopt", all nine fields as written).
+Measurement done the same day — see field 7.** Found during the 3.0.0
+release gate; the documents themselves were corrected before the tag,
+because they were simply wrong.
 
 1. **What went wrong.** `README.md`, `docs/OPERATIONS_RUNBOOK.md` and
    `docs/HANDOVER_HOMELAB.md` all described the 1.x split: plain
@@ -79,24 +80,33 @@ simply wrong).
    That is the trap FORM_PROTOCOL §8 field 3 names. Measured now across
    all documents: the health claims were the remaining instance; the
    shipped `Dockerfile` and `deploy/service.yml` were always correct.
-4. **How recurrence is prevented.** The proposal: extend
-   `tests/l10_docs.rs` from "every documented command parses" to "every
-   documented claim about a status code is true" — the test starts the
-   service, and for each documented `curl … /healthz` line with a stated
-   status, asserts the service really answers it. Concretely: a table in
-   the test of (path, condition, expected status) that the documents and
-   the test share, so a document and the binary cannot drift apart
-   silently.
-5. **What the remedy costs.** Roughly 60 more lines of test and a running
-   service inside it (the harness of T1 already provides one). It also
-   constrains how the documents state a status: as a number, next to the
-   path.
+4. **How recurrence is prevented.** Built as `tests/l11_health_claims.rs`,
+   and it went one better than the proposal. Asserting "the prose is true"
+   against prose is brittle, so the test inverts it: it **measures** every
+   cell of a health table against a running service — `/healthz`,
+   `/healthz?strict=1` and `--healthcheck`, each with every profile
+   working and with one failing — and then requires `README.md` and
+   `docs/OPERATIONS_RUNBOOK.md` to contain exactly that table between
+   `<!-- health-table:start -->` markers. The binary writes the
+   document's table, so a document cannot drift from it. Two facts are
+   additionally pinned as assertions rather than prose: the two paths
+   answer alike (the 1.x split is gone), and `--healthcheck` exits 0
+   while a profile is failing.
+5. **What the remedy costs.** About 210 lines of test, and a running
+   service inside it (the kit harness adopted as T1 provides one). It
+   constrains the two documents to carry a generated block rather than a
+   hand-written sentence — which is the point.
 6. **Who or what enforces it.** Code: the same suite the gate and CI
    already run.
-7. **How and when it is measured.** At the first commit after this one
-   that touches a health claim in any document — the new assertion must
-   be red before that document is corrected and green after. Until that
-   measurement has happened this stays open in this project.
+7. **How and when it is measured. Done 2026-09-09.** The test was written
+   first and failed twice, both times usefully. The first failure was its
+   own: a blocking `Command::output()` on a single-threaded test runtime
+   stopped the very server it was probing, so `--healthcheck` read exit 1
+   in every state — a measurement that would have contradicted the
+   correct one taken against a separate process. Moved to a blocking
+   thread on a multi-threaded runtime, it then failed for the right
+   reason: neither document carried the table. Both were given it, and
+   the test went green. The loop is closed.
 8. **The fallback if the measurement fails.** If tying prose to status
    codes proves too brittle to keep honest, the narrower fallback is a
    single test asserting that no document contains the string
