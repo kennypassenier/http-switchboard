@@ -54,7 +54,9 @@ body = '''
 #from = { http_path = "/uptime-kuma" }
 #to = { url = "http://homeassistant.lan:8123/api/webhook/ANOTHER-ID" }
 #content_type = "application/json"
-#inbound_token = "${HOOK_TOKEN}"
+# The door is not configured here any more (3.0.0, H1): every inbound
+# path is behind a chassis client token. Issue one per sender with
+# `chassis clients issue <sender> --url … --token-env HTTP_SWITCHBOARD_TOKEN`.
 #forward_error_body = true
 #body = '''
 #{"alert": {{ heartbeat.name | default("uptime-kuma") }},

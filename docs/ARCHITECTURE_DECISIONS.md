@@ -89,9 +89,15 @@ half a decision.
   unknown keys are errors. Added after the critic: the kyu subscription
   name is **its own key** (defaulting to the profile name), destination
   topic names are checked at startup (charset + the reserved `kyu.`
-  prefix), cross-field combinations are validated (an inbound token on a
-  kyu-source profile is a config error, not a silently ignored key), and
-  a profile delivering JSON **must** declare its content-type.
+  prefix), cross-field combinations are validated (a `method` on a kyu
+  sink, a `forward_error_body` on a kyu source — a config error, not a
+  silently ignored key), and a profile delivering JSON **must** declare
+  its content-type.
+  **Amended 2026-09-09 (H1, 3.0.0):** `inbound_token` is retired. The
+  field is still *recognised* so that a 2.x config gets a message naming
+  the `chassis clients issue` command that replaces it, rather than
+  serde's bare "unknown field" — a rejection that says what to do instead
+  is worth three lines.
   ⚔ Scenarios that forced this: a profile named `alertmanager-HA` starts
   fine and then fails every poll because kyu refuses the name, while the
   service reports itself healthy; renaming a profile six months later
@@ -229,6 +235,28 @@ half a decision.
   because the switchboard does not observe dead-lettering. And a topic
   nobody consumes is worse than no feature: kyu subscriptions do not see
   what was published before they existed, so those events are gone.
+
+- **AR21 · The inbound door is the kit's, not this service's**
+  (added 2026-09-09 by mini-round H1; Kenny: Onmisbaar). A sender
+  presents a chassis client token and the kit checks it before this
+  service reads the body; the profile paths are registered as the kit's
+  API routes. `chassis clients issue <sender> --url … --token-env …`
+  mints one from a terminal, so a headless service needs no dashboard
+  visit to onboard a sender, and `revoke` shuts the door the same second
+  instead of at the next config edit and restart.
+  ⚔ Counter-argument, recorded because it was real and was overruled:
+  the kit's door arrives with the whole `dashboard` feature — the
+  kp-themes assets in the binary, a clients store and a session store on
+  disk, and two secrets (`HTTP_SWITCHBOARD_TOKEN`,
+  `HTTP_SWITCHBOARD_SECRET_KEY`) without which the service refuses to
+  start. Measured on 2026-09-09, the live deployment had **zero** senders
+  to protect: one profile, kyu-sourced, no `http_path` anywhere. The
+  recommendation was therefore to keep the per-path token and revisit the
+  day Alertmanager posts directly. Kenny chose the kit door anyway, for
+  the reason the counter-argument does not answer: the door that exists
+  before the first sender is the only one that is ever ready for them.
+  The cost is real and named in `docs/HANDOVER_HOMELAB.md`, because it
+  lands on CT 109 and not here.
 
 - **AR13 · Deployment: the homelab vault, not `latch run`.** The draft
   said both, and both cannot be true — a distroless image contains no

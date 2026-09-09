@@ -73,6 +73,23 @@ impl Registry {
 
     /// The state a profile is in right now, so a caller can tell a
     /// transition from a repeat.
+    /// Put every profile back to `Starting` (H1/V1, 3.0.0): the dashboard's
+    /// "Recheck profiles" button.
+    ///
+    /// Health only ever changes when a message goes through, so a profile
+    /// whose source is an HTTP path stays `Failing` for as long as nobody
+    /// posts to it — long after the receiver that caused it came back.
+    /// `Starting` is the honest state for "nothing has been tried since",
+    /// and it is the one state `/healthz?strict=1` does not alarm on.
+    /// Returns how many profiles were reset.
+    pub fn reset_health(&self) -> usize {
+        let mut profiles = self.profiles.lock().unwrap();
+        for stats in profiles.values_mut() {
+            stats.health = Some(Health::Starting);
+        }
+        profiles.len()
+    }
+
     pub fn health_of(&self, profile: &str) -> Option<Health> {
         self.profiles
             .lock()

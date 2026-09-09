@@ -1,15 +1,21 @@
 //! The binary (L6b), on chassis since 2.0.0: the kit owns the command
 //! line, configuration layers, logging, `/healthz`, `/metrics`, the
 //! graceful shutdown and signed self-update; this file assembles the
-//! switchboard on top of it — inbound routes as public routes (third-party
-//! senders keep their per-path `inbound_token`), one health subsystem per
-//! profile, the pumps started after the bind and stopped in the shutdown
-//! window. The `test` dry-run subcommand is the switchboard's own and is
-//! dispatched before the kit sees the arguments.
+//! switchboard on top of it — one health subsystem per profile, the pumps
+//! started after the bind and stopped in the shutdown window. The `test`
+//! dry-run subcommand is the switchboard's own and is dispatched before
+//! the kit sees the arguments.
+//!
+//! 3.0.0 (H1, V1): the inbound routes are the kit's API routes, so a
+//! sender presents a kit client token and the per-path `inbound_token` is
+//! gone. That brings the kit's dashboard with it, which this file dresses:
+//! a client is called a *sender* here, and the status page carries the
+//! Profiles section from `dashboard.rs`.
 
 use std::process::ExitCode;
 use std::sync::Arc;
 
+use axum::routing::post;
 use axum::Router;
 use chassis::{App, AppSpec, Control};
 use http_switchboard::app::App as Switchboard;
@@ -90,11 +96,23 @@ async fn main() -> ExitCode {
         }
     }
     app.metrics_source(RegistryMetrics(Arc::clone(&switchboard.registry)));
-    // Inbound webhooks are PUBLIC routes: third-party senders cannot carry a
-    // kit client token, and the per-path inbound_token check lives in the
-    // handler. Without the dashboard feature the kit merges these as they
-    // are; /healthz and /metrics are the kit's.
+    // H1 (3.0.0): the profile paths are API routes, so the kit checks an
+    // `Authorization: Bearer <client token>` before this service sees the
+    // body, and revoking a sender's token locks it out the same second.
+    // `chassis clients issue <sender> --url … --token-env …` mints one
+    // without opening the dashboard.
     app.api_routes(switchboard.profile_router());
+    // V1: what a "client" is called here. Presentation only — the routes,
+    // the JSON keys and the log fields keep saying `client`.
+    app.vocabulary("sender", "senders");
+    app.status_section(http_switchboard::dashboard::Profiles::new(
+        &switchboard.config,
+        Arc::clone(&switchboard.registry),
+    ));
+    app.dashboard_routes(Router::new().route(
+        http_switchboard::dashboard::RECHECK_ROUTE,
+        post(http_switchboard::dashboard::recheck).with_state(Arc::clone(&switchboard.registry)),
+    ));
 
     let switchboard = Arc::new(switchboard);
     let stop: Arc<std::sync::Mutex<Option<tokio::sync::broadcast::Sender<()>>>> =

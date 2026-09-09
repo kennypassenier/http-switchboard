@@ -77,7 +77,6 @@ pub struct Profile {
     pub retries: u32,
     pub lease_ms: u64,
     pub max_attempts: u32,
-    pub inbound_token: Option<Secret>,
     /// W12 (mini-round MR2, 2026-08-30, Kenny's idea): include the
     /// receiver's own error text in the answer to the sender. Off by
     /// default and refused on a kyu source, where there is nobody to
@@ -165,8 +164,8 @@ pub enum ConfigError {
     #[error("{file}, profile '{profile}': forward_error_body is set, but this profile's source is a kyu topic. What now: remove it — a message from the hub has no sender waiting for an answer, so there is nobody to forward anything to; the failure already reaches you through the log and the self-report events.")]
     ForwardOnKyuSource { file: String, profile: String },
 
-    #[error("{file}, profile '{profile}': inbound_token is set, but this profile's source is a kyu topic. What now: remove inbound_token, or change the source to an http_path — a token on a kyu source guards nothing, and leaving it there suggests a door that was never built.")]
-    InboundTokenOnKyuSource { file: String, profile: String },
+    #[error("{file}, profile '{profile}': inbound_token is set, but this service stopped guarding its own door in 3.0.0. What now: remove the line and issue the sender a client token instead — `chassis clients issue <sender> --url http://<host>:8080 --token-env HTTP_SWITCHBOARD_TOKEN` prints it once. The token then goes in the same `authorization: Bearer` header the sender already sends, and revoking it takes effect the same second.")]
+    InboundTokenRetired { file: String, profile: String },
 
     #[error("{file}, profile '{profile}': method is set, but this profile delivers to a kyu topic. What now: remove method — publishing to the hub is always a POST to the topic.")]
     MethodOnKyuSink { file: String, profile: String },
@@ -197,14 +196,6 @@ pub enum ConfigError {
         file: String,
         location: String,
         var: String,
-    },
-
-    #[error("{file}: profiles '{first}' and '{second}' share the path '{path}' but expect different inbound tokens. What now: give both the same inbound_token (or none) — one path is one door, and a request that satisfies one profile but not the other would be half-delivered.")]
-    PathTokenMismatch {
-        file: String,
-        path: String,
-        first: String,
-        second: String,
     },
 
     #[error("{file}, profile '{profile}': {problem}")]
@@ -374,30 +365,6 @@ pub fn load(file: &str, text: &str, env: &dyn EnvLookup) -> Result<Config, Confi
         profiles.push(profile);
     }
 
-    // One path is one door: the inbound check happens once per request,
-    // so profiles sharing a path must agree on the token.
-    let mut door: BTreeMap<String, (&str, Option<String>)> = BTreeMap::new();
-    for p in &profiles {
-        let Source::Http { path } = &p.source else {
-            continue;
-        };
-        let token = p.inbound_token.as_ref().map(|t| t.expose().to_string());
-        match door.get(path) {
-            Some((first, expected)) if *expected != token => {
-                return Err(ConfigError::PathTokenMismatch {
-                    file: file.to_string(),
-                    path: path.clone(),
-                    first: (*first).to_string(),
-                    second: p.name.clone(),
-                })
-            }
-            Some(_) => {}
-            None => {
-                door.insert(path.clone(), (p.name.as_str(), token));
-            }
-        }
-    }
-
     Ok(Config {
         kyu,
         reporting,
@@ -526,16 +493,15 @@ fn validate_profile(
         });
     }
 
-    let inbound_token = match (rp.inbound_token, &source) {
-        (Some(_), Source::Kyu { .. }) => {
-            return Err(ConfigError::InboundTokenOnKyuSource {
-                file: file.to_string(),
-                profile: name.clone(),
-            })
-        }
-        (Some(t), _) => Some(resolve(file, &format!(", profile '{name}'"), &t, env)?),
-        (None, _) => None,
-    };
+    // 3.0.0: the door moved to the kit's client tokens (H1). The field is
+    // still recognised so a 2.x config gets a migration message with the
+    // replacement command, rather than serde's bare "unknown field".
+    if rp.inbound_token.is_some() {
+        return Err(ConfigError::InboundTokenRetired {
+            file: file.to_string(),
+            profile: name.clone(),
+        });
+    }
 
     let mut headers = BTreeMap::new();
     for (k, v) in rp.headers {
@@ -567,7 +533,6 @@ fn validate_profile(
         retries,
         lease_ms,
         max_attempts,
-        inbound_token,
         forward_error_body,
     };
 

@@ -22,7 +22,7 @@ use std::sync::Arc;
 
 use axum::body::Bytes;
 use axum::extract::{DefaultBodyLimit, State};
-use axum::http::{HeaderMap, StatusCode};
+use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::post;
 use axum::Router;
@@ -55,9 +55,10 @@ pub struct Inbound {
     reporting: Option<String>,
 }
 
-/// The profile paths only — what the kit merges as public routes (2.0.0).
-/// The per-path `inbound_token` check and the in-flight bound stay in the
-/// handler; the body cap is the kit's (`max_body_bytes`, same default).
+/// The profile paths only. Since 3.0.0 the kit merges these as API routes
+/// behind its client-token door (H1), so nothing here checks a credential
+/// any more; the in-flight bound stays in the handler, and the body cap is
+/// the kit's (`max_body_bytes`, same default).
 pub fn profile_router(
     config: &Config,
     sink: Arc<dyn Sink>,
@@ -148,28 +149,10 @@ pub fn router(
         .layer(DefaultBodyLimit::max(MAX_BODY_BYTES))
 }
 
-async fn handle(
-    State(state): State<Arc<Inbound>>,
-    headers: HeaderMap,
-    body: Bytes,
-) -> impl IntoResponse {
-    // W8: the door is checked before anything else is done with the body.
-    if let Some(expected) = state.profiles[0].inbound_token.as_ref() {
-        let presented = headers
-            .get("authorization")
-            .and_then(|v| v.to_str().ok())
-            .and_then(|v| v.strip_prefix("Bearer "))
-            .unwrap_or_default();
-        if !constant_time_eq(presented.as_bytes(), expected.expose().as_bytes()) {
-            return (
-                StatusCode::UNAUTHORIZED,
-                "this path requires a token. What now: send it as `authorization: Bearer <token>`; \
-                 the value is the one in the profile's inbound_token.\n",
-            )
-                .into_response();
-        }
-    }
-
+async fn handle(State(state): State<Arc<Inbound>>, body: Bytes) -> impl IntoResponse {
+    // W8, as amended in 3.0.0 (H1): the door is the kit's client token,
+    // checked by the kit's own layer before this handler is reached. What
+    // stays here is the bound — a credential is not a queue.
     let Ok(_permit) = state.permits.clone().try_acquire_owned() else {
         return (
             StatusCode::SERVICE_UNAVAILABLE,
@@ -253,12 +236,4 @@ async fn handle(
         )
             .into_response()
     }
-}
-
-/// Token comparison that does not leak the answer through its own timing.
-fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
-    if a.len() != b.len() {
-        return false;
-    }
-    a.iter().zip(b).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
 }

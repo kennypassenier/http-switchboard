@@ -7,16 +7,18 @@ shape it happens to speak; HTTPSwitchboard translates it and delivers it
 where *our* configuration says — the sender never knows the receiver, and
 the receiver never knows the sender.
 
-> **Status, 2026-08-30: built, tested, and drilled on real hardware —
-> not yet released.** Every feature on the frozen list is implemented,
-> with 99 tests green including six end-to-end suites against a real kyu
-> message hub. On 2026-08-30 the whole chain ran on real machines: a
-> message published on the production hub was translated by this service
-> on a throwaway container and arrived in Home Assistant, and the
-> restore-from-zero procedure was drilled. What is still missing is
-> **Alertmanager itself**, which is not deployed, so the flagship
-> criterion — a *genuine* alert travelling the chain — is not claimed.
-> `docs/TEST_PLAN.md` says which claims rest on what.
+> **Status, 2026-09-09: released, running, one criterion short.**
+> 2.0.0 moved the service onto [chassis](https://github.com/kennypassenier/chassis-rs),
+> the shared foundation that owns the command line, the configuration
+> layers, `/healthz`, `/metrics` and the signed self-update;
+> `docs/KIT.md` describes everything that comes from there. On 2026-08-30
+> the whole chain ran on real machines: a message published on the
+> production hub was translated by this service on a throwaway container
+> and arrived in Home Assistant, and the restore-from-zero procedure was
+> drilled. What is still missing is **Alertmanager itself**, which is not
+> deployed, so the flagship criterion — a *genuine* alert travelling the
+> chain — is not claimed. `docs/TEST_PLAN.md` says which claims rest on
+> what.
 
 The first customer is Prometheus Alertmanager, whose webhook format is
 fixed and does not fit Home Assistant's receiver:
@@ -65,17 +67,28 @@ Three habits worth knowing before writing a profile:
   `| default(...)` when an empty value is what you mean.
 - **A message can never change where it goes.** Scheme, host and port
   come only from the config.
-- **Nothing is stored.** Durability is the hub's job: a message from a
-  kyu topic is acknowledged only after the destination accepted it.
+- **No message is stored.** Durability is the hub's job: a message from a
+  kyu topic is acknowledged only after the destination accepted it. Since
+  3.0.0 the kit keeps two stores of its own in the state directory — the
+  senders that hold a token, and admin sessions — so losing that
+  directory costs tokens, never a message.
 
 ## Running it
 
 ```bash
-http-switchboard /etc/http-switchboard/config.toml
+http-switchboard --config /etc/http-switchboard/config.toml
 http-switchboard --check --config /etc/http-switchboard/config.toml
 http-switchboard test --profile alertmanager --input recorded.json
 http-switchboard --healthcheck http://127.0.0.1:8080/healthz
+http-switchboard --knobs
 ```
+
+The config path is a flag, not a positional argument — it has been since
+2.0.0, and `tests/l10_docs.rs` now hands every command line on this page
+to the binary so this block cannot drift away from it again.
+`--knobs` prints every setting the kit reads, with its environment
+variable, its default and what it means, before any configuration is
+opened.
 
 `/healthz` answers 200 while the process is alive and carries the state
 of every profile; `/healthz?strict=1` answers 503 when a profile is

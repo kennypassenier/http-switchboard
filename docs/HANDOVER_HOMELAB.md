@@ -1,5 +1,26 @@
 # Handover — folding HTTPSwitchboard into Homelab Rust
 
+> **3.0.0 (2026-09-09) — read this before installing it on CT 109.**
+> The inbound door moved onto chassis client tokens (H1), which compiles
+> the kit's dashboard in, which makes **two secrets mandatory**:
+> `HTTP_SWITCHBOARD_TOKEN` and `HTTP_SWITCHBOARD_SECRET_KEY`. Without both
+> the service refuses to start, and the unit's `ExecStartPre=--check`
+> refuses first — so an upgrade that only swaps the binary leaves CT 109
+> with a stopped service.
+>
+> The order that works:
+> 1. On CT 109, `http-switchboard gen-secret` on a terminal (it refuses a
+>    pipe, so a secret cannot land in a log).
+> 2. Both printed lines into `/appdata/kyu/http-switchboard-config/token.env`,
+>    alongside the `KYU_TOKEN` already there (0640, root:http-switchboard).
+> 3. `--check` under the real environment, and only then swap the binary.
+>
+> Nothing else changes for the deployment: the same unit, the same state
+> directory, the same port. The live `alertmanager` profile reads from a
+> kyu topic and never passes through the door, so **no sender needs a
+> token today** — `chassis clients issue` is there for the first one that
+> does. `docs/KIT.md` describes the rest of what the kit now serves.
+
 > **2.0.0 (chassis migration, 2026-09-05):** the compose preset described
 > below is retired and `deploy/homelab-preset/` is gone. The switchboard now
 > deploys like every chassis service: native binary at

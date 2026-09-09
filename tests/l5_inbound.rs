@@ -193,43 +193,6 @@ async fn ar4_one_failing_branch_makes_the_whole_request_fail() {
 }
 
 #[tokio::test]
-async fn w8_without_the_token_the_door_stays_shut() {
-    let receiver = TestServer::start(vec![200]).await;
-    let text = format!(
-        "{}\ninbound_token = \"${{HOOK_TOKEN}}\"\n",
-        one_profile(&receiver.base_url).trim_end()
-    );
-    let base = serve(&text).await;
-
-    let (status, body) = post(&format!("{base}/hook"), r#"{"x": 1}"#, None).await;
-    assert_eq!(status, 401);
-    assert!(body.contains("What now:"), "no remedy: {body}");
-    assert!(receiver.received().is_empty());
-
-    let (status, _) = post(&format!("{base}/hook"), r#"{"x": 1}"#, Some("wrong")).await;
-    assert_eq!(status, 401);
-    assert!(receiver.received().is_empty());
-
-    let (status, _) = post(&format!("{base}/hook"), r#"{"x": 1}"#, Some("let-me-in")).await;
-    assert_eq!(status, 200);
-    assert_eq!(receiver.received().len(), 1);
-}
-
-#[tokio::test]
-async fn w8_the_token_itself_never_appears_in_an_answer() {
-    let receiver = TestServer::start(vec![200]).await;
-    let text = format!(
-        "{}\ninbound_token = \"${{HOOK_TOKEN}}\"\n",
-        one_profile(&receiver.base_url).trim_end()
-    );
-    let base = serve(&text).await;
-
-    let (_, body) = post(&format!("{base}/hook"), r#"{"x": 1}"#, None).await;
-
-    assert!(!body.contains("let-me-in"), "the token leaked: {body}");
-}
-
-#[tokio::test]
 async fn ar9_a_body_over_the_cap_is_refused() {
     let receiver = TestServer::start(vec![200]).await;
     let base = serve(&one_profile(&receiver.base_url)).await;
@@ -242,9 +205,11 @@ async fn ar9_a_body_over_the_cap_is_refused() {
 }
 
 #[tokio::test]
-async fn k10_profiles_sharing_a_path_must_agree_on_the_token() {
-    // One path is one door: the check happens once per request, so two
-    // different expectations behind it would half-deliver.
+async fn k10_a_two_x_inbound_token_is_refused_with_the_command_that_replaces_it() {
+    // 3.0.0 (H1): the switchboard stopped guarding its own door. A config
+    // carrying the old field must not be silently ignored, and must not
+    // fail with serde's bare "unknown field" either — the person reading
+    // that message needs to know what to do instead.
     let text = r#"
 [[profiles]]
 name = "a"
@@ -253,23 +218,19 @@ to = { url = "http://127.0.0.1:1/x" }
 content_type = "application/json"
 inbound_token = "one"
 body = "{}"
-
-[[profiles]]
-name = "b"
-from = { http_path = "/hook" }
-to = { url = "http://127.0.0.1:1/y" }
-content_type = "application/json"
-inbound_token = "two"
-body = "{}"
 "#;
     let err = config::load("t.toml", text, &env(&[]))
         .unwrap_err()
         .to_string();
     assert!(err.contains("What now:"), "no remedy: {err}");
-    assert!(err.contains("/hook"), "{err}");
     assert!(
-        !err.contains("one") || !err.contains("two"),
-        "tokens must not be echoed: {err}"
+        err.contains("chassis clients issue"),
+        "the replacement command is named: {err}"
+    );
+    assert!(err.contains("'a'"), "the profile is named: {err}");
+    assert!(
+        !err.contains("\"one\""),
+        "the retired token must not be echoed: {err}"
     );
 }
 

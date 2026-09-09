@@ -13,6 +13,12 @@ use std::process::{Child, Command, Stdio};
 
 use support::TestServer;
 
+/// The two secrets a dashboard-carrying service needs before it will run
+/// (3.0.0, H1). Fixed values, because a test is not a deployment: on a
+/// host they come from `http-switchboard gen-secret` into the env file.
+const TEST_TOKEN: &str = "test-admin-token-not-a-real-one";
+const TEST_SECRET_KEY: &str = "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
+
 fn binary() -> std::path::PathBuf {
     let mut path = std::env::current_exe().unwrap();
     path.pop();
@@ -89,6 +95,8 @@ body = '''{{"x": {{{{ x }}}}}}'''
             .arg(&dir)
             .arg("--listen")
             .arg(format!("127.0.0.1:{port}"))
+            .env("HTTP_SWITCHBOARD_TOKEN", TEST_TOKEN)
+            .env("HTTP_SWITCHBOARD_SECRET_KEY", TEST_SECRET_KEY)
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .spawn()
@@ -153,6 +161,8 @@ body = '''{{"x": {{{{ x }}}}}}'''
         // D-H1: the switchboard's own events and the kit's lines share one
         // JSON shape; this test reads that shape.
         .env("HTTP_SWITCHBOARD_LOG_FORMAT", "json")
+        .env("HTTP_SWITCHBOARD_TOKEN", TEST_TOKEN)
+        .env("HTTP_SWITCHBOARD_SECRET_KEY", TEST_SECRET_KEY)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
@@ -172,10 +182,15 @@ body = '''{{"x": {{{{ x }}}}}}'''
         tokio::time::sleep(std::time::Duration::from_millis(150)).await;
     }
 
-    // A delivery that fails, so the failure paths print too.
+    // A delivery that fails, so the failure paths print too. Since 3.0.0
+    // the profile paths are behind the kit's door (H1), and the admin
+    // token is the bearer an operator's own script would use — issuing a
+    // sender token needs the dashboard, which is not what this test is
+    // about.
     let _ = reqwest::Client::new()
         .post(format!("http://127.0.0.1:{port}/hook"))
         .header("content-type", "application/json")
+        .header("authorization", format!("Bearer {TEST_TOKEN}"))
         .body(r#"{"x": 1}"#)
         .send()
         .await;
@@ -262,6 +277,8 @@ body = '''{"x": 1}'''
         .args(["--state-dir"])
         .arg(&dir)
         .args(["--listen", "not-an-address"])
+        .env("HTTP_SWITCHBOARD_TOKEN", TEST_TOKEN)
+        .env("HTTP_SWITCHBOARD_SECRET_KEY", TEST_SECRET_KEY)
         .output()
         .unwrap();
     assert!(!out.status.success());

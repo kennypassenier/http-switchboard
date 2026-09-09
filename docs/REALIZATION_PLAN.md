@@ -86,3 +86,37 @@ With that, all eleven phases are walked. What is deliberately not done:
 the preset is adopted in the homelab project's own mini-round, and
 Alertmanager — the reason this exists — is still on hold, so S1 remains
 unmet and unclaimed.
+
+### chassis 1.8.0 round — 2026-09-09
+
+A maintenance round, not a phase: the kit moved to 1.8.0 and this project
+decided what to take from it. The mechanical half needed no decision —
+`chassis_tag` and the `Cargo.toml` pin to `v1.8.0`, `chassis sync --write`
+(which wrote `.claude/hooks/gates.sh`'s `GIT_*` unset, the new
+`docs/KIT.md`, and corrected `kp_themes` to 5.0.0), and a suite that
+stayed at 97 green tests without one change. `chassis sync` then reported
+"in sync"; `--remote` reported no drift on the branch protection.
+
+| Gate | Date | What Kenny decided | Where it landed |
+|---|---|---|---|
+| Adoption form · chassis 1.8.0 | 2026-09-09 | **H1 Onmisbaar** — the inbound door moves to kit client tokens, against the recommendation to keep the per-path token (the live inventory that day: one profile, kyu-sourced, zero http sources, zero senders). **V1 Onmisbaar** — the dashboard's vocabulary and section buttons. **T1 Onmisbaar** — the kit test harness. **D1 Onmisbaar** — point the docs at `docs/KIT.md` and document `--knobs`. **C1 Klopt** — the README correction, all nine fields as written. | AR21 + AR2 amendment in ARCHITECTURE_DECISIONS.md; NG3 amendment in SCOPE.md; W8 amendment in FEATURES.md; docs/CORRECTIONS.md C1; CHANGELOG [3.0.0] |
+
+**Built.** The profile paths are the kit's API routes, so the kit checks a
+client token before this service reads a body; `inbound_token` is retired
+with a refusal that names `chassis clients issue`. A client is a *sender*
+here. The status page carries a Profiles section and one button, Recheck
+profiles, which clears a failure an http-source profile cannot clear
+itself. The door suite (`tests/l5b_door.rs`) runs on
+`chassis::testing::TestApp`; the project's own fakes stay where the
+subject is the pump, the hub and the retry ladder.
+
+**Deliberately not built.** No `ClientAction` on a sender's row: the kit
+already puts Re-issue, Revoke and Delete there and this service has no
+per-sender operation of its own, so a row button would have had nothing
+behind it.
+
+**What this costs elsewhere, and is not this session's to do.** The
+dashboard makes `HTTP_SWITCHBOARD_TOKEN` and `HTTP_SWITCHBOARD_SECRET_KEY`
+mandatory; the unit's `ExecStartPre=--check` refuses without them. CT 109
+still runs 1.x. The deploy is the Homelab Rust session's (V6) and the
+order that works is the banner at the top of `docs/HANDOVER_HOMELAB.md`.

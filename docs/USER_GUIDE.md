@@ -185,17 +185,58 @@ per message.
 *Proven by* `w11_e2e_a_failing_profile_reports_once_and_recovery_reports_once`
 and `w11_e2e_an_inbound_profile_reports_itself_too`.
 
-## Guarding the door (W8)
+## Guarding the door (W8, as of 3.0.0)
 
-```toml
-inbound_token = "${HOOK_TOKEN}"
+Every inbound path is behind a **sender token**. There is nothing to put
+in the config: the door is the kit's, and a token is issued per sender
+from the machine the service runs on.
+
+```bash
+http-switchboard gen-secret            # once, into the env file
+chassis clients issue alertmanager \
+  --url http://127.0.0.1:8080 \
+  --token-env HTTP_SWITCHBOARD_TOKEN   # prints the sender's token, once
 ```
 
-Requires `authorization: Bearer <token>` on that path, checked before
-the body is used and compared in constant time. Profiles sharing a path
-must agree on the token — one path is one door.
-*Proven by* `w8_without_the_token_the_door_stays_shut` and
-`k10_profiles_sharing_a_path_must_agree_on_the_token`.
+The sender then posts as it always did, with that token:
+
+```
+authorization: Bearer <the token that was printed>
+```
+
+Without it, or with a revoked one, the answer is 401 and nothing is
+translated or delivered. `chassis clients revoke` takes effect on the
+next request — no config edit, no restart. The same list is on the
+service's own **Senders** page, behind the admin login.
+
+Before 3.0.0 this was a per-path `inbound_token` in the profile. A
+config that still carries one is refused, with the command above in the
+message.
+*Proven by* `w8_a_sender_without_a_token_never_reaches_the_translation`,
+`w8_a_senders_token_opens_the_door_and_a_wrong_one_does_not`,
+`w8_revoking_a_sender_shuts_the_door_on_the_next_request` and
+`k10_a_two_x_inbound_token_is_refused_with_the_command_that_replaces_it`.
+
+## The status page (3.0.0)
+
+The door brought a dashboard with it. Behind the admin login (the
+`HTTP_SWITCHBOARD_TOKEN` from `gen-secret`) there is a **Profiles**
+section: one row per profile with its state, its source, its
+destination's host and its counters, and one button — **Recheck
+profiles**.
+
+That button exists for one situation. A profile's state only changes
+when a message goes through it, so a profile whose source is an HTTP
+path stays `failing` for as long as nobody posts to it — long after the
+receiver that caused it came back, and `/healthz?strict=1` keeps
+alarming. Recheck puts them back to `starting`, which means "nothing has
+been tried since". It changes no message and no configuration.
+*Proven by* `v1_the_status_page_names_the_profiles_and_calls_a_client_a_sender`
+and `v1_recheck_clears_a_failure_a_profile_can_no_longer_clear_itself`.
+
+Everything else on those pages comes from the kit and is described in
+`docs/KIT.md`, which `chassis sync` regenerates for the pinned kit
+version — this guide deliberately does not retell it.
 
 ## What this does not do
 
@@ -205,7 +246,10 @@ must agree on the token — one path is one door.
   Alertmanager also posts when an alert is over.
 - **It does not collect, count or batch.** One message in, one message
   out (NG2).
-- **It stores nothing** (NG3): no queue, no database, no spool.
+- **It stores no message** (NG3, amended 2026-09-09): no queue, no
+  database, no spool. Since 3.0.0 the kit keeps two stores of its own in
+  the state directory — the senders that hold a token, and admin
+  sessions. Losing that directory costs tokens, never a message.
 - **It is not a poller** (NG4): it reacts, it does not go looking.
 - **It accepts nothing from the internet yet** (NG5) — outbound is
   allowed, inbound is a decision of its own, deliberately postponed.

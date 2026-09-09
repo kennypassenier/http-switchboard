@@ -155,6 +155,15 @@ name is never a mystery to a future reader.
   Durability, redelivery and dead letters are kyu's job, which is
   why it sits in the chain.
 
+  **Amended 2026-09-09 (H1, 3.0.0).** The service still stores nothing of
+  a *message*: no queue, no database, no spool, and durability is still
+  the hub's job. What it does now keep on disk is the kit's own two
+  stores — the senders that hold a token, and the admin sessions — under
+  the state directory, because the inbound door moved onto the kit's
+  client tokens and a token nobody can revoke is not a door. The
+  distinction is the one that matters operationally: losing the state
+  directory costs the senders their tokens, and costs no message.
+
 - **NG4 · Not a poller.** It never goes out on a timer to fetch
   something. It reacts to what arrives — an HTTP request or a message
   on a topic — and nothing else.

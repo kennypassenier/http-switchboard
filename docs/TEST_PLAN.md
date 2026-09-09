@@ -1,8 +1,8 @@
 # Test plan — HTTPSwitchboard
 
 Phase 7 output. What each suite proves, what is deliberately not covered,
-and why. Written after the hardening pass on 2026-08-30, when the suite
-stood at **96 tests**.
+and why. Written after the hardening pass on 2026-08-30 when the suite
+stood at **96 tests**; at 3.0.0 (2026-09-09) it stands at **115**.
 
 Run everything with:
 
@@ -25,7 +25,9 @@ memory.
 | `tests/l2_translate.rs` (8) | The recorded Alertmanager payload renders byte-for-byte through the shipped profile; a quote in an alert summary cannot add a field or change the severity; a missing field errors instead of rendering empty; a profile we cannot escape safely is refused at startup. | pure |
 | `tests/l3_sinks.rs` (9) | Headers and body reach the receiver unchanged; a receiver that never answers times out with a remedy and frees the profile; two failures then success is one delivery and three attempts, with the pauses measured on a fake clock; no secret in any error. | a real TCP listener |
 | `tests/l4_pump.rs` (12) | The ordering: deliver, then ack — never the other way. A refused delivery is handed back and never acked. A 404 makes the next poll ask for the history. "Denied" is its own state and carries the remedy. Against a **real kyu**: a message published before the first poll still arrives; a refused delivery comes back and the retry succeeds exactly once; the translation is publishable back onto a topic; the subscription policy is in force after the first poll; a message that can never work is dead-lettered once and does not return. | real kyu container |
-| `tests/l5_inbound.rs` (14) | One route per path serving N profiles without a startup panic; the sender is answered only after delivery and told plainly when it failed; the destination never leaks back to the sender; no token means 401; a body over the cap is refused; a burst past the bound gets refusals carrying a remedy. | real TCP listeners |
+| `tests/l5_inbound.rs` (14) | One route per path serving N profiles without a startup panic; the sender is answered only after delivery and told plainly when it failed; the destination never leaks back to the sender; a body over the cap is refused; a burst past the bound gets refusals carrying a remedy; a 2.x `inbound_token` is refused with the command that replaces it. | real TCP listeners |
+| `tests/l5b_door.rs` (6) | The door, as the kit holds it since 3.0.0 (H1): no token is 401 and nothing is translated; an issued sender token gets in and a wrong one does not; **a revoked token is out on the next request**; no token appears in a refusal or on a page; the status page carries the Profiles section, the Recheck button and this project's word for a client; Recheck clears a failure an http-source profile cannot clear itself. | the kit's `TestApp`, in-process |
+| `tests/l10_docs.rs` (1) | Every `http-switchboard …` command line in README.md and USER_GUIDE.md is one the built binary parses (correction C1). It checks the *shape* of a command, never its outcome — a documented path that does not exist here is meant to fail. It cannot see a command that is wrong but still parses, nor prose around the block that has gone stale. | the built binary |
 | `tests/l6_observability.rs` (4) | Liveness stays green while a receiver is down, `?strict=1` goes 503 for the monitor; counters move; neither endpoint echoes message content. | real listeners |
 | `tests/l6b_assembly.rs` (4) | The binary refuses a broken config and accepts the shipped one; a message travels the whole way through the running service; against a real kyu the service pumps a published message by itself and counts it. | binary + real kyu |
 | `tests/l7_selfreport.rs` (2) | A failing profile produces exactly one event and recovery one more — for a kyu source and for an inbound one — and no event carries any part of a payload. | real kyu |
