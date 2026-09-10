@@ -15,9 +15,9 @@ gates hold from any session or terminal. After a fresh clone, run:
 
 | Field | Value |
 |---|---|
-| Current phase | **Done** — the chassis 2.0.0 round is closed (2026-09-10) |
-| Last completed gate | Decision form of 2026-09-10: `docs-executed` Klopt, `release` "3.1.0 nu, Claude tot de handtekening". On `ci-jobs` Kenny answered that the procedure had already decided it — the 2026-09-09 test policy — so the gates now run in two tiers and CI carries only the one check branch protection needs |
-| Next gate | none here. **3.1.0 is tagged and released, awaiting Kenny's signature** (`scripts/sign-release.sh v3.1.0`); the self-updater refuses it until then. Its binary is `static-pie` with **zero** glibc symbols, so the deployment no longer depends on the host's Debian version. What remains is not this project's: **the CT 109 upgrade belongs to the Homelab Rust session** and starts from `docs/HOMELAB_UPGRADE_PROMPT.md`, and Alertmanager is still not deployed, so the flagship criterion stays unmet and unclaimed |
+| Current phase | **Done** — up to date with chassis 2.0.2 (2026-09-10) |
+| Last completed gate | Kenny, 2026-09-10: "doe wat nodig is om up to date te zijn met de laatste versie van chassis (2.0.2)". Done with `chassis upgrade 2.0.2` and `chassis sync --write`; nothing in this project changed and the gates stayed at 110 tests green. The three shared commit hooks are no longer touched by sync (kit 2.0.1), and the kit's consumer check no longer rewrites this project's `Cargo.lock` (kit 2.0.2, their fix-6 — that was the unnamed defect in the realization plan) |
+| Next gate | none here. **3.1.0 is tagged and released, still awaiting Kenny's signature** (`scripts/sign-release.sh v3.1.0`) — the release carries only the binary and `SHA256SUMS`, so the self-updater refuses it. `main` now builds on kit 2.0.2 but no release carries that yet; 3.1.0 is the newest and it is the static musl build. The CT 109 upgrade belongs to the Homelab Rust session (`docs/HOMELAB_UPGRADE_PROMPT.md`), and Alertmanager is still not deployed |
 | AFK mode | off |
 
 <!-- Update this block after every completed gate. -->
