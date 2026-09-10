@@ -7,6 +7,8 @@ endpoints and the CLI verbs — not about the internals.
 
 ## [Unreleased]
 
+## [3.1.1] - 2026-09-10
+
 ### Changed
 
 - **chassis-rs 2.0.0 → 2.0.2**, through the kit's own `chassis upgrade`
