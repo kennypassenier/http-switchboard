@@ -7,6 +7,23 @@ endpoints and the CLI verbs — not about the internals.
 
 ## [Unreleased]
 
+### Changed
+
+- **chassis-rs 2.0.0 → 2.0.2**, through the kit's own `chassis upgrade`
+  rather than three hand edits. Nothing in this project changed: the two
+  patch releases carry no public API change, and the gates stayed at 110
+  tests green.
+  - **2.0.1** stops `chassis sync` from overwriting the three commit hooks
+    the dev-procedure owns, and writes one only when it is missing. That
+    was this project's friction on 2026-09-10, when a sync put the old ID
+    scheme back and it had to be restored by hand. Measured after the
+    bump: sync no longer names those three files at all.
+  - **2.0.2** stops `chassis sync --protect` from tightening the branch
+    protection, and its `fix-6` stops the kit's consumer check from
+    leaving this project's `Cargo.lock` rewritten. That last one is the
+    unnamed defect recorded in the realization plan on 2026-09-10 — it
+    now has a name, and it was never this project's.
+
 ## [3.1.0] - 2026-09-10
 
 ### Changed

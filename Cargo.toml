@@ -10,7 +10,7 @@ repository = "https://github.com/kennypassenier/http-switchboard"
 [dependencies]
 # The shared foundation (chassis-rs): command line, config layers, logging,
 # /healthz, /metrics, shutdown, signed self-update. Pinned to a tag.
-chassis = { git = "https://github.com/kennypassenier/chassis-rs", tag = "v2.0.0", version = "2.0.0", default-features = false, features = ["core", "self-update", "dashboard"] }
+chassis = { git = "https://github.com/kennypassenier/chassis-rs", tag = "v2.0.2", version = "2.0.2", default-features = false, features = ["core", "self-update", "dashboard"] }
 axum = { version = "0.8.9", default-features = false, features = ["http1", "tokio", "query"] }
 minijinja = { version = "2.24.0", features = ["json"] }
 reqwest = { version = "0.13.4", default-features = false, features = ["rustls"] }
@@ -30,4 +30,4 @@ reqwest = { version = "0.13.4", default-features = false, features = ["rustls"] 
 # port with a temporary state dir and fresh secrets, logs in, issues a
 # sender token. `testing` implies `dashboard`, which this project now ships
 # anyway (H1). Dev-only — the shipped binary is unchanged by this line.
-chassis = { git = "https://github.com/kennypassenier/chassis-rs", tag = "v2.0.0", version = "2.0.0", default-features = false, features = ["testing"] }
+chassis = { git = "https://github.com/kennypassenier/chassis-rs", tag = "v2.0.2", version = "2.0.2", default-features = false, features = ["testing"] }
