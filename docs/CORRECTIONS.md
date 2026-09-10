@@ -114,3 +114,56 @@ because they were simply wrong.
    reduced list rather than quietly applied.
 9. **When the measure is reviewed.** At the next kit upgrade that changes
    what `/healthz` answers.
+
+## fix-3 and fix-4 · Two documented instructions that nothing ever executed
+
+**Signed off by Kenny 2026-09-10 ("Klopt", all nine fields as written).**
+Found during the kit 2.0.0 round; both were repaired before the commit
+that carries them, because they were simply false.
+
+1. **What went wrong.** `http-switchboard test --config <a real config>`
+   answered "the file is not valid TOML" on a file that is valid TOML and
+   that the service starts from happily: the verb runs before the kit
+   parses anything, so nothing stripped the kit's own knobs and table
+   sections. And two container commands in the operations runbook reached
+   into the image at `/opt/http-switchboard/bin/…`, which is the native
+   install path; the image has always used `/usr/local/bin/…`.
+2. **Which gate let it through.** The documented-command test existed but
+   read only lines beginning with this service's own name. A `docker` line
+   and the behaviour of a verb against a real file both fell outside it.
+3. **Where else the same fault sits.** The property is "a document
+   prescribes an action that nothing executes". Searched with
+   `grep -rn 'docker exec\|docker run\|http-switchboard ' README.md docs/*.md`,
+   which returns every prescribed action rather than only the ones this
+   project's name opens. The two repaired places were the last two that no
+   test covered.
+4. **How recurrence is prevented.** Two tests, both built and green:
+   `w4_the_dry_run_reads_a_real_config_and_not_only_the_example` runs the
+   verb against a config carrying kit knobs and a `[[notify.webhook]]`
+   table, and `l10_a_documented_container_command_uses_the_path_the_image_has`
+   compares every documented container command against the Dockerfile's
+   own `COPY` target.
+5. **What the remedy costs.** About ninety lines of test, and the
+   convention that a path in a container command is written literally in
+   the document rather than described.
+6. **Who or what enforces it.** Code: both run in the commit tier of the
+   gates and again in CI.
+7. **How and when it was measured. Done 2026-09-10.** Each was driven red
+   first — the dry-run test on the misleading TOML message, the container
+   test on the exact runbook line, naming both paths — and green after the
+   fix.
+8. **The fallback if the measurement fails.** If extracting commands from
+   Markdown proves brittle, the narrower fallback is a single assertion:
+   no document names a path under `/opt/` inside a docker line. That
+   narrowing is written down here rather than quietly applied.
+9. **When the measure is reviewed.** At the next kit upgrade that changes
+   the command line or the image path.
+
+**A note the correction did not need but the round produced.** A third
+instance of the same property was found in the same pass and repaired
+without its own correction: a runbook paragraph still presented
+`?strict=1` as the strict probe, two paragraphs below the correction from
+2026-09-09 that removed exactly that claim. It is recorded here because
+the count matters: this property has now surfaced five times in this
+project, and each measure so far has been written for the surface the
+fault appeared on rather than for the property itself.

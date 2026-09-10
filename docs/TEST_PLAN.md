@@ -10,8 +10,12 @@ Run everything with:
 KYU_IMAGE=ghcr.io/kennypassenier/kyu:2.0.0 cargo test --all
 ```
 
-The commit gate sets `KYU_IMAGE` itself. Without it the end-to-end
-suites skip themselves and the run over-reports — that was a real gap
+The **release** gate sets `KYU_IMAGE` itself; an ordinary commit does not
+run those suites at all, because they need docker and a pulled image
+(Kenny's test policy: infrastructure-bound checks are release-tier). Run
+the command above by hand when a change touches the pump. Without
+`KYU_IMAGE` the end-to-end suites skip themselves and the run
+over-reports — that was a real gap
 (Phase 7, G14) and is now closed at the gate rather than trusted to
 memory.
 

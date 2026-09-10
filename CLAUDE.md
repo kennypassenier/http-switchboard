@@ -52,9 +52,16 @@ is therefore: work on a branch, wait for green, fast-forward.
 
 Commits are blocked by `.claude/hooks/check-commit.sh` unless
 `.claude/hooks/gates.sh` passes and the message carries IDs in
-brackets (`[W12]`, `[L4b]`, `[meta]`). CI re-runs the same gates on
-every push; red blocks merge. Both are installed in Phase 5, before
-the first line of feature code.
+brackets — the house scheme (`[feat-safety-4]`, `[fix-3]`, `[meta]`), with
+the old letter-plus-digit shape still accepted for history.
+
+**Two tiers** (Kenny's test policy, applied 2026-09-10): an ordinary
+commit runs fmt, clippy and the in-process suite; the release commit adds
+the real-kyu end-to-end suite, `cargo deny` and the container build. The
+tier comes from the repository — a commit that moves the package version
+is the release commit. CI carries only the single check branch protection
+needs, on every branch, because that is the one genuinely GitHub-bound
+part; `tests/l12_gate_tiers.rs` holds the two lists against each other.
 
 ## Carried into later phases
 

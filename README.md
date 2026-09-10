@@ -127,9 +127,18 @@ git config core.hooksPath .githooks
 From then on a commit is refused unless `cargo fmt --check`, `cargo
 clippy -D warnings` and the full test suite pass, and unless the message
 carries the feature IDs it implements (`[K3, W2]`, or `[meta]`). The
-gate sets `KYU_IMAGE` itself, so the end-to-end suites really run rather
-than skipping themselves. CI repeats all of it on every branch; red
-blocks `main`.
+gate runs in two tiers (Kenny's test policy): an ordinary commit runs the
+fast, in-process suite, and the **release** commit additionally runs the
+end-to-end suite against a real kyu container, `cargo deny` and the
+container build — locally, before a tag exists. The tier is read from the
+repository, not from a flag: a commit that moves the package version is
+the release commit and nothing else is.
+
+CI carries the one job branch protection needs, on every branch; red
+blocks `main`. It deliberately does not run cargo-deny, the container
+build or coverage — those are the release tier's, and
+`tests/l12_gate_tiers.rs` compares the two lists so this paragraph cannot
+quietly stop being true.
 
 ## Licence
 

@@ -32,6 +32,19 @@ endpoints and the CLI verbs — not about the internals.
   knowledge that lived nowhere and would have gone silently wrong the day
   the kit gained a second section.
 
+### Changed
+
+- **The gates run in two tiers** (Kenny's test policy of 2026-09-09,
+  applied here). An ordinary commit runs fmt, clippy and the in-process
+  suite — about eleven seconds. The **release** commit additionally runs
+  the end-to-end suite against a real kyu container, `cargo deny` and the
+  container build, locally, before a tag exists. The tier is read from the
+  repository: a commit that moves the package version is the release
+  commit, so there is no flag to forget. CI keeps only the single check
+  branch protection needs, on every branch, because that is the one
+  genuinely GitHub-bound part; `tests/l12_gate_tiers.rs` compares what CI
+  gave up against what the release tier runs.
+
 ### Fixed
 
 - **`test --config <a real config>` refused a file the service starts from
