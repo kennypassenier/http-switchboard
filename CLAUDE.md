@@ -63,6 +63,16 @@ is the release commit. CI carries only the single check branch protection
 needs, on every branch, because that is the one genuinely GitHub-bound
 part; `tests/l12_gate_tiers.rs` holds the two lists against each other.
 
+**Never run `chassis sync --protect` here.** Since kit 2.0.2 `chassis
+sync --remote` reports the branch protection as drift, because it
+compares against the scaffold's four CI jobs and this project runs one —
+and its remedy line recommends `--protect`. Following that would require
+`cargo-deny (advisories · licenses · bans)` and `container build` as
+checks on `main`, and this project's CI produces neither: `main` would
+wait forever for checks that never arrive. Those two run in the release
+tier of `.claude/hooks/gates.project.sh` instead. The protection stays as
+it is: one required check, `fmt · clippy · tests`, strict.
+
 ## Carried into later phases
 
 - **Phase 2 mandatory items:** update/distribution mechanism,
