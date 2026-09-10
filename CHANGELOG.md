@@ -7,6 +7,8 @@ endpoints and the CLI verbs — not about the internals.
 
 ## [Unreleased]
 
+## [3.1.0] - 2026-09-10
+
 ### Changed
 
 - **chassis-rs 1.8.0 → 2.0.0.** The major does not touch this project's
