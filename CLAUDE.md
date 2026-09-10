@@ -15,9 +15,9 @@ gates hold from any session or terminal. After a fresh clone, run:
 
 | Field | Value |
 |---|---|
-| Current phase | **Done** — 3.1.1 released, awaiting Kenny's signature (2026-09-10) |
+| Current phase | **Done** — 3.1.1 released and signed (2026-09-10) |
 | Last completed gate | Kenny, 2026-09-10: "ik heb de meting doorgegeven en ja maak een release klaar". Claude ran `chassis release 3.1.1`: the release tier of the gates (real-kyu E2E, `cargo deny check all`, `docker build`) passed before any tag existed, `main` moved to `29134dc`, `v3.1.1` is tagged and the Release workflow published the asset. The chain stops where it always stops — the minisign password is Kenny's |
-| Next gate | **Kenny signs 3.1.1**: `scripts/sign-release.sh v3.1.1`. Until then the release carries no `SHA256SUMS.minisig` and no `VERSION`, so the self-updater ignores it. Verified already: tag = `origin/main`, both checks green on that sha, the published binary `static-pie` with **zero** glibc symbols and matching `SHA256SUMS`. What remains is not this project's: **the CT 109 upgrade belongs to the Homelab Rust session** (`docs/HOMELAB_UPGRADE_PROMPT.md`), and Alertmanager is still not deployed, so the flagship criterion stays unmet and unclaimed |
+| Next gate | none here. **3.1.1 is released and signed** (2026-09-10). Verified end to end: `minisign -V` against the key in `scripts/sign-release.sh` reports "Signature and comment signature verified" with trusted comment `kennypassenier/http-switchboard v3.1.1`, `VERSION` reads `3.1.1`, tag = `origin/main` = `29134dc`, both checks green on that sha, and the published binary is `static-pie` with **zero** glibc symbols, matching `SHA256SUMS`. Kenny approved correction `fix-5` ("Klopt") in the same round. What remains is not this project's: **the CT 109 upgrade belongs to the Homelab Rust session** (`docs/HOMELAB_UPGRADE_PROMPT.md`), and Alertmanager is still not deployed, so the flagship criterion stays unmet and unclaimed |
 | AFK mode | off |
 
 <!-- Update this block after every completed gate. -->
@@ -44,8 +44,13 @@ gates hold from any session or terminal. After a fresh clone, run:
 
 `https://github.com/kennypassenier/http-switchboard` — public, MIT/Apache-2.0.
 Branch protection on `main` is ON: required check `fmt · clippy · tests`,
-strict (branch must be up to date), admins included, no force pushes, no
-deletions, **no pull request required** (single committer). The daily flow
+strict (branch must be up to date), no force pushes, no deletions, **no
+pull request required** (single committer). `enforce_admins` is **off** —
+measured 2026-09-10 with
+`gh api repos/kennypassenier/http-switchboard/branches/main/protection`,
+and that matches the kit's expectation since Kenny's decision of the same
+day. This line said "admins included" until that measurement; which
+command turned it off was not established. The daily flow
 is therefore: work on a branch, wait for green, fast-forward.
 
 ## Gates (enforced)

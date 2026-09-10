@@ -225,3 +225,17 @@ CI never produces and leave `main` waiting forever.
 the tagged `v3.1.1` and stays there. The published release notes on GitHub
 carry different text and never had it — measured with
 `gh release view v3.1.1 --json body`. The correction lives on `main`.
+
+**Kenny's answer, 2026-09-10: Klopt.** The correction and both tests stay
+as they are. He added one instruction in the same form: the drift finding
+below goes to the chassis-rs session as a report to keep, not to act on
+yet.
+
+**What the same round measured afterwards.** `enforce_admins` on this
+repository's `main` is **off**, while the `Repo` section of `CLAUDE.md`
+said "admins included". Same property as this correction — a document
+describing a system's state from memory — found this time in a claim about
+GitHub rather than about the kit. Measured with
+`gh api repos/kennypassenier/http-switchboard/branches/main/protection`
+and corrected to what the measurement says; which command turned it off
+was not established, and the document now says so rather than guessing.
