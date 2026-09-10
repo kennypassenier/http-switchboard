@@ -4,9 +4,9 @@ name = "http-switchboard"
 description = "Translates message shapes between webhooks and the kyu hub"
 repo = "kennypassenier/http-switchboard"
 toolchain = "1.97"
-chassis_tag = "v1.8.0"
+chassis_tag = "v2.0.0"
 chassis_repo = "https://github.com/kennypassenier/chassis-rs"
-kp_themes = "5.0.0"
+kp_themes = "5.1.0"
 # Measured on CT 109 (2026-09-06, CF-6 d): the config (handed to the 1.x
 # binary as a systemd credential) and the token env live in the homelab's
 # config dir; the kit's state goes there too. Binary: /usr/local/bin today

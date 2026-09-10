@@ -116,7 +116,7 @@ either repository. That is also where restic finds it.
 ## What the drill proved, and what it did not
 
 **Proved on real hardware (2026-08-30, scratch container 192, deleted
-afterwards):** the binary runs under systemd on a Debian 13 LXC; the
+afterwards):** the binary runs under systemd on an LXC — Debian 13 at the time of that drill, and since kit 2.0.0 the asset is a static musl build that does not depend on the host's glibc at all; the
 config check fails closed without its token, with the remedy; a message
 published on the real kyu hub was translated and delivered to Home
 Assistant in 7 ms; the subscription policy is in force on the real hub

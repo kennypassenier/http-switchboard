@@ -10,6 +10,30 @@ this upgrade crosses **two major versions at once** — the command line
 changed in 2.0.0 and the door changed in 3.0.0. Take it through the
 homelab procedure; this is that project's work, not the switchboard's.
 
+**The glibc question is gone as of kit 2.0.0 (2026-09-10).** An earlier
+version of this text did not mention it at all, and between then and now
+it mattered: every release asset built on the previous kit needed
+`GLIBC_2.39`, CT 109 runs Debian 12 with glibc 2.36, and the binary would
+not have started there — a restart loop under `Restart=always`, which is
+how the Homelab Rust session lost three rollouts in one day.
+
+The kit's `feat-build-1` made the release asset a **static musl binary on
+a distroless image**, and the release workflow now refuses to publish one
+that links shared libraries.
+
+**Which release you take decides whether that helps you.** The tagged
+**3.0.0** asset was built before this and still needs `GLIBC_2.39`: on
+Debian 12 it does not start, and under `Restart=always` that is a restart
+loop. The **first release cut from kit 2.0.0** is static and runs on
+Debian 12 and 13 alike. So: take that release, or move CT 109 to Debian
+13 first — either works, and doing both is fine. Check before installing:
+
+```bash
+objdump -T <the downloaded binary> | grep -c GLIBC_
+```
+
+Zero means static, and the host's Debian version stops mattering.
+
 **What is on CT 109 today** (measured 2026-09-09 from the Proxmox host):
 
 - unit `http-switchboard`, `active`

@@ -22,6 +22,17 @@ use http_switchboard::app::App as Switchboard;
 use http_switchboard::config::{self, ProcessEnv, Source};
 use http_switchboard::obs::{ProfileSubsystem, RegistryMetrics};
 
+/// The kit's description of this service. One definition, because the
+/// dry-run needs the same knob and section names the real start does.
+fn spec() -> AppSpec {
+    AppSpec {
+        name: "http-switchboard",
+        version: env!("CARGO_PKG_VERSION"),
+        repository: Some("kennypassenier/http-switchboard"),
+        ..Default::default()
+    }
+}
+
 fn usage() -> String {
     "http-switchboard [--config <config.toml>] [--listen host:port] [--state-dir <dir>]\n\
      http-switchboard --check [--config <config.toml>]\n\
@@ -41,12 +52,7 @@ async fn main() -> ExitCode {
         return dry_run(&args[1..]);
     }
 
-    let spec = AppSpec {
-        name: "http-switchboard",
-        version: env!("CARGO_PKG_VERSION"),
-        repository: Some("kennypassenier/http-switchboard"),
-        ..Default::default()
-    };
+    let spec = spec();
     let mut app = match App::from_env_and_args(spec, Router::new()) {
         Ok(app) => app,
         Err(e) => {
@@ -68,7 +74,19 @@ async fn main() -> ExitCode {
     // validate the rest with the switchboard's own rules intact
     // (deny_unknown_fields, reserved paths, `${VAR}` from the environment).
     let path = loaded.file_path.display().to_string();
-    let config = match load_own(&path, &app.spec.knob_keys()) {
+    // feat-config-1 (kit 2.0.0): the kit hands over its own half of the
+    // shared file — its knob keys AND its table sections. What this replaced
+    // was nineteen hand-written lines, one of which stripped `notify` on
+    // knowledge that lived nowhere and would have gone silently wrong the
+    // day the kit gained a second section.
+    let config = match app
+        .project_table()
+        .map_err(|e| e.to_string())
+        .and_then(|table| {
+            let own =
+                toml::to_string(&table).map_err(|e| format!("{path}: cannot re-serialise: {e}"))?;
+            config::load(&path, &own, &ProcessEnv).map_err(|e| e.to_string())
+        }) {
         Ok(config) => config,
         Err(message) => {
             eprintln!("{message}");
@@ -135,8 +153,17 @@ async fn main() -> ExitCode {
     app.run().await
 }
 
-/// Read the shared config file and hand the switchboard its part.
-fn load_own(path: &str, kit_keys: &[&str]) -> Result<config::Config, String> {
+/// Read a config file for the `test` subcommand.
+///
+/// This verb runs before the kit parses anything, so there is no `App` to
+/// ask for `project_table()`. It does the same strip from the spec, which
+/// names both halves itself (`knob_keys` since 1.2.0, `kit_sections` since
+/// 2.0.0) — so this is the kit's list, not knowledge kept here.
+///
+/// fix-3: without the strip this verb answered "not valid TOML" on a file
+/// that is valid TOML and that the service starts from happily, which is
+/// exactly the file the operations runbook tells an operator to point it at.
+fn load_for_dry_run(path: &str) -> Result<config::Config, String> {
     let text = std::fs::read_to_string(path).map_err(|e| {
         format!(
             "{path}: cannot be read ({e}). What now: check the path (--config / \
@@ -145,12 +172,12 @@ fn load_own(path: &str, kit_keys: &[&str]) -> Result<config::Config, String> {
         )
     })?;
     let mut table: toml::Table = toml::from_str(&text).map_err(|e| {
-        format!("{path}: is not valid TOML: {e}. What now: fix the file; the kit's and the switchboard's keys share it.")
+        format!("{path}: is not valid TOML: {e}. What now: fix the syntax the parser points at.")
     })?;
-    for key in kit_keys {
+    let spec = spec();
+    for key in spec.knob_keys().iter().chain(spec.kit_sections()) {
         table.remove(*key);
     }
-    table.remove("notify");
     let own = toml::to_string(&table).map_err(|e| format!("{path}: cannot re-serialise: {e}"))?;
     config::load(path, &own, &ProcessEnv).map_err(|e| e.to_string())
 }
@@ -176,7 +203,7 @@ fn dry_run(args: &[String]) -> ExitCode {
         eprintln!("{}", usage());
         return ExitCode::FAILURE;
     }
-    let config = match load_own(&config_path, &[]) {
+    let config = match load_for_dry_run(&config_path) {
         Ok(c) => c,
         Err(message) => {
             eprintln!("{message}");

@@ -175,3 +175,71 @@ fn l10_every_documented_command_is_one_the_binary_accepts() {
          (fences changed shape?) and this test is proving nothing"
     );
 }
+
+/// Where the image actually puts the binary, read from the Dockerfile.
+fn binary_path_inside_the_image() -> String {
+    let dockerfile = std::fs::read_to_string(repo_root().join("Dockerfile"))
+        .expect("the Dockerfile must be readable");
+    for line in dockerfile.lines() {
+        let line = line.trim();
+        if line.starts_with("COPY --from=build") && line.contains("http-switchboard") {
+            if let Some(dest) = line.split_whitespace().last() {
+                if dest.starts_with('/') {
+                    return dest.to_string();
+                }
+            }
+        }
+    }
+    panic!("the Dockerfile no longer copies the binary anywhere this test recognises");
+}
+
+#[test]
+fn l10_a_documented_container_command_uses_the_path_the_image_has() {
+    // fix-4, found 2026-09-10 during the kit 2.0.0 honesty pass. The
+    // operations runbook told an operator to reach into the container at
+    // /opt/http-switchboard/bin/http-switchboard — which is where the
+    // NATIVE install puts it. The image has always used another path, so
+    // both documented commands answered "no such file or directory" on a
+    // container that was working fine.
+    //
+    // The same class as the two corrections before it: a document stating
+    // something about the software that nothing ever executed. This test is
+    // the cheapest thing that executes it — it compares the document's path
+    // against the Dockerfile's own.
+    //
+    // Placement: integration test — it reads the repository. Timing: full
+    // suite.
+    let expected = binary_path_inside_the_image();
+    let root = repo_root();
+
+    let mut checked = 0usize;
+    for doc in [
+        "README.md",
+        "docs/USER_GUIDE.md",
+        "docs/OPERATIONS_RUNBOOK.md",
+    ] {
+        let text = std::fs::read_to_string(root.join(doc))
+            .unwrap_or_else(|e| panic!("{doc} must be readable: {e}"));
+        for line in text.lines() {
+            if !(line.contains("docker exec") || line.contains("docker run")) {
+                continue;
+            }
+            checked += 1;
+            for word in line.split_whitespace() {
+                if word.contains("/http-switchboard") && word.starts_with('/') {
+                    assert_eq!(
+                        word.trim_end_matches('\\'),
+                        expected,
+                        "{doc} reaches into the image at a path it does not have.\n  line: {}\n\
+                         What now: fix the document — the Dockerfile is what ships.",
+                        line.trim()
+                    );
+                }
+            }
+        }
+    }
+    assert!(
+        checked >= 2,
+        "only {checked} container commands were found; the scan is proving nothing"
+    );
+}

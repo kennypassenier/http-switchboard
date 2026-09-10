@@ -252,3 +252,51 @@ fn k7_awkward_values_in_a_templated_path_stay_one_segment() {
         }
     }
 }
+
+#[test]
+fn w4_the_dry_run_reads_a_real_config_and_not_only_the_example() {
+    // fix-3, found 2026-09-10 while moving to kit 2.0.0. The operations
+    // runbook tells an operator to run this verb against the DEPLOYED
+    // config. A deployed config also carries the kit's own knobs and its
+    // `[[notify.webhook]]` tables, and this verb runs before the kit parses
+    // anything, so nothing was stripping them: the verb answered "not valid
+    // TOML" on a file that is valid TOML and that the service itself starts
+    // from happily.
+    //
+    // Placement: integration test — it needs the real binary and a real
+    // file. Timing: full suite.
+    let dir = std::env::temp_dir().join(format!("hsw-realconfig-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("config.toml");
+    let example = std::fs::read_to_string("deploy/config.example.toml").unwrap();
+    std::fs::write(
+        &path,
+        format!(
+            "listen = \"0.0.0.0:8080\"\nlog = \"info\"\n\n\
+             [[notify.webhook]]\nurl = \"http://127.0.0.1:9/hook\"\n\n{example}"
+        ),
+    )
+    .unwrap();
+
+    let out = std::process::Command::new(binary())
+        .args(["test", "--config"])
+        .arg(&path)
+        .args([
+            "--profile",
+            "alertmanager",
+            "--input",
+            "tests/fixtures/alertmanager_firing.json",
+        ])
+        .env("KYU_TOKEN", "vault-value")
+        .output()
+        .expect("the binary must be built");
+
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    let _ = std::fs::remove_dir_all(&dir);
+    assert!(
+        out.status.success(),
+        "the dry-run must read a config that carries the kit's own knobs.\nstdout: {stdout}\nstderr: {stderr}"
+    );
+    assert!(stdout.contains("would send"), "{stdout}");
+}

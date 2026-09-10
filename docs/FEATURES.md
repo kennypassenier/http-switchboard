@@ -8,6 +8,17 @@ names, docs and forms forever.
 > plus the four mandatory items. The scale is the canonical one:
 > Essential · Desired · Later · Don't do.
 
+**Amendment, 2026-09-10 (kit 2.0.0).** The update-and-distribution row
+above still says "glibc release + signing". That is no longer true: the
+kit's `feat-build-1` made the release asset a **static musl binary on a
+distroless image**, and the release workflow refuses to publish one that
+links shared libraries. The practical difference is that the binary no
+longer depends on the host's Debian version — the previous asset needed
+`GLIBC_2.39` and would not have started on CT 109, which runs glibc 2.36.
+The row itself is left as it was written: this project's identifiers are
+migrated one at a time as they surface, and rewriting the row would have
+been recorded as minting an old-shape ID.
+
 **Tally:** 21 Essential · 3 Desired · 2 Later · 0 Don't do (26 total). W12 was added on 2026-08-30 by mini-round MR2, after the freeze.
 
 Frozen at the Phase 2 gate on 2026-08-29: every item below, its rating

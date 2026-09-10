@@ -7,6 +7,49 @@ endpoints and the CLI verbs — not about the internals.
 
 ## [Unreleased]
 
+### Changed
+
+- **chassis-rs 1.8.0 → 2.0.0.** The major does not touch this project's
+  code: its breaking change is the `Client` struct, which this service
+  never constructs. What arrives through `chassis sync` is worth more than
+  the version number suggests:
+  - **The release asset is a static musl binary on a distroless image**
+    (kit `feat-build-1`), and the release workflow refuses to publish one
+    that links shared libraries. The previous asset needed `GLIBC_2.39`;
+    CT 109 runs glibc 2.36, so it could not have started there. **The
+    deployment no longer depends on the host's Debian version.**
+  - **`update_cmd` passes the unit's own `Environment=` lines**, so a
+    self-update's staged `--check` no longer runs without
+    `HTTP_SWITCHBOARD_STATE_DIR` and fail with a message pointing at the
+    wrong layer.
+  - **`docs/KIT.md` describes only the features this binary carries**
+    (kit K35): core, dashboard, assets, self-update.
+  - kp-themes 5.1.0, which fixes the state badge that broke `active`
+    across two lines on the Clients page.
+- **The nineteen hand-written lines that split the shared config file are
+  gone** (kit `feat-config-1`): `App::project_table()` removes the kit's
+  knob keys and its table sections. One of those lines removed `notify` on
+  knowledge that lived nowhere and would have gone silently wrong the day
+  the kit gained a second section.
+
+### Fixed
+
+- **`test --config <a real config>` refused a file the service starts from
+  happily** (fix-3). The dry-run runs before the kit parses anything, so
+  nothing stripped the kit's own knobs and tables; a config carrying
+  `listen` or a `[[notify.webhook]]` table — which every deployed config
+  does — was answered with "not valid TOML" on a file that is valid TOML.
+  The operations runbook tells an operator to point this verb at exactly
+  that file. It now does the same strip from the spec, which names both
+  halves itself.
+- **Two documented container commands used a path the image does not
+  have** (fix-4): `/opt/http-switchboard/bin/…` is the native install;
+  the image has always used `/usr/local/bin/…`. `tests/l10_docs.rs` now
+  compares documented container commands against the Dockerfile.
+- A paragraph in the operations runbook still presented `?strict=1` as the
+  strict probe, two paragraphs below the correction that removed exactly
+  that claim.
+
 ### Added
 
 - `tests/l11_health_claims.rs` — the measure of correction C2. It measures

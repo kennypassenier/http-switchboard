@@ -28,7 +28,7 @@ values) and the rendered body. Nothing is sent. Inside the container,
 which has no shell:
 
 ```bash
-docker run --rm --entrypoint /opt/http-switchboard/bin/http-switchboard \
+docker run --rm --entrypoint /usr/local/bin/http-switchboard \
   -v /path/config.toml:/c.toml:ro -v /path/message.json:/m.json:ro \
   ghcr.io/kennypassenier/http-switchboard:latest \
   test --config /c.toml --profile alertmanager --input /m.json
@@ -73,9 +73,10 @@ where three documents described a split that had been gone for two
 releases.
 
 
-`?strict=1` is the one that goes **503** when any profile is failing,
-denied or cut off. **Point Uptime Kuma at that one.** Either way the body
-names each profile, its state and how long ago it last succeeded.
+`?strict=1` is accepted and answers the same as the plain path; it is a
+leftover of the 1.x split and points at nothing of its own. **Point Uptime
+Kuma at `/healthz`.** Either way the body names each profile, its state
+and how long ago it last succeeded.
 
 Counters, including delivery duration, are at `/metrics` in Prometheus
 format. Neither endpoint ever echoes message content.
@@ -125,14 +126,18 @@ preset.
 
 ## 6 · The container, when there is no shell to help you
 
-The image is distroless: no shell, no curl, no `ps`. Three things still
-work from outside it:
+The image is distroless: no shell, no curl, no `ps`. The binary lives at
+`/usr/local/bin/http-switchboard` there — **not** at the
+`/opt/http-switchboard/bin/…` of the native install; `tests/l10_docs.rs`
+compares the two commands below against the Dockerfile so they cannot
+drift apart again (correction fix-4). Three things still work from
+outside it:
 
 ```bash
 docker logs <container>                    # JSON lines, one per message
-docker exec <container> /opt/http-switchboard/bin/http-switchboard --healthcheck \
+docker exec <container> /usr/local/bin/http-switchboard --healthcheck \
   http://127.0.0.1:8080/healthz            # the binary asks itself
-docker run --rm --entrypoint /opt/http-switchboard/bin/http-switchboard \
+docker run --rm --entrypoint /usr/local/bin/http-switchboard \
   -v /path/config.toml:/c.toml:ro -v /path/message.json:/m.json:ro \
   <image> test --config /c.toml --profile <name> --input /m.json
 ```
