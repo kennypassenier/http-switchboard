@@ -237,5 +237,11 @@ said "admins included". Same property as this correction — a document
 describing a system's state from memory — found this time in a claim about
 GitHub rather than about the kit. Measured with
 `gh api repos/kennypassenier/http-switchboard/branches/main/protection`
-and corrected to what the measurement says; which command turned it off
-was not established, and the document now says so rather than guessing.
+and corrected to what the measurement says. The cause came back the same
+evening from the chassis-rs session, which had turned it off in all five
+repositories with `gh api -X DELETE …/protection/enforce_admins` on
+Kenny's answer to one of its forms — `chassis sync --protect`, a command
+this project must never run, was not involved. Corroborated here rather than taken on the word of another
+session: all five repositories read `enforce_admins=false` with the single
+check `fmt · clippy · tests`, which is what one sweep across five would
+leave behind.

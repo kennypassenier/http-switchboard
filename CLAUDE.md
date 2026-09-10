@@ -47,10 +47,13 @@ Branch protection on `main` is ON: required check `fmt · clippy · tests`,
 strict (branch must be up to date), no force pushes, no deletions, **no
 pull request required** (single committer). `enforce_admins` is **off** —
 measured 2026-09-10 with
-`gh api repos/kennypassenier/http-switchboard/branches/main/protection`,
-and that matches the kit's expectation since Kenny's decision of the same
-day. This line said "admins included" until that measurement; which
-command turned it off was not established. The daily flow
+`gh api repos/kennypassenier/http-switchboard/branches/main/protection`.
+The chassis-rs session turned it off that evening in all five repositories
+with `gh api -X DELETE …/protection/enforce_admins`, on Kenny's answer to
+one of its forms; `chassis sync --protect` was never run here. Measured
+across all five: every one reads `enforce_admins=false` with the single
+check `fmt · clippy · tests`. This line said "admins included" until that
+measurement. The daily flow
 is therefore: work on a branch, wait for green, fast-forward.
 
 ## Gates (enforced)
