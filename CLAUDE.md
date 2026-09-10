@@ -15,9 +15,9 @@ gates hold from any session or terminal. After a fresh clone, run:
 
 | Field | Value |
 |---|---|
-| Current phase | **Done** — the chassis 1.8.0 round is closed (2026-09-09) |
-| Last completed gate | Retrospective of 2026-09-09: five lessons, the ecosystem entry and U1 all Opnemen, C2 Klopt. Committed to `~/Projects/dev-procedure` as `829a45e` (local only — that repo has no remote). C2's measure is built and its measurement is done: `tests/l11_health_claims.rs` was red on both documents and is green. Before that, the release report of 2026-09-09: R1–R4, R6 Akkoord, R5 Akkoord with a request (a prompt for the Homelab Rust session — `docs/HOMELAB_UPGRADE_PROMPT.md`), R7 "Claude tot de handtekening". 3.0.0 on `main` = `f400d57`, tag on that commit, all checks green, release published with the binary and `SHA256SUMS` |
-| Next gate | none here. **3.0.0 is released and signed** — verified end to end against the key compiled into the shipped software. What remains is not this project's: **the CT 109 upgrade belongs to the Homelab Rust session (V6)** and starts from `docs/HOMELAB_UPGRADE_PROMPT.md`, and Alertmanager is still not deployed, so S1 stays unmet and unclaimed |
+| Current phase | **Done** — the chassis 2.0.0 round is closed (2026-09-10) |
+| Last completed gate | Decision form of 2026-09-10: `docs-executed` Klopt, `release` "3.1.0 nu, Claude tot de handtekening". On `ci-jobs` Kenny answered that the procedure had already decided it — the 2026-09-09 test policy — so the gates now run in two tiers and CI carries only the one check branch protection needs |
+| Next gate | none here. **3.1.0 is tagged and released, awaiting Kenny's signature** (`scripts/sign-release.sh v3.1.0`); the self-updater refuses it until then. Its binary is `static-pie` with **zero** glibc symbols, so the deployment no longer depends on the host's Debian version. What remains is not this project's: **the CT 109 upgrade belongs to the Homelab Rust session** and starts from `docs/HOMELAB_UPGRADE_PROMPT.md`, and Alertmanager is still not deployed, so the flagship criterion stays unmet and unclaimed |
 | AFK mode | off |
 
 <!-- Update this block after every completed gate. -->

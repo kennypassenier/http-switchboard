@@ -146,3 +146,58 @@ procedure.
 1.x; the upgrade belongs to the Homelab Rust session (V6) and starts from
 `docs/HOMELAB_UPGRADE_PROMPT.md`. Alertmanager is not deployed, so S1 —
 a genuine alert travelling the whole chain — remains unmet and unclaimed.
+
+### chassis 2.0.0 and release 3.1.0 — 2026-09-10
+
+The kit's first major. It touched no code here — its breaking change is
+the `Client` struct, which this service never constructs — but what came
+with it mattered more than the version number.
+
+| Gate | Date | What Kenny decided | Where it landed |
+|---|---|---|---|
+| Decision form · after the 2.0.0 upgrade | 2026-09-10 | `docs-executed` **Klopt** (the correction and its two tests stand). `release` **"3.1.0 nu, Claude tot de handtekening"**. On `ci-jobs` he did not choose an option: *"Er is hierover in de dev procedure toch al een beslissing gemaakt? Draai zoveel mogelijk lokaal, enkel testen wat er verandert, bij een release testen we de hele suite. Enkel wat via github actions moet gaat via ci."* — the 2026-09-09 test policy, which Claude had read this session and turned into a question anyway. | Two-tier gates in `.claude/hooks/gates.project.sh`; one CI job; `tests/l12_gate_tiers.rs`; `docs/CORRECTIONS.md` fix-3 + fix-4 |
+| Release 3.1.0 | 2026-09-10 | Claude ran the chain; Kenny signs. | Tag `v3.1.0` = `3da6b88` = `origin/main`, all checks green on that sha, release published with the binary and `SHA256SUMS`. Awaiting `scripts/sign-release.sh v3.1.0` |
+
+**What the upgrade itself cost.** Two lines of pin plus `chassis sync
+--write`, and zero test changes. That is the second round in a row where
+the kit bump alone was a dependency change; everything else was adopting
+new capability or repairing what was already wrong.
+
+**What arrived through the sync, and why it matters here.** The release
+asset is now a **static musl binary on a distroless image**. Measured on
+the published 3.1.0 asset: `static-pie linked`, **zero** glibc symbols,
+`--version` runs. The 3.0.0 asset needed `GLIBC_2.39` and CT 109 has
+2.36, so it could not have started there at all. The fleet's move from
+Debian 12 to 13 stops being a precondition for this service. `update_cmd`
+now also passes the unit's own `Environment=` lines, so a self-update's
+staged `--check` no longer runs without the state directory.
+
+**Adopted.** `App::project_table()` replaced the nineteen hand-written
+lines that split the shared config file — one of which stripped `notify`
+on knowledge that lived nowhere.
+
+**Deliberately kept against the scaffold.** The two commit hooks stay on
+this project's newer ID scheme; the kit's 2.0.0 scaffold still teaches the
+old shape and its sync had quietly downgraded them. Reported to the
+chassis-rs session, which is fixing it in 2.0.1 (their `fix-4`).
+
+**Three faults found and closed.** `fix-3`: the dry-run refused a config
+the service starts from happily. `fix-4`: two documented container
+commands used the native install path instead of the image's. And a
+runbook paragraph still presented `?strict=1` as the strict probe, two
+paragraphs below the correction of 2026-09-09 that removed that very
+claim. All three are the same property — a document prescribing an action
+nothing executes — which has now surfaced five times in this project.
+
+**One thing left without a name (standing rule 8a).** Twice on 2026-09-10
+the `chassis` entry in `Cargo.lock` lost its `source = "git+…"` line in
+the working tree — which would say the dependency is a local path. The
+first time it was dismissed as leftover from another session; the second
+time there was no other session, so that explanation was wrong. Five
+candidates were run against a clean tree and none reproduced it:
+`cargo deny check all`, `cargo test --test l4_pump` with `KYU_IMAGE`,
+`docker build`, `chassis sync`, and `cargo update -w --offline`. The
+committed lock is correct — `git show HEAD:Cargo.lock` carries the source
+line and CI built from it — and the gate's clean-tree check is what
+stands between this and a bad commit both times. It stays here as an
+open, unnamed defect rather than a third guess.

@@ -24,9 +24,11 @@ that links shared libraries.
 **Which release you take decides whether that helps you.** The tagged
 **3.0.0** asset was built before this and still needs `GLIBC_2.39`: on
 Debian 12 it does not start, and under `Restart=always` that is a restart
-loop. The **first release cut from kit 2.0.0** is static and runs on
-Debian 12 and 13 alike. So: take that release, or move CT 109 to Debian
-13 first — either works, and doing both is fine. Check before installing:
+loop. **Take 3.1.0 or later.** Measured on the published 3.1.0 asset on
+2026-09-10: `static-pie linked`, zero glibc symbols, and
+`./http-switchboard --version` runs. It needs nothing from the host, so
+Debian 12 and 13 are both fine and the fleet migration is no longer a
+precondition for this service. Check before installing anyway:
 
 ```bash
 objdump -T <the downloaded binary> | grep -c GLIBC_
