@@ -15,9 +15,9 @@ gates hold from any session or terminal. After a fresh clone, run:
 
 | Field | Value |
 |---|---|
-| Current phase | **Done** — up to date with chassis 2.0.2 (2026-09-10) |
-| Last completed gate | Kenny, 2026-09-10: "doe wat nodig is om up to date te zijn met de laatste versie van chassis (2.0.2)". Done with `chassis upgrade 2.0.2` and `chassis sync --write`; nothing in this project changed and the gates stayed at 110 tests green. The three shared commit hooks are no longer touched by sync (kit 2.0.1), and the kit's consumer check no longer rewrites this project's `Cargo.lock` (kit 2.0.2, their fix-6 — that was the unnamed defect in the realization plan) |
-| Next gate | none here. **3.1.0 is released and signed** (2026-09-10) — verified end to end: `minisign -V` against the key compiled into the shipped software, the published binary matching the signed manifest, `static-pie` with zero glibc symbols. `main` builds on kit 2.0.2, which no release carries yet; 3.1.0 on kit 2.0.0 is the newest and is the static build, so nothing waits on that. What remains is not this project's: **the CT 109 upgrade belongs to the Homelab Rust session** (`docs/HOMELAB_UPGRADE_PROMPT.md`), and Alertmanager is still not deployed, so the flagship criterion stays unmet and unclaimed |
+| Current phase | **Done** — 3.1.1 released, awaiting Kenny's signature (2026-09-10) |
+| Last completed gate | Kenny, 2026-09-10: "ik heb de meting doorgegeven en ja maak een release klaar". Claude ran `chassis release 3.1.1`: the release tier of the gates (real-kyu E2E, `cargo deny check all`, `docker build`) passed before any tag existed, `main` moved to `29134dc`, `v3.1.1` is tagged and the Release workflow published the asset. The chain stops where it always stops — the minisign password is Kenny's |
+| Next gate | **Kenny signs 3.1.1**: `scripts/sign-release.sh v3.1.1`. Until then the release carries no `SHA256SUMS.minisig` and no `VERSION`, so the self-updater ignores it. Verified already: tag = `origin/main`, both checks green on that sha, the published binary `static-pie` with **zero** glibc symbols and matching `SHA256SUMS`. What remains is not this project's: **the CT 109 upgrade belongs to the Homelab Rust session** (`docs/HOMELAB_UPGRADE_PROMPT.md`), and Alertmanager is still not deployed, so the flagship criterion stays unmet and unclaimed |
 | AFK mode | off |
 
 <!-- Update this block after every completed gate. -->
@@ -63,8 +63,9 @@ is the release commit. CI carries only the single check branch protection
 needs, on every branch, because that is the one genuinely GitHub-bound
 part; `tests/l12_gate_tiers.rs` holds the two lists against each other.
 
-**Never run `chassis sync --protect` here.** Since kit 2.0.2 `chassis
-sync --remote` reports the branch protection as drift, because it
+**Never run `chassis sync --protect` here.** `chassis sync --remote`
+reports the branch protection as drift (measured on kit 2.0.2,
+2026-09-10), because it
 compares against the scaffold's four CI jobs and this project runs one —
 and its remedy line recommends `--protect`. Following that would require
 `cargo-deny (advisories · licenses · bans)` and `container build` as

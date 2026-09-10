@@ -20,11 +20,15 @@ endpoints and the CLI verbs — not about the internals.
     was this project's friction on 2026-09-10, when a sync put the old ID
     scheme back and it had to be restored by hand. Measured after the
     bump: sync no longer names those three files at all.
-  - **2.0.2** stops `chassis sync --protect` from tightening the branch
-    protection, and its `fix-6` stops the kit's consumer check from
+  - **2.0.2** turns `enforce_admins` off in the branch protection that
+    `chassis sync --protect` writes, so the repository's owner can push to
+    `main` directly; the required check and the force-push and deletion
+    blocks stay as they were. It does not change *which* checks `--protect`
+    would require, and this project must still never run it — see the
+    warning in `CLAUDE.md`. Its `fix-6` stops the kit's consumer check from
     leaving this project's `Cargo.lock` rewritten. That last one is the
-    unnamed defect recorded in the realization plan on 2026-09-10 — it
-    now has a name, and it was never this project's.
+    unnamed defect recorded in the realization plan on 2026-09-10 — it now
+    has a name, and it was never this project's.
 
 ## [3.1.0] - 2026-09-10
 

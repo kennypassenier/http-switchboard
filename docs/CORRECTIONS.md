@@ -167,3 +167,61 @@ without its own correction: a runbook paragraph still presented
 the count matters: this property has now surfaced five times in this
 project, and each measure so far has been written for the surface the
 fault appeared on rather than for the property itself.
+
+## fix-5 · A release note described another repository's change from memory
+
+**What the document said.** The `[3.1.1]` section of `CHANGELOG.md` said
+that kit 2.0.2 "stops `chassis sync --protect` from tightening the branch
+protection". That is not what 2.0.2 did. It turns `enforce_admins` off in
+the protection `--protect` writes; *which* checks `--protect` would
+require is untouched. Written that way, the sentence reads as the opposite
+of the warning committed to `CLAUDE.md` an hour earlier: this project must
+never run that command, because it would demand two checks this project's
+CI never produces and leave `main` waiting forever.
+
+1. **What the fault actually was.** The entry was written from the memory
+   of a conversation about the kit, not from the kit's own release notes.
+   The kit's text was two commands away: `sed -n '/^## \[2.0.2\]/,…'` on
+   its `CHANGELOG.md`, which is what settled it afterwards.
+2. **Which gate let it through.** None looks at prose about another
+   repository. `fmt`, `clippy` and 110 tests all passed, and the release
+   tier added `cargo deny`, the container build and the real-kyu suite —
+   none of which reads a sentence.
+3. **Where else the same fault sits.** The property is "a document
+   describes another repository's behaviour from memory". Checked the
+   other place this round produced: the `CLAUDE.md` warning also carried
+   an unmeasured causal claim, "Since kit 2.0.2 `chassis sync --remote`
+   reports…". The drift was only ever measured on 2.0.2; whether older kit
+   versions reported it was never tested. Corrected to say what was
+   measured and when.
+4. **How recurrence is prevented.** `tests/l13_protect_warning.rs`. It
+   holds the claim that matters — no document in this repository may name
+   `chassis sync --protect` without the words "never run" in the same
+   paragraph — plus a second test requiring the warning to keep naming the
+   two checks that would deadlock `main`. It cannot check that a sentence
+   about the kit is true; it can make the one dangerous sentence
+   impossible to write.
+5. **What the remedy costs.** About eighty lines of test, and one
+   convention: a passage naming that command carries its refusal in the
+   same paragraph, so a reader who sees only the paragraph sees both.
+6. **Who or what enforces it.** Code: the commit tier of the gates, and
+   again in CI.
+7. **How and when it was measured. Done 2026-09-10.** Driven red by
+   removing `Never` from the warning in `CLAUDE.md` — and the first
+   version of the test stayed **green**, because it looked for the bare
+   word "never", which also matches "checks that never arrive" two lines
+   below. The marker was tightened to the pair "never run", driven red
+   again, and this time it failed; green with the warning restored.
+8. **The fallback if the measurement fails.** If a legitimate passage ever
+   needs to name the command without refusing it — a report to the kit,
+   say — the fallback is an explicit allow-list of file plus paragraph in
+   the test, written down there rather than loosening the marker.
+9. **When the measure is reviewed.** At the next kit release that changes
+   what `chassis sync --protect` writes, or when this project's CI grows
+   the two checks, at which point the warning becomes wrong and both tests
+   should be deleted in the same commit.
+
+**What this cost in the release.** Nothing recoverable: the sentence is in
+the tagged `v3.1.1` and stays there. The published release notes on GitHub
+carry different text and never had it — measured with
+`gh release view v3.1.1 --json body`. The correction lives on `main`.
