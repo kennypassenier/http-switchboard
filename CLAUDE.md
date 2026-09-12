@@ -18,6 +18,7 @@ gates hold from any session or terminal. After a fresh clone, run:
 | Current phase | **Done** — 3.1.1 released and signed (2026-09-10) |
 | Last completed gate | Kenny, 2026-09-10: "ik heb de meting doorgegeven en ja maak een release klaar". Claude ran `chassis release 3.1.1`: the release tier of the gates (real-kyu E2E, `cargo deny check all`, `docker build`) passed before any tag existed, `main` moved to `29134dc`, `v3.1.1` is tagged and the Release workflow published the asset. The chain stops where it always stops — the minisign password is Kenny's |
 | Next gate | none here. **3.1.1 is released and signed** (2026-09-10). Verified end to end: `minisign -V` against the key in `scripts/sign-release.sh` reports "Signature and comment signature verified" with trusted comment `kennypassenier/http-switchboard v3.1.1`, `VERSION` reads `3.1.1`, tag = `origin/main` = `29134dc`, both checks green on that sha, and the published binary is `static-pie` with **zero** glibc symbols, matching `SHA256SUMS`. Kenny approved correction `fix-5` ("Klopt") in the same round. What remains is not this project's: **the CT 109 upgrade belongs to the Homelab Rust session** (`docs/HOMELAB_UPGRADE_PROMPT.md`), and Alertmanager is still not deployed, so the flagship criterion stays unmet and unclaimed |
+| Next action | waiting on Kenny: nothing in progress here |
 | AFK mode | off |
 
 <!-- Update this block after every completed gate. -->
