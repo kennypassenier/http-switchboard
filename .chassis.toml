@@ -14,5 +14,8 @@ kp_themes = "5.1.0"
 state_dir = "/appdata/kyu/http-switchboard-config"
 env_file = "/appdata/kyu/http-switchboard-config/token.env"
 latch = false
+# CI runs one job on purpose (ci.yml); cargo-deny and the container build run
+# at the release tier of .claude/hooks/gates.project.sh.
+required_checks = ["fmt · clippy · tests"]
 # Adopted by the homelab as stack http-switchboard on CT 109 (2026-08-31).
 vmid = 109
