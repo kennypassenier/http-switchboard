@@ -7,6 +7,8 @@ endpoints and the CLI verbs — not about the internals.
 
 ## [Unreleased]
 
+## [3.2.0] - 2026-09-26
+
 ### Added
 
 - **Config reload without restart** (feat-reload-1, raised to Essential
