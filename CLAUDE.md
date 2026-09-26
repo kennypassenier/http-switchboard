@@ -18,7 +18,7 @@ gates hold from any session or terminal. After a fresh clone, run:
 | Current phase | **Done** — 3.2.0 released 2026-09-26 (feat-reload-1 + fix-7), **not yet signed** |
 | Last completed gate | Kenny, 2026-09-26, resume form: flagship **Telt mee** (scope-flagship-1 met), internet **Later**, reload **Onmisbaar**, fix-6 **Klopt**. The consequence line he picked for reload read "Claude bouwt het nu, met tests voor een foute en een halve config, en maakt een release" |
 | Next gate | the signature on v3.2.0: `scripts/sign-release.sh v3.2.0` once the minisign key reaches WSL (workstation GARUDA.md step 1); until then the self-updater does not offer 3.2.0, because VERSION is uploaded only by the signing step. Verified 2026-09-26: tag v3.2.0 = `origin/main` = `e6f48c4`, CI and Release green, the asset matches `SHA256SUMS` and is `static-pie` with zero GLIBC symbols. The release-tier gates ran on WSL through `newgrp docker` (the session predates the docker group) |
-| Next action | waiting on Kenny: the CT 109 rollout choice in the 2026-09-26 release form (homelab thread, direct, or not yet); then sign when the key is on WSL |
+| Next action | (1) sign v3.2.0 once the minisign key is on WSL (`scripts/sign-release.sh v3.2.0`, Kenny types the password). (2) CT 109 rollout: Kenny chose "Via de homelab-thread" on 2026-09-26; handed to the Homelab deployment thread with the `ExecReload=` line for its captured unit and the reload measurement; it reports back here. "Release-route" was answered "Wachten op de volgende WSL-start" after the release had already run through `newgrp docker`, so it changed nothing |
 | AFK mode | off |
 
 <!-- Update this block after every completed gate. -->
