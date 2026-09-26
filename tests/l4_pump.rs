@@ -292,7 +292,7 @@ macro_rules! require_hub {
 
 #[tokio::test]
 async fn k2_e2e_a_message_published_before_the_first_poll_still_arrives() {
-    // S1's scenario against the real hub: publish first, subscribe after.
+    // scope-flagship-1's scenario against the real hub: publish first, subscribe after.
     // Without AR8's replay this is the alert that vanishes.
     require_hub!(hub_container);
     let receiver = TestServer::start(vec![200]).await;

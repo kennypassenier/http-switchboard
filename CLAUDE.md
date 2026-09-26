@@ -17,8 +17,8 @@ gates hold from any session or terminal. After a fresh clone, run:
 |---|---|
 | Current phase | **Done** — 3.1.1 released and signed (2026-09-10) |
 | Last completed gate | Kenny, 2026-09-10: "ik heb de meting doorgegeven en ja maak een release klaar". Claude ran `chassis release 3.1.1`: the release tier of the gates (real-kyu E2E, `cargo deny check all`, `docker build`) passed before any tag existed, `main` moved to `29134dc`, `v3.1.1` is tagged and the Release workflow published the asset. The chain stops where it always stops — the minisign password is Kenny's |
-| Next gate | none here. **3.1.1 is released and signed** (2026-09-10). Verified end to end: `minisign -V` against the key in `scripts/sign-release.sh` reports "Signature and comment signature verified" with trusted comment `kennypassenier/http-switchboard v3.1.1`, `VERSION` reads `3.1.1`, tag = `origin/main` = `29134dc`, both checks green on that sha, and the published binary is `static-pie` with **zero** glibc symbols, matching `SHA256SUMS`. Kenny approved correction `fix-5` ("Klopt") in the same round. What remains is not this project's: **the CT 109 upgrade belongs to the Homelab Rust session** (`docs/HOMELAB_UPGRADE_PROMPT.md`), and Alertmanager is still not deployed, so the flagship criterion stays unmet and unclaimed |
-| Next action | waiting on Kenny: nothing in progress here |
+| Next gate | the 2026-09-26 decision form (three items: does the 2026-09-19 test alert satisfy scope-flagship-1; the inbound-from-the-internet round feat-internet-1; the rating of config reload feat-reload-1) plus correction fix-6. Measured 2026-09-26: CT 109 serves 3.1.1 with `NRestarts=0` since 2026-09-10 21:12 UTC; Alertmanager IS deployed (10.10.10.13:9093, receiver `kyu-hub`) and a hand-injected test alert crossed the whole chain on 2026-09-19 (`delivered_total{profile="alertmanager"} 2`, `failed_total 0`); the older "Alertmanager not deployed" lines were stale (fix-6) |
+| Next action | waiting on Kenny: the 2026-09-26 decision form (scope-flagship-1, feat-internet-1, feat-reload-1, fix-6) |
 | AFK mode | off |
 
 <!-- Update this block after every completed gate. -->

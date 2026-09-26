@@ -196,7 +196,7 @@ name is never a mystery to a future reader.
 
 ## Success criteria
 
-- **S1 · The flagship: one real alert on the phone.** A genuine
+- **scope-flagship-1 · The flagship: one real alert on the phone.** A genuine
   Alertmanager alert travels the whole chain and arrives as a
   notification through Kenny's dispatcher — no test curl, no throwaway
   script. At that moment Alertmanager comes off hold.

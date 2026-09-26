@@ -1,7 +1,7 @@
 # Realization plan — HTTPSwitchboard
 
 Phase 5 output. Approved by Kenny on 2026-08-29: all ten milestones
-agreed as drafted, and every enforcement question answered (S1-S7).
+agreed as drafted, and every enforcement question answered (ask-gates-1 and S2-S7).
 
 ## Milestones
 
@@ -21,7 +21,7 @@ agreed as drafted, and every enforcement question answered (S1-S7).
 
 ## Enforcement (decided at the Phase 5 gate)
 
-- **S1 · Commit gates:** format check, clippy with warnings as errors, **and
+- **ask-gates-1 · Commit gates:** format check, clippy with warnings as errors, **and
   the full test suite**. Slow gates are a mini-round, never a shortcut.
 - **S2 · No bypass.** `--no-verify` is not a sanctioned route; CI and branch
   protection catch whatever slips through anyway.
@@ -64,8 +64,8 @@ that happens, not the first.
 | Deployment drill | 2026-08-30 | Kenny gave a go per step. Scratch container 192 created on Proxmox, static binary + config + unit installed, hub token moved from LXC 109 without being displayed. **Proven:** the config check fails closed on a real machine with its remedy; the service runs under systemd; a message published on the REAL kyu travelled to Home Assistant (HA trace 09:30:06, delivered in 7 ms); the subscription policy is in force on the real hub (lease_ms 60000); and the restore-from-zero rebuild delivered again (HA trace 09:31:29). Container deleted afterwards. **Not proven:** deployment through the homelab preset, and Alertmanager itself, which is still on hold | OPERATIONS_RUNBOOK §5, TEST_PLAN |
 | Phase 8 · documentation | 2026-08-30 | All six documents approved by spot-check: README (honesty pass), USER_GUIDE, DEBUGGING_GUIDE, OPERATIONS_RUNBOOK, ARCHITECTURE_REFERENCE, TEST_PLAN. Evidence references checked mechanically — all 29 named test names exist (standing rule 11a). The pre-gate scan found the HA webhook id in SCOPE.md in a public repo; redacted, and Kenny decided **not to rotate** it (the automation is `local_only`) — recorded as an accepted exposure in the runbook | docs/ + this row |
 | Mini-round MR2 | 2026-08-30 | Kenny's idea: forward the receiver's own error text to the sender. Added as **W12, Desired** — per profile, off by default, bounded and refused where there is nobody to answer. Built the same day; no built work reworked | FEATURES.md W12 |
-| Phase 7 · hardening | 2026-08-30 | test-gap audit (18 findings) + security review (1) + a reasoned-vs-measured sweep. Six gaps were plain defects and were fixed before the gate; Kenny answered the remaining nine: **Dichten** for all except the flagship criterion S1, which is **Later** (it belongs to the deployment drill). Suite 83 → 96 tests. The sweep itself found a real bug: the kyu policy was written before the first poll, so the hub ran on its own 30 s lease while the config had been validated against 60 s | TEST_PLAN.md + this row |
-| Phase 5 · plan | 2026-08-29 | All ten milestones agreed; S1-S7 answered (full suite per commit, no bypass, `[meta]` for non-features, public repo + branch protection by Claude, scratch = own kyu + throwaway LXC, session moved into the project) | this document |
+| Phase 7 · hardening | 2026-08-30 | test-gap audit (18 findings) + security review (1) + a reasoned-vs-measured sweep. Six gaps were plain defects and were fixed before the gate; Kenny answered the remaining nine: **Dichten** for all except the flagship criterion scope-flagship-1, which is **Later** (it belongs to the deployment drill). Suite 83 → 96 tests. The sweep itself found a real bug: the kyu policy was written before the first poll, so the hub ran on its own 30 s lease while the config had been validated against 60 s | TEST_PLAN.md + this row |
+| Phase 5 · plan | 2026-08-29 | All ten milestones agreed; ask-gates-1 and S2-S7 answered (full suite per commit, no bypass, `[meta]` for non-features, public repo + branch protection by Claude, scratch = own kyu + throwaway LXC, session moved into the project) | this document |
 | L7 · Home Assistant | 2026-08-30 | Kenny's explicit go for `automation.homelab_alert_webhook`; created through the HA API and proven live — a firing alert dispatched, a resolved alert stopped at the condition. Mini-round M1 shortened the chain: the switchboard delivers straight to HA, since it is already the kyu consumer that acks only after delivery, and hub-bridge is not deployed | SCOPE.md G6 amendment |
 | L1-L6 · report | 2026-08-30 | All six milestones signed off with their evidence; coverage confirmed with no silent gaps; the five build-time decisions ratified (dead-letter on an unrenderable message, headers config-only, inbound payload must be JSON, 60 s default lease, KYU_IMAGE gating); **L6b added** because assembly was missing from the plan | this document + FEATURES.md |
 | L1-L6 · AFK build | 2026-08-30 | built, tested and landed on `main` with green CI per milestone; combined report form pending | commits 368401f…8098d65 |
@@ -84,7 +84,7 @@ architecture critic always asks which question a health endpoint answers.
 
 With that, all eleven phases are walked. What is deliberately not done:
 the preset is adopted in the homelab project's own mini-round, and
-Alertmanager — the reason this exists — is still on hold, so S1 remains
+Alertmanager — the reason this exists — is still on hold, so scope-flagship-1 remains
 unmet and unclaimed.
 
 ### chassis 1.8.0 round — 2026-09-09
@@ -144,7 +144,7 @@ procedure.
 
 **Deliberately still open, and not this project's work.** CT 109 runs
 1.x; the upgrade belongs to the Homelab Rust session (V6) and starts from
-`docs/HOMELAB_UPGRADE_PROMPT.md`. Alertmanager is not deployed, so S1 —
+`docs/HOMELAB_UPGRADE_PROMPT.md`. Alertmanager is not deployed, so scope-flagship-1 —
 a genuine alert travelling the whole chain — remains unmet and unclaimed.
 
 ### chassis 2.0.0 and release 3.1.0 — 2026-09-10
@@ -201,3 +201,19 @@ committed lock is correct — `git show HEAD:Cargo.lock` carries the source
 line and CI built from it — and the gate's clean-tree check is what
 stands between this and a bad commit both times. It stays here as an
 open, unnamed defect rather than a third guess.
+
+### Resumed on the Windows machine — 2026-09-26
+
+Measured, not recalled: CT 109 serves `{"status":"ok","version":"3.1.1"}`
+with `NRestarts=0` since 2026-09-10 21:12 UTC, and GitHub's latest release
+is still 3.1.1 (the service's own read-only release check agrees every six
+hours). Two claims in this document and in `TEST_PLAN.md` had gone stale:
+"Alertmanager is not deployed" — it runs on 10.10.10.13:9093 and routes to
+the kyu hub — and, following from that, the flagship gap being "one hop".
+The chain carried a hand-injected test alert end to end on 2026-09-19; see
+`TEST_PLAN.md` for the evidence and why scope-flagship-1 is still not
+claimed. Recorded as correction fix-6.
+
+Three identifiers surfaced and were translated (`docs/ID_TRANSLATIONS.md`):
+the flagship criterion, the inbound-from-internet round and config
+hot-reload. The first two and the reload rating go to Kenny in one form.

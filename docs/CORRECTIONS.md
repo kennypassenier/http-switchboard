@@ -245,3 +245,38 @@ this project must never run, was not involved. Corroborated here rather than tak
 session: all five repositories read `enforce_admins=false` with the single
 check `fmt · clippy · tests`, which is what one sweep across five would
 leave behind.
+
+## fix-6 · Two documents kept saying Alertmanager was not deployed
+
+Found 2026-09-26 on resuming the project, by measuring before repeating.
+
+1. **What the fault actually was.** `TEST_PLAN.md`, `HANDOVER_HOMELAB.md`,
+   `CLAUDE.md`, the workstation's `OPEN_WORK.md` and the central memory
+   all said Alertmanager was not deployed and that scope-flagship-1 waited
+   on it. Alertmanager has run on 10.10.10.13:9093 with receiver `kyu-hub`
+   since the homelab project's metrics round, and a test alert crossed the
+   whole chain on 2026-09-19. Nobody in this project re-read the state
+   after that round.
+2. **Which gate let it through.** None: the claim is about another
+   project's machine, and no gate looks there.
+3. **Where else the same fault sits.** Every "waiting on another project"
+   line in `CLAUDE.md` Next action and in `OPEN_WORK.md` has the same
+   property — a blocker recorded once and never re-measured.
+4. **How recurrence is prevented.** The service already measures it: its
+   `/healthz` reports an `alertmanager` subsystem and `/metrics` counts
+   deliveries per profile. The resume start prompt checks open points
+   against reality; this entry is that check working.
+5. **What the remedy costs.** Nothing beyond the documentation fixes in
+   this commit.
+6. **Who or what enforces it.** The resume procedure (Kenny's start
+   prompt, 2026-09-26), not code.
+7. **How and when it was measured. Done 2026-09-26.**
+   `curl 10.10.10.13:9093/api/v2/status` (route → `kyu-hub`),
+   `curl 10.10.10.9:8083/metrics` (`delivered_total{profile="alertmanager"} 2`,
+   `failed_total 0`), and HA trace `545d5214…` of
+   `automation.homelab_alert_webhook` (2026-09-19 22:17 UTC, finished,
+   `push_targets: [kenny]`).
+8. **The fallback if the measurement fails.** If a later resume finds a
+   blocker line that contradicts a measurement, the measurement wins and
+   the line is rewritten in the same commit.
+9. **When the measure is reviewed.** At the next resume of this project.

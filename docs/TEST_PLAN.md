@@ -59,15 +59,21 @@ dependency, it silently deletes classes of behaviour (standing rule 9).
 
 ## Not covered, by decision
 
-- **S1, the flagship criterion, is still not met — but the gap is now one
-  hop, not five.** The deployment drill of 2026-08-30 ran the whole chain
-  on real machines: a message published on the **real kyu hub** was picked
-  up by the service on a scratch container, translated, delivered to the
-  Home Assistant webhook, and the automation ran to completion (traces at
-  09:30:06 and, after the restore, 09:31:29). What is still missing is
-  **Alertmanager itself**, which is not deployed — that is the homelab
-  project's metrics round, deliberately on hold. So: the chain is proven;
-  the *genuine Alertmanager alert* S1 asks for is not, and is not claimed.
+- **scope-flagship-1, the flagship criterion, is not claimed — but every
+  hop has now carried an alert.** The deployment drill of 2026-08-30 ran
+  the chain from the real kyu hub to Home Assistant. Since then
+  Alertmanager has been deployed by the homelab project (10.10.10.13:9093,
+  receiver `kyu-hub`), and on 2026-09-19 22:17 UTC an alert travelled the
+  whole chain: Alertmanager → kyu → this service (profile `alertmanager`)
+  → `automation.homelab_alert_webhook` → `script.notification_dispatch`
+  with `push_targets: [kenny]`, trace `545d5214…` finished; the resolved
+  message at 22:32 stopped on the `firing` filter, as designed. Measured
+  2026-09-26 on the running 3.1.1: `switchboard_messages_delivered_total
+  {profile="alertmanager"} 2`, `…failed_total 0`, `NRestarts=0` since
+  2026-09-10 21:12 UTC. What keeps the criterion open is its own wording:
+  that alert was `HomelabTestAlarm`, injected by hand ("manual check
+  metrics-51fd"), and the criterion excludes a test source. Whether it
+  counts is Kenny's call, asked in the 2026-09-26 form.
 - **The restore drill (M3) HAS now been run** (2026-08-30) and the runbook
   records it as a proven procedure. One step within it remains untested:
   deploying through the homelab preset rather than by hand, which belongs

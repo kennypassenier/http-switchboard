@@ -131,11 +131,11 @@ path has never run. That is precisely what this handover is for.
 
 ## And then, finally
 
-With the preset adopted, one thing still stands between this and the
-project's flagship criterion: **Alertmanager is not deployed**. That is
-the homelab project's own metrics round (`node_exporter`, `alertmanager`,
-`smartctl_exporter`), on hold since 2026-08-29 waiting for exactly this
-service to exist. It exists now.
+With the preset adopted, one thing stood between this and the project's
+flagship criterion: **Alertmanager was not deployed**. It is now
+(measured 2026-09-26): it runs on 10.10.10.13:9093 and routes to the kyu
+hub, and a hand-injected test alert crossed the whole chain on 2026-09-19.
+What remains is a genuine alert — see `TEST_PLAN.md`, scope-flagship-1.
 
 ---
 

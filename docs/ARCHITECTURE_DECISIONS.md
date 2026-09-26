@@ -173,7 +173,7 @@ half a decision.
   1. **Topic-birth replay.** A kyu subscription only sees what is
      published after its first poll. After a 404 unknown-topic, the next
      successful poll carries `from=beginning`, so the *first* alert —
-     the one S1 is about — cannot fall into the gap. Pre-existing topics
+     the one scope-flagship-1 is about — cannot fall into the gap. Pre-existing topics
      start from now, on purpose.
   2. **Nack, do not let the lease expire.** A failed delivery is handed
      back actively. Waiting out the 30 s lease burns one of kyu's five
