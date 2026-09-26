@@ -69,6 +69,31 @@ fn k12_the_recorded_alertmanager_payload_renders_byte_for_byte() {
     assert_eq!(delivery.content_type, "application/json");
 }
 
+/// Alertmanager groups by alertname and host, so one message can carry two
+/// filesystems of the same machine. The shipped template read `alerts.0`
+/// only, and the second filesystem never reached Home Assistant (homelab
+/// T64 alertmanager-group, 2026-09-26). Every member's summary now arrives,
+/// with the count beside it.
+#[test]
+fn fix_7_a_grouped_alert_delivers_every_member_not_only_the_first() {
+    let payload = br#"{"status":"firing","alerts":[
+        {"status":"firing","labels":{"alertname":"FilesystemAlmostFull","instance":"10.10.10.4:9100","severity":"warning"},"annotations":{"summary":"104-app-gateway: / is over 90% full"}},
+        {"status":"firing","labels":{"alertname":"FilesystemAlmostFull","instance":"10.10.10.4:9100","severity":"warning"},"annotations":{"summary":"104-app-gateway: /mnt/traefik-logs is over 90% full"}}]}"#;
+
+    let body = translate::prepare(&shipped_profile(), payload)
+        .expect("a grouped payload must render")
+        .body;
+    let parsed: serde_json::Value = serde_json::from_str(&body).unwrap();
+
+    assert_eq!(parsed["count"], 2, "the count says how many: {body}");
+    let summary = parsed["summary"].as_str().unwrap();
+    assert!(summary.contains("/ is over"), "first member: {summary}");
+    assert!(
+        summary.contains("/mnt/traefik-logs"),
+        "the second member must not be dropped: {summary}"
+    );
+}
+
 #[test]
 fn k5_field_access_defaults_arithmetic_and_conditionals() {
     let payload = br#"{"bytes": 1073741824, "sev": "critical", "labels": {"name": "disk"}}"#;

@@ -280,3 +280,33 @@ Found 2026-09-26 on resuming the project, by measuring before repeating.
    blocker line that contradicts a measurement, the measurement wins and
    the line is rewritten in the same commit.
 9. **When the measure is reviewed.** At the next resume of this project.
+
+## fix-7 · A grouped alert delivered only its first member
+
+Found 2026-09-26 by the homelab notifications inventory (T64 there), and
+fixed the same day on Kenny's answer to its form item `alertmanager-group`.
+
+1. **What the fault actually was.** The shipped alertmanager template read
+   `alerts.0` only. Alertmanager groups by alertname and host, so two full
+   filesystems on one machine arrive as one message, and the second never
+   reached Home Assistant.
+2. **Which gate let it through.** The byte-for-byte fixture
+   (`alertmanager_firing.json`) holds a single alert, so no test ever
+   rendered a group.
+3. **Where else the same fault sits.** Searched `alerts.0` across the
+   repository: the template in `deploy/config.example.toml`, its copy in
+   the README, and the SCOPE example (historical, left as written).
+4. **How recurrence is prevented.** The template counts the group and joins
+   every summary; test `fix_7_a_grouped_alert_delivers_every_member_not_only_the_first`
+   renders a two-member group and fails on the old template.
+5. **What the remedy costs.** One extra field (`count`) in the JSON Home
+   Assistant receives; its automation ignores fields it does not read.
+6. **Who or what enforces it.** Code: the L2 test suite.
+7. **How and when it was measured. Done 2026-09-26.** The new body rendered
+   with `http-switchboard test` on CT 109 against a two-member payload
+   (`"count": 2`, both summaries), then went live there; `--check` ok and
+   `/healthz?strict=1` 200 after the restart.
+8. **The fallback if the measurement fails.** The previous config is kept
+   on CT 109 as `config.toml.pre-t64`.
+9. **When the measure is reviewed.** When Alertmanager's grouping changes.
+

@@ -2,4 +2,5 @@
  "status": "firing",
  "severity": "critical",
  "instance": "10.10.10.6:9100",
+ "count": 1,
  "summary": "Filesystem 92% full on lxc-media"}

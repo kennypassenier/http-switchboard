@@ -39,7 +39,8 @@ body = '''
  "status": {{ alerts.0.status }},
  "severity": {{ alerts.0.labels.severity | default("warning") }},
  "instance": {{ alerts.0.labels.instance | default("unknown") }},
- "summary": {{ alerts.0.annotations.summary }}}
+ "count": {{ alerts | length }},
+ "summary": {{ alerts | map(attribute="annotations.summary") | join("; ") }}}
 '''
 
 # A second profile, on the HTTP ingress, showing the shape S2 proves: a
