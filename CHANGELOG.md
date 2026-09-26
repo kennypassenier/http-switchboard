@@ -7,6 +7,25 @@ endpoints and the CLI verbs — not about the internals.
 
 ## [Unreleased]
 
+### Added
+
+- **Config reload without restart** (feat-reload-1, raised to Essential
+  by Kenny on 2026-09-26). `systemctl reload http-switchboard` sends
+  `SIGHUP`; the service re-reads the file and applies it to the next
+  message. All or nothing: a broken or half-written file changes
+  nothing. A profile's contents can change this way; its existence,
+  source and subscription, and the `[kyu]` and `[reporting]` sections
+  still need a restart, and the refusal says so. New metric
+  `switchboard_config_reloads_total{outcome}`. The unit file gains
+  `ExecReload=`. Before this, a stray `SIGHUP` ended the process.
+
+### Fixed
+
+- **A grouped alert delivers every member, not only the first** (fix-7).
+  Alertmanager groups by alertname and host, so one message can carry
+  several alerts; the shipped template read only the first. It now sends
+  the group's count and every summary.
+
 ## [3.1.1] - 2026-09-10
 
 ### Changed

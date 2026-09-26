@@ -31,6 +31,7 @@ use crate::adapters::{deliver_with_retry, Clock, Sink};
 use crate::config::{Config, Profile, Source};
 use crate::obs::Registry;
 use crate::pump::Health;
+use crate::reload::ProfileStore;
 use crate::translate;
 
 /// A body cap exists from day one even though the configurable limits of
@@ -44,7 +45,11 @@ pub const MAX_BODY_BYTES: usize = 1024 * 1024;
 pub const MAX_IN_FLIGHT: usize = 32;
 
 pub struct Inbound {
-    profiles: Vec<Arc<Profile>>,
+    /// The profiles behind this path, by name; each request takes the
+    /// current version from the store, so a reload (feat-reload-1)
+    /// reaches the next request and never one already under way.
+    names: Vec<String>,
+    store: Arc<ProfileStore>,
     sink: Arc<dyn Sink>,
     clock: Arc<dyn Clock>,
     permits: Arc<tokio::sync::Semaphore>,
@@ -61,17 +66,18 @@ pub struct Inbound {
 /// the kit's (`max_body_bytes`, same default).
 pub fn profile_router(
     config: &Config,
+    store: Arc<ProfileStore>,
     sink: Arc<dyn Sink>,
     clock: Arc<dyn Clock>,
     registry: Arc<Registry>,
 ) -> Router {
-    let mut by_path: BTreeMap<String, Vec<Arc<Profile>>> = BTreeMap::new();
+    let mut by_path: BTreeMap<String, Vec<String>> = BTreeMap::new();
     for profile in &config.profiles {
         if let Source::Http { path } = &profile.source {
             by_path
                 .entry(path.clone())
                 .or_default()
-                .push(Arc::new(profile.clone()));
+                .push(profile.name.clone());
         }
     }
 
@@ -79,7 +85,8 @@ pub fn profile_router(
     let mut router = Router::new();
     for (path, profiles) in by_path {
         let state = Arc::new(Inbound {
-            profiles,
+            names: profiles,
+            store: Arc::clone(&store),
             sink: Arc::clone(&sink),
             clock: Arc::clone(&clock),
             permits: Arc::clone(&permits),
@@ -96,11 +103,12 @@ pub fn profile_router(
 /// gets these three from the kit.
 pub fn router(
     config: &Config,
+    store: Arc<ProfileStore>,
     sink: Arc<dyn Sink>,
     clock: Arc<dyn Clock>,
     registry: Arc<Registry>,
 ) -> Router {
-    let router = profile_router(config, sink, clock, Arc::clone(&registry));
+    let router = profile_router(config, store, sink, clock, Arc::clone(&registry));
 
     // AR11: the same listener, on paths the config refuses to let a
     // profile claim. Neither answers anything a message put there.
@@ -163,8 +171,13 @@ async fn handle(State(state): State<Arc<Inbound>>, body: Bytes) -> impl IntoResp
             .into_response();
     };
 
+    let profiles: Vec<Arc<Profile>> = state
+        .names
+        .iter()
+        .filter_map(|name| state.store.get(name))
+        .collect();
     let mut failures = Vec::new();
-    for profile in &state.profiles {
+    for profile in &profiles {
         let started = std::time::Instant::now();
         let (ok, attempts) = match translate::prepare(profile, &body) {
             Err(e) => {

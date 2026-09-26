@@ -217,3 +217,20 @@ claimed. Recorded as correction fix-6.
 Three identifiers surfaced and were translated (`docs/ID_TRANSLATIONS.md`):
 the flagship criterion, the inbound-from-internet round and config
 hot-reload. The first two and the reload rating go to Kenny in one form.
+
+**Kenny's answers, 2026-09-26** (the resume form, rendered in the
+Projects thread and sent back with its button):
+
+| Item | Answer | Where it landed |
+|---|---|---|
+| flagship — does the 2026-09-19 test alert satisfy scope-flagship-1 | **Telt mee** (Claude's recommendation) | `SCOPE.md`, `TEST_PLAN.md`: the criterion is met |
+| internet — feat-internet-1, inbound from the internet | **Later** (Claude's recommendation) | unchanged in `FEATURES.md`; parked until a real sender outside the house exists |
+| reload — feat-reload-1, config reload without restart | **Onmisbaar**, against Claude's recommendation "Niet doen" | built the same evening: `src/reload.rs`, `tests/l14_reload.rs`, `ExecReload=` in the unit; release 3.2.0 follows, as the chosen consequence line said |
+| fix-6 — the stale "Alertmanager not deployed" lines | **Klopt** | `CORRECTIONS.md` |
+
+The reload's design choices were made by Claude as defaults and are
+recorded in `FEATURES.md`: `SIGHUP` as the trigger (what `systemctl
+reload` sends, and the process used to die on it), all-or-nothing
+application, and a restart still required for anything the kit
+registers at start.
+

@@ -15,5 +15,6 @@ pub mod dashboard;
 pub mod inbound;
 pub mod obs;
 pub mod pump;
+pub mod reload;
 pub mod secret;
 pub mod translate;

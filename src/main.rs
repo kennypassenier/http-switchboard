@@ -125,6 +125,7 @@ async fn main() -> ExitCode {
     app.vocabulary("sender", "senders");
     app.status_section(http_switchboard::dashboard::Profiles::new(
         &switchboard.config,
+        Arc::clone(&switchboard.profiles),
         Arc::clone(&switchboard.registry),
     ));
     app.dashboard_routes(Router::new().route(
@@ -133,6 +134,9 @@ async fn main() -> ExitCode {
     ));
 
     let switchboard = Arc::new(switchboard);
+    if app.control.is_none() {
+        spawn_reload_on_hangup(path.clone(), Arc::clone(&switchboard));
+    }
     let stop: Arc<std::sync::Mutex<Option<tokio::sync::broadcast::Sender<()>>>> =
         Arc::new(std::sync::Mutex::new(None));
     {
@@ -153,17 +157,52 @@ async fn main() -> ExitCode {
     app.run().await
 }
 
-/// Read a config file for the `test` subcommand.
+/// feat-reload-1: on SIGHUP (`systemctl reload http-switchboard`), read
+/// the file again and apply it if — and only if — it is a complete, valid
+/// config of the same shape. Registering the handler also means a stray
+/// hangup no longer ends the process, which is the signal's default.
+fn spawn_reload_on_hangup(path: String, switchboard: Arc<Switchboard>) {
+    use tokio::signal::unix::{signal, SignalKind};
+    let mut hangup = match signal(SignalKind::hangup()) {
+        Ok(s) => s,
+        Err(e) => {
+            http_switchboard::obs::log_warn(
+                "-",
+                "reload_unavailable",
+                &format!("cannot listen for SIGHUP ({e}); a config change needs a restart"),
+            );
+            return;
+        }
+    };
+    tokio::spawn(async move {
+        while hangup.recv().await.is_some() {
+            let loaded = load_config_file(&path);
+            let outcome =
+                http_switchboard::reload::apply(&switchboard.config, &switchboard.profiles, loaded);
+            switchboard.registry.record_reload(outcome.label());
+            let line = http_switchboard::reload::describe(&outcome);
+            match outcome {
+                http_switchboard::reload::Outcome::Applied { .. } => {
+                    http_switchboard::obs::log_info("-", "config_reloaded", &line)
+                }
+                _ => http_switchboard::obs::log_warn("-", "config_not_reloaded", &line),
+            }
+        }
+    });
+}
+
+/// Read the switchboard's half of a config file: the `test` subcommand
+/// and a reload (feat-reload-1).
 ///
-/// This verb runs before the kit parses anything, so there is no `App` to
-/// ask for `project_table()`. It does the same strip from the spec, which
+/// Neither has the kit's start-up `App` to ask for `project_table()`, so
+/// this does the same strip from the spec, which
 /// names both halves itself (`knob_keys` since 1.2.0, `kit_sections` since
 /// 2.0.0) — so this is the kit's list, not knowledge kept here.
 ///
 /// fix-3: without the strip this verb answered "not valid TOML" on a file
 /// that is valid TOML and that the service starts from happily, which is
 /// exactly the file the operations runbook tells an operator to point it at.
-fn load_for_dry_run(path: &str) -> Result<config::Config, String> {
+fn load_config_file(path: &str) -> Result<config::Config, String> {
     let text = std::fs::read_to_string(path).map_err(|e| {
         format!(
             "{path}: cannot be read ({e}). What now: check the path (--config / \
@@ -203,7 +242,7 @@ fn dry_run(args: &[String]) -> ExitCode {
         eprintln!("{}", usage());
         return ExitCode::FAILURE;
     }
-    let config = match load_for_dry_run(&config_path) {
+    let config = match load_config_file(&config_path) {
         Ok(c) => c,
         Err(message) => {
             eprintln!("{message}");

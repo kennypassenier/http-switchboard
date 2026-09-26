@@ -24,6 +24,7 @@ async fn serve(config_text: &str) -> String {
         .expect("config must load");
     let router = inbound::router(
         &cfg,
+        Arc::new(http_switchboard::reload::ProfileStore::new(&cfg)),
         Arc::new(HttpSink::new(None, None, 2_000)),
         Arc::new(TokioClock),
         Arc::new(http_switchboard::obs::Registry::new()),

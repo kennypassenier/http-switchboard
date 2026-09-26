@@ -54,8 +54,11 @@ async fn start(config_text: &str) -> TestApp {
     let cfg = config::load("t.toml", config_text, &env(&[])).expect("config must load");
     let switchboard = Switchboard::from_config(cfg);
     let registry = Arc::clone(&switchboard.registry);
-    let profiles =
-        http_switchboard::dashboard::Profiles::new(&switchboard.config, Arc::clone(&registry));
+    let profiles = http_switchboard::dashboard::Profiles::new(
+        &switchboard.config,
+        Arc::clone(&switchboard.profiles),
+        Arc::clone(&registry),
+    );
     let subsystems: Vec<http_switchboard::obs::ProfileSubsystem> = switchboard
         .config
         .profiles

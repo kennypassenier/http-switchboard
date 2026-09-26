@@ -40,6 +40,7 @@ Two halves, on purpose (AR1):
 | `pump` | The state machine for a kyu source: poll, translate, deliver, settle. Returns a `Step` rather than logging, so the caller decides what to record and tests can assert on it. |
 | `inbound` | The axum router: one route per path serving the profiles behind it, the token check, the body cap, the in-flight bound, and `/healthz` + `/metrics`. |
 | `obs` | The registry behind both endpoints, and the log-line builders. Counters and names only — never payloads. |
+| `reload` | feat-reload-1: the `ProfileStore` every delivery reads its profile from (one `Arc` per message, swapped as a whole), and `apply`, which accepts a re-read config only when it is valid and has the shape the service started with. `main` calls it on `SIGHUP`. |
 | `app` | Assembly: one pump task per kyu profile, the listener, graceful shutdown, and the shared transition handling both sides use. |
 
 ## The orderings that matter
@@ -58,6 +59,12 @@ still has the message, so it must not be told "accepted" until it is.
 One fact, modelled once in `obs::Registry`, read by `/healthz`, written
 by both drivers through `app::note_transition`, and published as at most
 one event per transition.
+
+**A reload (feat-reload-1).** Signal → read the file → validate exactly
+as a start does → compare the shape with the start → swap the whole
+store, or nothing. A pump takes the new profile between messages, never
+during one, and writes the hub policy again when the lease or attempt cap
+moved; an inbound request takes it when it arrives.
 
 ## The three things that are structurally impossible
 

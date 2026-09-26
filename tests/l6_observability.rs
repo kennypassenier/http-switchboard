@@ -35,6 +35,7 @@ body = '''{{"x": {{{{ x }}}}}}'''
     }
     let router = inbound::router(
         &cfg,
+        Arc::new(http_switchboard::reload::ProfileStore::new(&cfg)),
         Arc::new(HttpSink::new(None, None, 2_000)),
         Arc::new(TokioClock),
         Arc::clone(&registry),

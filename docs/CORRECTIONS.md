@@ -281,6 +281,9 @@ Found 2026-09-26 on resuming the project, by measuring before repeating.
    the line is rewritten in the same commit.
 9. **When the measure is reviewed.** At the next resume of this project.
 
+**Kenny's answer, 2026-09-26: Klopt.** The correction stands as written.
+
+
 ## fix-7 · A grouped alert delivered only its first member
 
 Found 2026-09-26 by the homelab notifications inventory (T64 there), and

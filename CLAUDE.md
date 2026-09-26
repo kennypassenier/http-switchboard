@@ -15,10 +15,10 @@ gates hold from any session or terminal. After a fresh clone, run:
 
 | Field | Value |
 |---|---|
-| Current phase | **Done** — 3.1.1 released and signed (2026-09-10) |
-| Last completed gate | Kenny, 2026-09-10: "ik heb de meting doorgegeven en ja maak een release klaar". Claude ran `chassis release 3.1.1`: the release tier of the gates (real-kyu E2E, `cargo deny check all`, `docker build`) passed before any tag existed, `main` moved to `29134dc`, `v3.1.1` is tagged and the Release workflow published the asset. The chain stops where it always stops — the minisign password is Kenny's |
-| Next gate | the 2026-09-26 decision form (three items: does the 2026-09-19 test alert satisfy scope-flagship-1; the inbound-from-the-internet round feat-internet-1; the rating of config reload feat-reload-1) plus correction fix-6. Measured 2026-09-26: CT 109 serves 3.1.1 with `NRestarts=0` since 2026-09-10 21:12 UTC; Alertmanager IS deployed (10.10.10.13:9093, receiver `kyu-hub`) and a hand-injected test alert crossed the whole chain on 2026-09-19 (`delivered_total{profile="alertmanager"} 2`, `failed_total 0`); the older "Alertmanager not deployed" lines were stale (fix-6) |
-| Next action | waiting on Kenny: the 2026-09-26 decision form (scope-flagship-1, feat-internet-1, feat-reload-1, fix-6) |
+| Current phase | **Done**, reopened for one feature — feat-reload-1 (config reload without restart), raised to Essential by Kenny on 2026-09-26 and built the same evening |
+| Last completed gate | Kenny, 2026-09-26, resume form: flagship **Telt mee** (scope-flagship-1 met), internet **Later**, reload **Onmisbaar**, fix-6 **Klopt**. The consequence line he picked for reload read "Claude bouwt het nu, met tests voor een foute en een halve config, en maakt een release" |
+| Next gate | release 3.2.0 (feat-reload-1 + fix-7) through `chassis release 3.2.0`; the minisign signature is Kenny's. Then the CT 109 upgrade, which needs Kenny's go for that machine (rule 13c): binary + the new `ExecReload=` line in the unit |
+| Next action | Claude: commit feat-reload-1, then run the release chain up to the signature |
 | AFK mode | off |
 
 <!-- Update this block after every completed gate. -->

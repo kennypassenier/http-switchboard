@@ -32,6 +32,9 @@ pub struct ProfileStats {
 #[derive(Debug, Default)]
 pub struct Registry {
     profiles: Mutex<BTreeMap<String, ProfileStats>>,
+    /// feat-reload-1: reloads per outcome (`applied`, `needs-restart`,
+    /// `invalid`), so a reload that did nothing is visible in a scrape.
+    reloads: Mutex<BTreeMap<&'static str, u64>>,
 }
 
 impl Registry {
@@ -47,6 +50,10 @@ impl Registry {
             .unwrap()
             .entry(profile.to_string())
             .or_default();
+    }
+
+    pub fn record_reload(&self, outcome: &'static str) {
+        *self.reloads.lock().unwrap().entry(outcome).or_default() += 1;
     }
 
     pub fn record(&self, profile: &str, delivered: bool, duration_ms: u64) {
@@ -201,6 +208,22 @@ impl Registry {
                 s.duration_ms_total
             ));
         }
+        out.push_str(
+            "# HELP switchboard_config_reloads_total Config reloads per outcome (applied, needs-restart, invalid).\n",
+        );
+        out.push_str("# TYPE switchboard_config_reloads_total counter\n");
+        for outcome in ["applied", "needs-restart", "invalid"] {
+            let n = self
+                .reloads
+                .lock()
+                .unwrap()
+                .get(outcome)
+                .copied()
+                .unwrap_or(0);
+            out.push_str(&format!(
+                "switchboard_config_reloads_total{{outcome=\"{outcome}\"}} {n}\n"
+            ));
+        }
         out
     }
 }
@@ -242,6 +265,11 @@ pub fn log_transition(profile: &str, from: Health, to: Health, detail: &str) {
 /// logging a Working -> Failing transition that never happened, which is
 /// a log line lying about the state it exists to describe (found while
 /// smoke-testing the container image).
+/// An operator-visible event that is not a problem (a reload applied).
+pub fn log_info(profile: &str, event: &str, detail: &str) {
+    tracing::info!(target: "http_switchboard::events", profile, event, detail, "event");
+}
+
 pub fn log_warn(profile: &str, event: &str, detail: &str) {
     tracing::warn!(target: "http_switchboard::events", profile, event, detail, "warning");
 }

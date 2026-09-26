@@ -238,6 +238,17 @@ Everything else on those pages comes from the kit and is described in
 `docs/KIT.md`, which `chassis sync` regenerates for the pinned kit
 version — this guide deliberately does not retell it.
 
+## Changing the config while it runs (feat-reload-1, 3.2.0)
+
+`systemctl reload http-switchboard` (a `SIGHUP`) reads the config file
+again. The next message uses the new version; a delivery already under
+way finishes with the old one. A file that is not a complete, valid
+config — a typo, or an editor caught mid-save — is refused as a whole
+and nothing changes. A reload can change what lives inside a profile;
+a change to the set of profiles, a source, a subscription, `[kyu]` or
+`[reporting]` is refused with the advice to restart. Proven by
+`tests/l14_reload.rs`.
+
 ## What this does not do
 
 - **It does not filter.** Everything that arrives is forwarded;

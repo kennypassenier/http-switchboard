@@ -15,6 +15,7 @@ use crate::adapters::{Clock, HttpSink, KyuHub, Sink};
 use crate::config::{Config, Source};
 use crate::obs::{self, Registry};
 use crate::pump::{pump_once, Health, Hub, PumpState, Step};
+use crate::reload::ProfileStore;
 use crate::translate::{Delivery, Target};
 
 /// How long to wait after an idle poll before asking again. The hub's own
@@ -26,7 +27,11 @@ const HUB_DOWN_PAUSE_MS: u64 = 5_000;
 /// The whole service, with its own pieces injectable so the assembly can
 /// be tested with fakes as well as against a real hub.
 pub struct App {
+    /// The config the service was started with: the shape a reload is
+    /// held against (feat-reload-1). The profiles actually delivered with
+    /// live in `profiles`.
     pub config: Config,
+    pub profiles: Arc<ProfileStore>,
     pub registry: Arc<Registry>,
     pub sink: Arc<dyn Sink>,
     pub clock: Arc<dyn Clock>,
@@ -56,6 +61,7 @@ impl App {
             base_url.map(|url| Arc::new(KyuHub::new(url, token, 25)) as Arc<dyn Hub>);
 
         Self {
+            profiles: Arc::new(ProfileStore::new(&config)),
             config,
             registry,
             sink,
@@ -69,6 +75,7 @@ impl App {
     pub fn profile_router(&self) -> axum::Router {
         crate::inbound::profile_router(
             &self.config,
+            Arc::clone(&self.profiles),
             Arc::clone(&self.sink),
             Arc::clone(&self.clock),
             Arc::clone(&self.registry),
@@ -85,7 +92,8 @@ impl App {
             let Some(hub) = self.hub.clone() else {
                 continue;
             };
-            let profile = profile.clone();
+            let mut profile = Arc::new(profile.clone());
+            let profiles = Arc::clone(&self.profiles);
             let sink = Arc::clone(&self.sink);
             let clock = Arc::clone(&self.clock);
             let registry = Arc::clone(&self.registry);
@@ -96,6 +104,19 @@ impl App {
                 loop {
                     if stop.try_recv().is_ok() {
                         return;
+                    }
+                    // feat-reload-1: pick up a reloaded profile between
+                    // messages, never during one. A new lease or attempt
+                    // cap is a hub-side policy, so it is written again.
+                    if let Some(now) = profiles.get(&profile.name) {
+                        if !Arc::ptr_eq(&now, &profile) {
+                            if now.lease_ms != profile.lease_ms
+                                || now.max_attempts != profile.max_attempts
+                            {
+                                state.policy_pushed = false;
+                            }
+                            profile = now;
+                        }
                     }
                     let before = state.health;
                     let started = std::time::Instant::now();
@@ -214,6 +235,7 @@ impl App {
     ) -> Result<(), String> {
         let router = crate::inbound::router(
             &self.config,
+            Arc::clone(&self.profiles),
             Arc::clone(&self.sink),
             Arc::clone(&self.clock),
             Arc::clone(&self.registry),

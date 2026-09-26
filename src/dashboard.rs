@@ -28,6 +28,7 @@ use chassis::{Section, SectionAction, StatusSection};
 use crate::config::{Config, Sink, Source};
 use crate::obs::Registry;
 use crate::pump::Health;
+use crate::reload::ProfileStore;
 
 /// The route the Recheck button posts to. Registered with
 /// `dashboard_routes`, so it is behind the admin login, not a sender's
@@ -36,16 +37,27 @@ pub const RECHECK_ROUTE: &str = "/profiles/recheck";
 
 pub struct Profiles {
     registry: Arc<Registry>,
-    /// Name, source and destination, in config order — the shape of the
-    /// profile never changes while the service runs, so it is read once.
-    shapes: Vec<(String, String)>,
+    store: Arc<ProfileStore>,
+    /// Profile names in config order. The set never changes while the
+    /// service runs; a destination can (feat-reload-1), so each render
+    /// reads the profile from the store.
+    order: Vec<String>,
 }
 
 impl Profiles {
-    pub fn new(config: &Config, registry: Arc<Registry>) -> Self {
-        let shapes = config
-            .profiles
+    pub fn new(config: &Config, store: Arc<ProfileStore>, registry: Arc<Registry>) -> Self {
+        let order = config.profiles.iter().map(|p| p.name.clone()).collect();
+        Self {
+            registry,
+            store,
+            order,
+        }
+    }
+
+    fn shapes(&self) -> Vec<(String, String)> {
+        self.order
             .iter()
+            .filter_map(|name| self.store.get(name))
             .map(|p| {
                 let from = match &p.source {
                     Source::Http { path } => format!("POST {path}"),
@@ -57,8 +69,7 @@ impl Profiles {
                 };
                 (p.name.clone(), format!("{from} → {to}"))
             })
-            .collect();
-        Self { registry, shapes }
+            .collect()
     }
 }
 
@@ -79,7 +90,7 @@ impl StatusSection for Profiles {
     fn render(&self) -> Section {
         let snapshot = self.registry.snapshot();
         let rows = self
-            .shapes
+            .shapes()
             .iter()
             .map(|(name, shape)| {
                 let stats = snapshot.get(name);

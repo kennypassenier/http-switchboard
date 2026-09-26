@@ -14,6 +14,30 @@ the file, the profile, what is wrong and what to do about it. Run this
 before every restart — the service refuses to start on a bad config
 (K10), so this turns a failed restart into a caught typo.
 
+## 1a · Apply a config change without a restart (feat-reload-1, 3.2.0)
+
+```bash
+systemctl reload http-switchboard
+journalctl -u http-switchboard -n 5
+```
+
+The service re-reads its config file on `SIGHUP`. The journal shows one
+line: `config reloaded: changed <profiles>`, or `config NOT reloaded:`
+with the reason and what to do. A reload is all or nothing — a typo or a
+file saved halfway changes nothing, and the service keeps delivering
+with what it had. `/metrics` counts every attempt in
+`switchboard_config_reloads_total{outcome="applied|needs-restart|invalid"}`.
+
+What a reload can change: a profile's template, destination, headers,
+timeouts, retries, lease and attempt cap. What still needs
+`systemctl restart`: adding, removing or renaming a profile, a new
+source path or kyu topic, a new subscription, and the `[kyu]` and
+`[reporting]` sections. The refusal names which one; a restart loses
+nothing, because the hub holds the position.
+
+Drilled in `tests/l14_reload.rs` against the real binary and a real
+signal; not yet run on CT 109.
+
 ## 2 · See what a profile would send, without sending it
 
 ```bash
