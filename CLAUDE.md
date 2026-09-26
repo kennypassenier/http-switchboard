@@ -18,7 +18,7 @@ gates hold from any session or terminal. After a fresh clone, run:
 | Current phase | **Done**, reopened for one feature — feat-reload-1 (config reload without restart), raised to Essential by Kenny on 2026-09-26 and built the same evening |
 | Last completed gate | Kenny, 2026-09-26, resume form: flagship **Telt mee** (scope-flagship-1 met), internet **Later**, reload **Onmisbaar**, fix-6 **Klopt**. The consequence line he picked for reload read "Claude bouwt het nu, met tests voor een foute en een halve config, en maakt een release" |
 | Next gate | release 3.2.0 (feat-reload-1 + fix-7) through `chassis release 3.2.0`; the minisign signature is Kenny's. Then the CT 109 upgrade, which needs Kenny's go for that machine (rule 13c): binary + the new `ExecReload=` line in the unit |
-| Next action | Claude: commit feat-reload-1, then run the release chain up to the signature |
+| Next action | feat-reload-1 is on `main` (224083b, CI green). Release 3.2.0 is blocked on this WSL box twice, measured 2026-09-26: (1) the release-tier gate needs docker, and this session's process lacks the docker group (kenny was added at 22:47, the systemd user manager predates it: `id -nG` = `kenny wheel`) — a fresh WSL start fixes it; (2) the minisign key is still only on Garuda (workstation GARUDA.md step 1). Kenny chooses the route in the 2026-09-26 release form |
 | AFK mode | off |
 
 <!-- Update this block after every completed gate. -->
