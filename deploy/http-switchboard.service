@@ -8,8 +8,10 @@
 # the binary's directory too, or self-update verifies, downloads and then
 # fails at the swap.
 #
-# Install: install -D -m755 http-switchboard /opt/http-switchboard/bin/http-switchboard (the
-# service owns that directory: chown -R http-switchboard: /opt/http-switchboard), copy
+# Install: install -D -m755 -o http-switchboard -g http-switchboard http-switchboard /opt/http-switchboard/bin/http-switchboard
+# (the service must own the binary itself, not only its directory: Linux
+# refuses a hard link to a file another user owns, so a root-owned binary
+# stops the self-update at the swap — fix-12, kyu on CT 109), copy
 # this file to /etc/systemd/system/http-switchboard.service, create the user
 # (http-switchboard), the state dir (/appdata/kyu/http-switchboard-config) and the env file
 # (/appdata/kyu/http-switchboard-config/token.env, 0640 root:http-switchboard), then

@@ -300,8 +300,8 @@ dependencies = [
 
 [[package]]
 name = "chassis"
-version = "2.0.2"
-source = "git+https://github.com/kennypassenier/chassis-rs?tag=v2.0.2#ce7e17ed8e0bf072a5f70879fb193fc2a2ffa4b4"
+version = "2.2.1"
+source = "git+https://github.com/kennypassenier/chassis-rs?tag=v2.2.1#901e2989c1098dbcc6283cd18297c498da23c1a2"
 dependencies = [
  "axum",
  "axum-extra",
@@ -2264,7 +2264,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",

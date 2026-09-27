@@ -7,6 +7,19 @@ endpoints and the CLI verbs — not about the internals.
 
 ## [Unreleased]
 
+### Changed
+
+- **chassis-rs 2.0.2 → 2.2.1** via `chassis upgrade` and `chassis sync
+  --write`. In the shipped binary: kp-themes 7.2.0 on the status pages
+  (from 5.1.0), and a refused `.prev` link during a self-update names the
+  binary's owner (kit fix-9). Around it: the Release workflow no longer
+  marks an unsigned release `latest`, and `sign-release.sh` does so once
+  the signature is up (kit fix-10, the 404 on `VERSION` kyu 4.0.0 hit);
+  the unit's install line sets the binary's owner (kit fix-12). Two sync
+  results were refused on purpose: `ci.yml` keeps its single job (the
+  scaffold wants four, see `CLAUDE.md`), and the unit keeps
+  `ExecReload=` (feat-reload-1), which the scaffold's copy lacks.
+
 ## [3.2.0] - 2026-09-26
 
 ### Added
