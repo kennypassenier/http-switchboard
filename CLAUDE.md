@@ -15,10 +15,10 @@ gates hold from any session or terminal. After a fresh clone, run:
 
 | Field | Value |
 |---|---|
-| Current phase | **Done** — 3.2.0 released, signed and live on CT 109 (2026-09-27) |
+| Current phase | **Done** — 3.2.1 (chassis-rs 2.2.1) released 2026-09-27, **awaiting signature**; CT 109 runs 3.2.0 |
 | Last completed gate | Kenny, 2026-09-26, resume form: flagship **Telt mee** (scope-flagship-1 met), internet **Later**, reload **Onmisbaar**, fix-6 **Klopt**. The consequence line he picked for reload read "Claude bouwt het nu, met tests voor een foute en een halve config, en maakt een release" |
-| Next gate | none here. Measured 2026-09-27: the v3.2.0 release carries `SHA256SUMS.minisig` and `VERSION`; CT 109 serves `{"status":"ok","version":"3.2.0"}` and `switchboard_config_reloads_total{outcome="applied"} 1` after the Homelab thread's `systemctl reload` (MainPID unchanged, NRestarts 0). 3.1.1 kept on CT 109 as `http-switchboard.prev-3.1.1` |
-| Next action | waiting on Kenny: nothing in progress here. Open by decision: feat-internet-1 (Later) and the size limits that hang on it |
+| Next gate | sign v3.2.1: `cd ~/Projects/http-switchboard && scripts/sign-release.sh v3.2.1` in a WSL terminal, no admin; the key is on WSL since 2026-09-27. Kenny's plan (2026-09-27): one combined signing thread signs all four chassis-rs children. Verified before handing off: tag v3.2.1 = `origin/main` = `fbeb608`, CI + Release green, asset matches `SHA256SUMS`, `static-pie`, zero GLIBC; `latest` is still v3.2.0 (kit fix-10), assets are only `http-switchboard` + `SHA256SUMS` |
+| Next action | after signing: (1) the script uploads `.minisig` then `VERSION` and marks v3.2.1 `latest`; check with `gh release view v3.2.1` and `minisign -V`; (2) CT 109 rollout via the Homelab deployment thread (Kenny's standing choice of 2026-09-26): swap to the signed 3.2.1, `--check` first, keep 3.2.0 as `.prev`, then measure `/healthz` = 3.2.1 and one `systemctl reload` → `outcome="applied"` +1 with NRestarts unchanged |
 | AFK mode | off |
 
 <!-- Update this block after every completed gate. -->
