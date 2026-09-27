@@ -36,7 +36,8 @@ source path or kyu topic, a new subscription, and the `[kyu]` and
 nothing, because the hub holds the position.
 
 Drilled in `tests/l14_reload.rs` against the real binary and a real
-signal; not yet run on CT 109.
+signal, and run on CT 109 on 2026-09-27 by the homelab rollout: rc 0,
+same MainPID, `outcome="applied"` went from 0 to 1.
 
 ## 2 · See what a profile would send, without sending it
 

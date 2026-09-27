@@ -234,3 +234,10 @@ reload` sends, and the process used to die on it), all-or-nothing
 application, and a restart still required for anything the kit
 registers at start.
 
+**3.2.0, 2026-09-26/27.** Released by Claude through `chassis release
+3.2.0` (release-tier gates on WSL via `newgrp docker`), signed later the
+same night, and rolled out to CT 109 at 03:01 UTC by the Homelab
+deployment thread on Kenny's choice "Via de homelab-thread": `--check`
+against the live config before the swap, the `ExecReload=` unit, and one
+`systemctl reload` measured as applied without a restart.
+
