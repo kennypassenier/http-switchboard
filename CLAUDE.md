@@ -83,6 +83,21 @@ wait forever for checks that never arrive. Those two run in the release
 tier of `.claude/hooks/gates.project.sh` instead. The protection stays as
 it is: one required check, `fmt · clippy · tests`, strict.
 
+## Releasing
+
+`chassis release <version>` builds and publishes locally — no release
+workflow, no wait on GitHub Actions: gate, version bump + changelog,
+commit (the release tier of `.claude/hooks/gates.project.sh` runs here),
+local tag, static musl build in docker with the `ldd` refusal,
+`dist/http-switchboard` + `dist/SHA256SUMS`, image
+`ghcr.io/kennypassenier/http-switchboard:v<version>` + `:latest`; then push
+`main` + tag, push both image tags, `gh release create` (not `latest`),
+and `scripts/sign-release.sh v<version>` signs and marks it `latest`.
+`--dry-run` runs the gate and every build and stops before any commit.
+Needs chassis-rs >= 3.0.0; the pin (`chassis_tag` in `.chassis.toml`) is
+still older, so `chassis upgrade 3.0.0` + `chassis sync --write` come
+first once the kit is released.
+
 ## Carried into later phases
 
 - **Phase 2 mandatory items:** update/distribution mechanism,

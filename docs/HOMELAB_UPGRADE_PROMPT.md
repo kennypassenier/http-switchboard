@@ -18,7 +18,7 @@ not have started there — a restart loop under `Restart=always`, which is
 how the Homelab Rust session lost three rollouts in one day.
 
 The kit's `feat-build-1` made the release asset a **static musl binary on
-a distroless image**, and the release workflow now refuses to publish one
+a distroless image**, and `chassis release` now refuses to publish one
 that links shared libraries.
 
 **Which release you take decides whether that helps you.** The tagged

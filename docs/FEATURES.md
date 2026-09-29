@@ -11,7 +11,7 @@ names, docs and forms forever.
 **Amendment, 2026-09-10 (kit 2.0.0).** The update-and-distribution row
 above still says "glibc release + signing". That is no longer true: the
 kit's `feat-build-1` made the release asset a **static musl binary on a
-distroless image**, and the release workflow refuses to publish one that
+distroless image**, and `chassis release` refuses to publish one that
 links shared libraries. The practical difference is that the binary no
 longer depends on the host's Debian version — the previous asset needed
 `GLIBC_2.39` and would not have started on CT 109, which runs glibc 2.36.

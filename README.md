@@ -141,6 +141,26 @@ build or coverage — those are the release tier's, and
 `tests/l12_gate_tiers.rs` compares the two lists so this paragraph cannot
 quietly stop being true.
 
+### Releasing
+
+A release is built and published from this machine, not by GitHub
+Actions: `chassis release <version>` runs the gate, bumps `Cargo.toml` and
+the changelog, commits (through the release tier above) and tags, builds
+the static musl binary in docker, refuses it if `ldd` finds a shared
+library, writes `dist/http-switchboard` + `dist/SHA256SUMS`, builds the
+image `ghcr.io/kennypassenier/http-switchboard:v<version>` + `:latest`, and
+only then pushes `main`, the tag and both image tags and creates the GitHub
+release (not `latest`); `scripts/sign-release.sh v<version>` signs it and
+marks it `latest`. `chassis release <version> --dry-run` rehearses every
+build and stops before any commit, tag or upload. The release machine
+needs docker logged in to `ghcr.io` with `write:packages`, `cargo-deny`,
+`gh` and `minisign`.
+
+This needs chassis-rs **3.0.0 or later**. The pin is still older: until
+`chassis upgrade 3.0.0` and `chassis sync --write` have run here, the
+installed kit's `chassis release` still expects the release workflow this
+repository no longer has.
+
 ## Licence
 
 MIT or Apache-2.0, at your option.

@@ -7,6 +7,16 @@ endpoints and the CLI verbs — not about the internals.
 
 ## [Unreleased]
 
+### Changed
+
+- **Releases are built and published locally** through `chassis release
+  <version>` (chassis-rs 3.0.0): the static musl binary, the `ldd`
+  refusal, `SHA256SUMS`, the GHCR image tags and the GitHub release
+  (still not `latest` until `sign-release.sh`) are made on this machine,
+  and `--dry-run` rehearses all of it without uploading.
+  `.github/workflows/release.yml` is gone. Needs `chassis upgrade 3.0.0`
+  + `chassis sync --write` once the kit is released.
+
 ## [3.2.1] - 2026-09-27
 
 ### Changed

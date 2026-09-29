@@ -19,8 +19,8 @@
 #            the end-to-end suite against a REAL kyu container, cargo-deny,
 #            and building the container image. All three run here, locally,
 #            BEFORE the tag exists — which is the point. kyu-runner once
-#            lost a tag because its image would not build, and the release
-#            workflow is the worst place to find that out.
+#            lost a tag because its image would not build, and after the
+#            tag is the worst place to find that out.
 #
 # ── How the release tier is detected
 #
