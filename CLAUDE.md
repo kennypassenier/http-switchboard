@@ -54,8 +54,10 @@ with `gh api -X DELETE …/protection/enforce_admins`, on Kenny's answer to
 one of its forms; `chassis sync --protect` was never run here. Measured
 across all five: every one reads `enforce_admins=false` with the single
 check `fmt · clippy · tests`. This line said "admins included" until that
-measurement. The daily flow
-is therefore: work on a branch, wait for green, fast-forward.
+measurement. Since ci.yml was removed (2026-09-29) nothing produces
+`fmt · clippy · tests` any more; the required check is Kenny's to drop
+from the protection. The daily flow: work on a branch, let the local
+gates pass, fast-forward.
 
 ## Gates (enforced)
 
@@ -68,20 +70,24 @@ the old letter-plus-digit shape still accepted for history.
 commit runs fmt, clippy and the in-process suite; the release commit adds
 the real-kyu end-to-end suite, `cargo deny` and the container build. The
 tier comes from the repository — a commit that moves the package version
-is the release commit. CI carries only the single check branch protection
-needs, on every branch, because that is the one genuinely GitHub-bound
-part; `tests/l12_gate_tiers.rs` holds the two lists against each other.
+is the release commit. Nothing runs on GitHub Actions (ci.yml removed
+2026-09-29): `chassis release`'s gate runs what CI ran (fmt, clippy,
+tests, this project's gates, `--version`, cargo-deny, the image build and
+smoke, coverage as information) and the release tier runs the rest; run
+it all without releasing with `chassis release <next> --dry-run`.
+`tests/l12_gate_tiers.rs` holds the repository to having no CI workflow
+and the release tier to its checks.
 
 **Never run `chassis sync --protect` here.** `chassis sync --remote`
 reports the branch protection as drift (measured on kit 2.0.2,
 2026-09-10), because it
-compares against the scaffold's four CI jobs and this project runs one —
-and its remedy line recommends `--protect`. Following that would require
+compares against the scaffold's four CI jobs and this project runs none —
+and its remedy line recommends `--protect`. On the current kit pin, following that would require
 `cargo-deny (advisories · licenses · bans)` and `container build` as
-checks on `main`, and this project's CI produces neither: `main` would
-wait forever for checks that never arrive. Those two run in the release
-tier of `.claude/hooks/gates.project.sh` instead. The protection stays as
-it is: one required check, `fmt · clippy · tests`, strict.
+checks on `main`, and nothing on GitHub produces either: `main` would
+wait forever for checks that never arrive. Those two run locally, in
+`chassis release`'s gate and the release tier of
+`.claude/hooks/gates.project.sh`.
 
 ## Releasing
 

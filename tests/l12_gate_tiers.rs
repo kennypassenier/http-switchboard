@@ -1,15 +1,17 @@
-//! L12 — the checks CI stopped running are the checks the release tier
-//! runs (standing rule 38, applied 2026-09-10).
+//! L12 — nothing runs on GitHub Actions; the gates run locally
+//! (standing rule 38, applied 2026-09-10; CI dropped 2026-09-29).
 //!
 //! Kenny's test policy says to run as much as possible locally, to test
-//! only what changed at commit time, to run the whole suite at a release,
-//! and to send to GitHub Actions only what has to go there. Applying it
-//! left this project with one CI job and three checks that moved into
-//! `.claude/hooks/gates.project.sh`.
+//! only what changed at commit time and to run the whole suite at a
+//! release. Applying it first left this project with one CI job and three
+//! checks that moved into `.claude/hooks/gates.project.sh`; since
+//! 2026-09-29 GitHub Actions builds nothing at all, and `chassis release`'s
+//! gate plus that release tier run everything CI ever ran.
 //!
-//! Two lists that promise the same thing and nothing comparing them is
-//! exactly the shape rule 38 was written about: the short list stays green
-//! while the complete list is red. So this test lays them side by side.
+//! A check that "moved" and a place it moved to, with nothing comparing
+//! them, is exactly the shape rule 38 was written about. So this test
+//! holds the repository to having no CI workflow, and the release tier to
+//! running the checks that used to be CI jobs.
 //!
 //! Placement: integration test — it reads the repository. Timing: commit
 //! subset; it is three file reads and costs nothing.
@@ -25,8 +27,7 @@ fn read(rel: &str) -> String {
         .unwrap_or_else(|e| panic!("{rel} must be readable: {e}"))
 }
 
-/// The checks that used to be their own CI job and now live in the
-/// release tier. Each is named by the command that would run it, so the
+/// The checks that used to be CI jobs and now live in the release tier. Each is named by the command that would run it, so the
 /// assertion cannot pass on a comment that merely mentions the word.
 const MOVED: [(&str, &str); 3] = [
     ("cargo-deny", "cargo deny check all"),
@@ -35,32 +36,20 @@ const MOVED: [(&str, &str); 3] = [
 ];
 
 #[test]
-fn l12_ci_runs_one_job_because_the_rest_runs_locally() {
-    let ci = read(".github/workflows/ci.yml");
-    let jobs: Vec<&str> = ci
-        .lines()
-        .skip_while(|l| !l.starts_with("jobs:"))
-        .filter(|l| {
-            let bytes = l.as_bytes();
-            bytes.len() > 3 && &l[..2] == "  " && bytes[2] != b' ' && l.trim_end().ends_with(':')
-        })
-        .collect();
-    assert_eq!(
-        jobs.len(),
-        1,
-        "CI is meant to carry only the one check branch protection needs; it declares {jobs:?}. \
-         What now: either move the extra job's check into the release tier of \
-         .claude/hooks/gates.project.sh, or say here why CI grew a second job."
-    );
+fn l12_the_repository_carries_no_ci_workflow() {
+    let ci = root().join(".github/workflows/ci.yml");
     assert!(
-        ci.contains(r#"branches: ["**"]"#),
-        "CI must run on every branch: branch protection is strict, the flow is branch → green → \
-         fast-forward, and a branch push that produces no checks can never reach main."
+        !ci.exists(),
+        "{} exists, but GitHub Actions builds nothing here: the gate runs locally, through \
+         `chassis release` and the release tier of .claude/hooks/gates.project.sh. \
+         What now: move the workflow's checks into that release tier and delete the file, \
+         or say here why a CI workflow came back.",
+        ci.display()
     );
 }
 
 #[test]
-fn l12_every_check_ci_gave_up_is_run_by_the_release_tier() {
+fn l12_every_check_ci_used_to_run_is_run_by_the_release_tier() {
     let gates = read(".claude/hooks/gates.project.sh");
     let (_, release_tier) = gates
         .split_once("# ── release tier ──")
@@ -69,10 +58,9 @@ fn l12_every_check_ci_gave_up_is_run_by_the_release_tier() {
     for (name, command) in MOVED {
         assert!(
             release_tier.contains(command),
-            "{name} runs in neither CI nor the release tier — it runs nowhere.\n  \
+            "{name} is not run by the release tier — nothing else on GitHub runs it either.\n  \
              expected the release tier to run: {command}\n\
-             What now: add it back to .claude/hooks/gates.project.sh, or add its job to \
-             .github/workflows/ci.yml and update this list."
+             What now: add it back to .claude/hooks/gates.project.sh."
         );
     }
 }

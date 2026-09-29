@@ -30,15 +30,18 @@
 # no flag to pass, nothing to forget, and it cannot fire on an ordinary
 # commit because an ordinary commit does not move the version.
 #
-# ── What CI still does, and why that is only one job
+# ── Nothing runs on GitHub any more
 #
-# Branch protection is a GitHub feature, so something GitHub can see has
-# to say the commit is good: that is the single required check. Everything
-# else it used to run now runs here, where it runs before the push instead
-# of after it. The omissions are named on purpose (standing rule 38): CI
-# does not run cargo-deny, the container build or coverage, because this
-# script does — and `tests/l12_gate_tiers.rs` compares the two lists so
-# they cannot drift apart silently.
+# GitHub Actions builds and checks nothing: .github/workflows/ci.yml is
+# gone (2026-09-29). Everything runs on this machine, before the push:
+# `chassis release <version>` runs its gate (fmt, clippy, the tests, this
+# script with CHASSIS_RELEASE_GATE=1, `--version`, cargo-deny, the image
+# build + smoke, coverage as information) and then commits through this
+# release tier, which runs the real-kyu suite, cargo-deny and the image
+# build again against the bumped tree. To run all of it without
+# releasing: `chassis release <next version> --dry-run`.
+# `tests/l12_gate_tiers.rs` holds the release tier to its three checks
+# and the repository to having no CI workflow.
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 

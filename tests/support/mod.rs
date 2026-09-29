@@ -317,7 +317,8 @@ impl http_switchboard::adapters::Sink for FakeSink {
 /// A real kyu, in a container of its own, for the E2E bar the feature
 /// list demands ("against a real kyu, not a mock"). Opt-in through
 /// KYU_IMAGE so a workstation without docker can still run the rest;
-/// CI sets it, so there the E2E suite always runs.
+/// the release tier of .claude/hooks/gates.project.sh sets it, so at a
+/// release the E2E suite always runs.
 pub struct KyuHarness {
     pub base_url: String,
     name: String,

@@ -39,8 +39,8 @@ memory.
 | `tests/l7_resilience.rs` (1) | `kill -9` while a delivery is in flight loses nothing: after a restart the message comes back and is delivered, unchanged. | binary + real kyu |
 | `tests/l8_desired.rs` (7) | A path segment may come from the message while scheme, host and port cannot; awkward values (empty, structured, CR/LF, `?`, `#`) stay one segment; the dry run shows exactly what the real path produces and sends nothing, printing header names but never their values. | binary |
 | `tests/l9_deployment.rs` (3) | `--healthcheck` answers correctly for a live and a dead service — the container's only probe, since the image has no shell; no secret reaches the log of the running binary; the CLI fails closed with a remedy on every wrong invocation. | binary |
-| CI job `container image` | The image builds, starts with the shipped config path, answers `/healthz`, passes its own `--healthcheck` from inside a distroless image, and can actually reach an **https** destination — the CA claim in the Dockerfile, executed rather than argued. | docker |
-| CI job `coverage` | A coverage number, informational and deliberately not a gate. | — |
+| Container image + smoke (`chassis release` gate and the release tier of `.claude/hooks/gates.project.sh`) | The image builds, answers `--version`, and its `--healthcheck` fails against a closed port. The old CI image job also started the image with the shipped config, probed `/healthz` and reached an **https** destination (the Dockerfile's CA claim); that job went on 2026-09-10 and those three steps are not reproduced locally. | docker |
+| Coverage (`chassis release` gate, `cargo llvm-cov --summary-only`) | A coverage number, informational and deliberately not a gate; skipped when `cargo-llvm-cov` is absent. | — |
 
 ## What the doubles cannot express
 
@@ -52,8 +52,8 @@ dependency, it silently deletes classes of behaviour (standing rule 9).
   expiring — needs the real hub, and does have it (`l7_resilience.rs`).
 - **`TestServer`** speaks just enough HTTP to answer with a status and
   record what arrived: no chunked encoding, no keep-alive, no redirects,
-  no TLS. TLS is covered instead by the CI image job against a real
-  https host.
+  no TLS. TLS was covered by the CI image job against a real https host until
+  2026-09-10; no local check has replaced that step.
 - **`FakeHub`** has no leases, no redelivery and no dead letters. Each of
   those three is covered against a real kyu container.
 
@@ -79,7 +79,7 @@ dependency, it silently deletes classes of behaviour (standing rule 9).
   to the homelab project.
 - **Deployment through the homelab orchestrator is unproven.** The drill
   installed the static binary under systemd; the container image is
-  proven by the CI job, and the preset is a proposal until the homelab
+  proven by the image check of the release gate, and the preset is a proposal until the homelab
   project adopts it.
 - **A non-JSON destination is refused rather than supported.** Escaping
   is a mechanism only for JSON; supporting another content type needs a

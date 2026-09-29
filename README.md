@@ -135,11 +135,14 @@ container build — locally, before a tag exists. The tier is read from the
 repository, not from a flag: a commit that moves the package version is
 the release commit and nothing else is.
 
-CI carries the one job branch protection needs, on every branch; red
-blocks `main`. It deliberately does not run cargo-deny, the container
-build or coverage — those are the release tier's, and
-`tests/l12_gate_tiers.rs` compares the two lists so this paragraph cannot
-quietly stop being true.
+Nothing runs on GitHub Actions: there is no CI workflow. Everything it
+used to run — fmt, clippy, the tests, cargo-deny, the container build and
+smoke, coverage (informational) — runs on this machine in the gate of
+`chassis release` and in the release tier above. To run all of it without
+releasing: `chassis release <next version> --dry-run`.
+`tests/l12_gate_tiers.rs` holds the repository to having no CI workflow
+and the release tier to its checks, so this paragraph cannot quietly stop
+being true.
 
 ### Releasing
 
