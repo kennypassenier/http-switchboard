@@ -16,6 +16,11 @@ endpoints and the CLI verbs — not about the internals.
   and `--dry-run` rehearses all of it without uploading.
   `.github/workflows/release.yml` is gone. Needs `chassis upgrade 3.0.0`
   + `chassis sync --write` once the kit is released.
+- **chassis-rs 3.0.0 → 3.0.1** (kit fix-14). The unit's `ExecReload=`
+  line (feat-reload-1) now comes from `unit_service` in `.chassis.toml`,
+  so `chassis sync --write` writes it instead of dropping it. Measured
+  2026-09-30: after one `--write` the unit reports in sync and keeps the
+  line; only its comment moved to `.chassis.toml`.
 
 ## [3.2.1] - 2026-09-27
 
