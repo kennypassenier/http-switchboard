@@ -30,6 +30,10 @@ User=http-switchboard
 Group=http-switchboard
 EnvironmentFile=/appdata/kyu/http-switchboard-config/token.env
 WorkingDirectory=/appdata/kyu/http-switchboard-config
+# feat-backup-1: /run/http-switchboard/backup.sock, where `http-switchboard backup-pause`
+# reaches the running service; outside the state root, so never archived.
+RuntimeDirectory=http-switchboard
+RuntimeDirectoryMode=0700
 ExecStartPre=/opt/http-switchboard/bin/http-switchboard --check
 ExecStart=/opt/http-switchboard/bin/http-switchboard
 ExecReload=/bin/kill -HUP $MAINPID

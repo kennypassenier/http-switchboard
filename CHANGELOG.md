@@ -9,13 +9,25 @@ endpoints and the CLI verbs — not about the internals.
 
 ### Changed
 
+- **chassis-rs 3.0.1 → 3.1.0**, `chassis sync --write`. The unit
+  (`deploy/http-switchboard.service`) gains `RuntimeDirectory=http-switchboard`
+  / `RuntimeDirectoryMode=0700`, the home of `/run/http-switchboard/backup.sock`
+  that `http-switchboard backup-pause` talks to; without it the pause falls
+  back to stopping the unit. The project's own `ExecReload=` line
+  (feat-reload-1, `unit_service` in `.chassis.toml`) survived the sync
+  unchanged, as fix-14 promises. `kp_themes` moves to 8.1.0 (vendored by
+  the kit; http-switchboard mounts no `webapp` and serves only the kit's
+  own dashboard pages, so there is nothing visible). http-switchboard
+  keeps no state of its own outside the kit's stores — the config is
+  re-read on `SIGHUP` (`reload.rs`), never written — so there is nothing
+  to wrap in `chassis::shell::backup::writing()`; the kit's pause already
+  covers everything this binary writes.
 - **Releases are built and published locally** through `chassis release
   <version>` (chassis-rs 3.0.0): the static musl binary, the `ldd`
   refusal, `SHA256SUMS`, the GHCR image tags and the GitHub release
   (still not `latest` until `sign-release.sh`) are made on this machine,
   and `--dry-run` rehearses all of it without uploading.
-  `.github/workflows/release.yml` is gone. Needs `chassis upgrade 3.0.0`
-  + `chassis sync --write` once the kit is released.
+  `.github/workflows/release.yml` is gone.
 - **chassis-rs 3.0.0 → 3.0.1** (kit fix-14). The unit's `ExecReload=`
   line (feat-reload-1) now comes from `unit_service` in `.chassis.toml`,
   so `chassis sync --write` writes it instead of dropping it. Measured
