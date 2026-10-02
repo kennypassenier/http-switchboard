@@ -60,6 +60,11 @@ async fn main() -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
+    // fix-15 (chassis-rs 3.2.0): without this the kit's dashboard pages and
+    // layout would show the binary name ("http-switchboard") as the brand;
+    // "HTTPSwitchboard" is the name the service uses everywhere else
+    // (README).
+    app.brand_title("HTTPSwitchboard");
     // Only a real start and `--check` need the switchboard's own config;
     // `--version`, `gen-secret`, `--healthcheck`, `--print-config`, `update`
     // and `rekey` are the kit's alone and must work without the file.
