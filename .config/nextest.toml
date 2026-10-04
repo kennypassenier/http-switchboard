@@ -1,0 +1,9 @@
+# Kenny, 2026-10-04: the suites run side by side under cargo-nextest. These
+# suites share fake receivers and a reloading binary, so they keep running
+# one at a time among themselves; everything else runs in parallel.
+[test-groups]
+serial-receivers = { max-threads = 1 }
+
+[[profile.default.overrides]]
+filter = 'binary(l3_sinks) | binary(l14_reload)'
+test-group = 'serial-receivers'
