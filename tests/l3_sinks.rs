@@ -252,3 +252,45 @@ async fn k3_the_whole_path_from_payload_to_receiver_holds_together() {
 
     assert_eq!(server.received()[0].body, r#"{"x": "with \" quote"}"#);
 }
+
+/// fix-8 (2026-10-04): a destination that never answers is cut off at the
+/// profile's own timeout_ms, not at the sink's 30 s ceiling. Before the fix
+/// one attempt against a dropped connection took 30 s while the config's
+/// budget check had counted 500 ms against the lease.
+#[tokio::test]
+async fn fix_8_the_profile_timeout_bounds_each_attempt() {
+    struct NeverAnswers;
+    impl Sink for NeverAnswers {
+        fn deliver<'a>(
+            &'a self,
+            _delivery: &'a Delivery,
+        ) -> http_switchboard::adapters::BoxFuture<'a, Result<(), DeliverError>> {
+            Box::pin(std::future::pending())
+        }
+    }
+    let p = profile(
+        "retries = 0\ntimeout_ms = 300",
+        r#"{ url = "http://127.0.0.1:9/in" }"#,
+    );
+    let started = std::time::Instant::now();
+    let outcome = deliver_with_retry(
+        &p,
+        &delivery_to("http://127.0.0.1:9/in", &[]),
+        &NeverAnswers,
+        &FakeClock::default(),
+    )
+    .await;
+    assert!(
+        matches!(
+            outcome.result,
+            Err(DeliverError::Timeout { timeout_ms: 300 })
+        ),
+        "{:?}",
+        outcome.result
+    );
+    assert!(
+        started.elapsed() < std::time::Duration::from_secs(2),
+        "the attempt must end at the profile's 300 ms, it took {:?}",
+        started.elapsed()
+    );
+}

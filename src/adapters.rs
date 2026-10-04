@@ -217,7 +217,20 @@ pub async fn deliver_with_retry(
     let mut attempts = 0;
     loop {
         attempts += 1;
-        match sink.deliver(delivery).await {
+        // The profile's timeout bounds each attempt (fix-8, 2026-10-04):
+        // the sink only carries a 30 s ceiling, and a destination that
+        // drops the connection instead of refusing it held one attempt for
+        // that long, far past the retry budget the config checked against
+        // the lease.
+        let attempt = tokio::time::timeout(
+            Duration::from_millis(profile.timeout_ms),
+            sink.deliver(delivery),
+        )
+        .await
+        .unwrap_or(Err(DeliverError::Timeout {
+            timeout_ms: profile.timeout_ms,
+        }));
+        match attempt {
             Ok(()) => {
                 return Outcome {
                     attempts,

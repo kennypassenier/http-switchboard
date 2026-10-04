@@ -313,3 +313,17 @@ fixed the same day on Kenny's answer to its form item `alertmanager-group`.
    on CT 109 as `config.toml.pre-t64`.
 9. **When the measure is reviewed.** When Alertmanager's grouping changes.
 
+
+## fix-8 · A profile's timeout_ms never bounded a delivery attempt (2026-10-04)
+
+| Field | |
+|---|---|
+| What went wrong | `deliver_with_retry` called the sink without the profile's `timeout_ms`; the only bound was the sink's 30 s ceiling (`src/app.rs`). Found when `l9_deployment` k8 took 30 s against `127.0.0.1:9`, which WSL drops instead of refusing, with `timeout_ms = 500`. |
+| Which gate let it through | No test delivered to a destination that hangs; every timeout test used a receiver that answered. The comment in `app.rs` claimed the per-attempt timeout existed. |
+| Where else the same fault sits | Property: "a configured timeout that no code applies". Searched: `grep -rn "timeout_ms" src/ \| grep -v config.rs`. The only uses are the sink's construction ceiling and the reload comparison; the inbound path goes through the same `deliver_with_retry`, so it is fixed by the same change. |
+| Prevention | `deliver_with_retry` wraps each attempt in `tokio::time::timeout(profile.timeout_ms)`. Test `l3_sinks::fix_8_the_profile_timeout_bounds_each_attempt` uses a sink that never answers. Without the fix it hangs; with the fix it ends at 300 ms. |
+| What it costs | Nothing measurable: one timer per attempt. |
+| Enforced by | Code and the test. |
+| Measured when | At the 3.3.5 release, when the full suite runs. Live, after the next CT 109 rollout: the timeout counter moves when a destination hangs. |
+| Fallback | Lower `timeout_ms` has no effect without the fix; keep the lease generous. |
+| Review | When the sink gets its own per-profile client. |

@@ -7,6 +7,13 @@ endpoints and the CLI verbs — not about the internals.
 
 ## [Unreleased]
 
+### Fixed (fix-8)
+
+- **A profile's `timeout_ms` now bounds every delivery attempt.** It was
+  never applied: a destination that drops the connection held one attempt
+  for the sink's 30 s ceiling, far past the retry budget the config checks
+  against the kyu lease, which makes duplicates.
+
 ### Fixed
 
 - **The real-kyu suites run again, against the latest kyu.** They started

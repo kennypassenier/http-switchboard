@@ -54,7 +54,7 @@ impl App {
             base_url.clone(),
             token.clone(),
             // The sink's own ceiling; each profile's timeout is applied
-            // per attempt inside the retry loop.
+            // per attempt inside the retry loop (deliver_with_retry).
             30_000,
         ));
         let hub: Option<Arc<dyn Hub>> =
