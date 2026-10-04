@@ -12,7 +12,7 @@ mod support;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use http_switchboard::adapters::{HttpSink, KyuHub};
+use http_switchboard::adapters::HttpSink;
 use http_switchboard::config::{self, Profile};
 use http_switchboard::pump::{pump_once, Health, HubMessage, Poll, PumpState, Step};
 use support::{FakeClock, FakeHub, FakeSink, HubErrorKind, KyuHarness, TestServer};
@@ -284,8 +284,7 @@ async fn ar8_the_subscription_policy_is_pushed_once() {
 macro_rules! require_hub {
     ($harness:ident) => {
         let Some($harness) = KyuHarness::start().await else {
-            eprintln!("skipped: set KYU_IMAGE to run the end-to-end suite against a real kyu");
-            return;
+            unreachable!("KyuHarness::start always starts a kyu");
         };
     };
 }
@@ -306,7 +305,7 @@ async fn k2_e2e_a_message_published_before_the_first_poll_still_arrives() {
         .publish("alerts.raw", r#"{"alertname": "FilesystemFull"}"#)
         .await;
 
-    let hub = KyuHub::new(hub_container.base_url.clone(), None, 2);
+    let hub = hub_container.hub(2);
     let sink = HttpSink::new(None, None, 2_000);
     let mut state = PumpState::default();
 
@@ -344,7 +343,7 @@ async fn k2_e2e_a_refused_delivery_comes_back_and_a_delivered_one_does_not() {
         r#"{"alert": {{ alertname }}}"#,
     );
 
-    let hub = KyuHub::new(hub_container.base_url.clone(), None, 2);
+    let hub = hub_container.hub(2);
     let sink = HttpSink::new(None, None, 2_000);
     let mut state = PumpState::default();
 
@@ -386,8 +385,14 @@ async fn k4_e2e_the_translation_is_published_back_onto_a_topic() {
         r#"{ kyu_topic = "chain.out" }"#,
         r#"{"alert": {{ alerts.0.labels.alertname }}}"#,
     );
-    let hub = KyuHub::new(hub_container.base_url.clone(), None, 2);
-    let sink = HttpSink::new(Some(hub_container.base_url.clone()), None, 2_000);
+    let hub = hub_container.hub(2);
+    let sink = HttpSink::new(
+        Some(hub_container.base_url.clone()),
+        Some(http_switchboard::secret::Secret::new(
+            hub_container.token.clone(),
+        )),
+        2_000,
+    );
     let mut state = PumpState::default();
 
     pump_once(&p, &hub, &sink, &FakeClock::default(), &mut state).await;
@@ -410,6 +415,7 @@ async fn k4_e2e_the_translation_is_published_back_onto_a_topic() {
             "{}/t/chain.out/next?as=reader&envelope=json&wait=2&from=beginning",
             hub_container.base_url
         ))
+        .bearer_auth(&hub_container.token)
         .send()
         .await
         .unwrap()
@@ -444,7 +450,7 @@ async fn ar8_e2e_the_policy_is_in_force_after_the_first_successful_poll() {
         .publish("policy.raw", r#"{"name": "x"}"#)
         .await;
 
-    let hub = KyuHub::new(hub_container.base_url.clone(), None, 2);
+    let hub = hub_container.hub(2);
     let sink = HttpSink::new(None, None, 2_000);
     let mut state = PumpState::default();
 
@@ -456,6 +462,7 @@ async fn ar8_e2e_the_policy_is_in_force_after_the_first_successful_poll() {
             "{}/api/t/policy.raw/subs/switchboard/policy",
             hub_container.base_url
         ))
+        .bearer_auth(support::KYU_ADMIN_TOKEN)
         .send()
         .await
         .unwrap()
@@ -485,7 +492,7 @@ async fn k2_e2e_a_message_that_can_never_work_is_settled_not_looped() {
         &format!(r#"{{ url = "{}/hook" }}"#, receiver.base_url),
         r#"{"alert": {{ name }}}"#,
     );
-    let hub = KyuHub::new(hub_container.base_url.clone(), None, 2);
+    let hub = hub_container.hub(2);
     let sink = HttpSink::new(None, None, 2_000);
     let mut state = PumpState::default();
 
@@ -493,6 +500,7 @@ async fn k2_e2e_a_message_that_can_never_work_is_settled_not_looped() {
     pump_once(&p, &hub, &sink, &FakeClock::default(), &mut state).await;
     reqwest::Client::new()
         .post(format!("{}/t/dead.raw", hub_container.base_url))
+        .bearer_auth(&hub_container.token)
         .header("content-type", "text/plain")
         .body("this is not json at all")
         .send()

@@ -7,6 +7,18 @@ endpoints and the CLI verbs — not about the internals.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The real-kyu suites run again, against the latest kyu.** They started
+  the pinned `ghcr.io/kennypassenier/kyu:2.0.0` image, which no longer
+  exists, and skipped themselves without `KYU_IMAGE`; the release tier of
+  `gates.project.sh` never ran under `chassis release` because it looked
+  only at a staged version change. Now the suites start the newest signed
+  kyu (`workstation/bin/kyu-latest`, or `KYU_BIN`) with a client token, the
+  release tier follows `CHASSIS_RELEASE_GATE`, and the hard-kill test gives
+  the service the two dashboard secrets it has needed since 3.0.0. Tests
+  only; the shipped binary is unchanged.
+
 ## [3.3.4] - 2026-10-04
 
 ## [3.3.3] - 2026-10-04

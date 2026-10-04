@@ -146,8 +146,7 @@ async fn l6b_e2e_the_running_service_pumps_the_hub_by_itself() {
     // No test driving pump_once by hand: the service's own loop picks the
     // message up, translates it and delivers it.
     let Some(hub) = KyuHarness::start().await else {
-        eprintln!("skipped: set KYU_IMAGE to run this against a real kyu");
-        return;
+        unreachable!("KyuHarness::start always starts a kyu");
     };
     let receiver = TestServer::start(vec![200]).await;
     let port = free_port();
@@ -155,6 +154,7 @@ async fn l6b_e2e_the_running_service_pumps_the_hub_by_itself() {
         r#"
 [kyu]
 base_url = "{}"
+token = "{}"
 
 [[profiles]]
 name = "pumped"
@@ -164,7 +164,7 @@ content_type = "application/json"
 retries = 0
 body = '''{{"alert": {{{{ name }}}}}}'''
 "#,
-        hub.base_url, receiver.base_url
+        hub.base_url, hub.token, receiver.base_url
     );
     let cfg = config::load("t.toml", &text, &env(&[])).unwrap();
     let (stop_tx, stop_rx) = tokio::sync::oneshot::channel::<()>();

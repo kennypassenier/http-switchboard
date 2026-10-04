@@ -34,6 +34,17 @@ fn spawn(config: &std::path::Path, port: u16) -> Child {
         .arg(config.parent().expect("the config lives in a directory"))
         .arg("--listen")
         .arg(format!("127.0.0.1:{port}"))
+        // Since 3.0.0 the dashboard is compiled in and the service refuses
+        // to start without both secrets; this test was skipped from then
+        // until 2026-10-04 and so never noticed.
+        .env(
+            "HTTP_SWITCHBOARD_TOKEN",
+            "resilience-suite-admin-token-0123456789",
+        )
+        .env(
+            "HTTP_SWITCHBOARD_SECRET_KEY",
+            "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        )
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn()
@@ -67,8 +78,7 @@ impl Drop for Killed {
 #[tokio::test]
 async fn s3_e2e_a_hard_kill_mid_delivery_loses_nothing() {
     let Some(hub) = KyuHarness::start().await else {
-        eprintln!("skipped: set KYU_IMAGE to run this against a real kyu");
-        return;
+        unreachable!("KyuHarness::start always starts a kyu");
     };
     // The first delivery attempt hangs forever; the second is accepted.
     // So the process is killed with the message claimed and undelivered —
@@ -85,6 +95,7 @@ async fn s3_e2e_a_hard_kill_mid_delivery_loses_nothing() {
         r#"
 [kyu]
 base_url = "{}"
+token = "{}"
 
 [[profiles]]
 name = "survivor"
@@ -100,7 +111,7 @@ lease_ms = 15000
 timeout_ms = 9000
 body = '''{{"alert": {{{{ name }}}}}}'''
 "#,
-        hub.base_url, receiver.base_url
+        hub.base_url, hub.token, receiver.base_url
     )
     .unwrap();
     drop(file);

@@ -47,7 +47,12 @@ cd "$(git rev-parse --show-toplevel)"
 
 version=$(grep -m1 '^version' Cargo.toml | sed -E 's/.*"(.*)".*/\1/')
 tier=commit
-if [ -n "$version" ] && ! git rev-parse -q --verify "refs/tags/v$version" >/dev/null 2>&1; then
+# `chassis release` runs this before it bumps anything, so nothing is
+# staged yet; it says so through CHASSIS_RELEASE_GATE (missed until
+# 2026-10-04: 3.3.2 and 3.3.3 never ran the real-kyu suite).
+if [ "${CHASSIS_RELEASE_GATE:-}" = 1 ]; then
+  tier=release
+elif [ -n "$version" ] && ! git rev-parse -q --verify "refs/tags/v$version" >/dev/null 2>&1; then
   # The version has no tag yet. On its own that is true of every commit
   # after a release too, so narrow it: only a commit that CHANGES the
   # version is the release commit.
@@ -64,13 +69,10 @@ if [ "$tier" = commit ]; then
 fi
 
 # ── release tier ──────────────────────────────────────────────────────
-# The end-to-end suite runs against a REAL kyu container and skips itself
-# silently when KYU_IMAGE is unset — five tests, including the most
-# important ones, reporting "ok" in 0.00 s. This sets it, so a green gate
-# means what it says; if the image cannot be pulled the tests fail, which
-# is the honest outcome.
-export KYU_IMAGE="${KYU_IMAGE:-ghcr.io/kennypassenier/kyu:2.0.0}"
-echo "gates.project: end-to-end against a real kyu container"
+# The end-to-end suite runs against a REAL kyu: the newest signed release
+# (workstation/bin/kyu-latest), or KYU_BIN. If it cannot be fetched the
+# tests fail, which is the honest outcome.
+echo "gates.project: end-to-end against the latest kyu"
 cargo test --test l4_pump
 
 echo "gates.project: cargo-deny"

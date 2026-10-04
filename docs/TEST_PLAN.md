@@ -7,17 +7,17 @@ stood at **96 tests**; at 3.0.0 (2026-09-09) it stands at **116**.
 Run everything with:
 
 ```bash
-KYU_IMAGE=ghcr.io/kennypassenier/kyu:2.0.0 cargo test --all
+cargo test --all
 ```
 
-The **release** gate sets `KYU_IMAGE` itself; an ordinary commit does not
-run those suites at all, because they need docker and a pulled image
-(Kenny's test policy: infrastructure-bound checks are release-tier). Run
-the command above by hand when a change touches the pump. Without
-`KYU_IMAGE` the end-to-end suites skip themselves and the run
-over-reports — that was a real gap
-(Phase 7, G14) and is now closed at the gate rather than trusted to
-memory.
+The end-to-end suites run against the newest signed kyu release, which
+`~/Projects/workstation/bin/kyu-latest` downloads, verifies against its
+SHA256SUMS and the ecosystem minisign key, and caches (Kenny, 2026-10-04:
+always the latest kyu, never a pinned image; the ghcr images are gone since
+kyu runs as a native service). `KYU_BIN` points them at another binary.
+They no longer skip themselves: a missing hub fails the run. The release
+tier of the gate (`CHASSIS_RELEASE_GATE=1`, set by `chassis release`) runs
+`cargo test --test l4_pump` once more on the bumped tree.
 
 ## The suites
 

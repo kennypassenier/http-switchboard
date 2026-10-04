@@ -38,7 +38,7 @@ at the sender, or at the hub.
 | The sender gets 503 with `retry-after` | More deliveries in flight than the bound allows. | It is a refusal, not a loss — the body says so. | Retry. If it keeps happening, the destination is too slow: look at the duration metric. |
 | Uptime Kuma is green while nothing arrives | It is watching plain `/healthz`, which is liveness. | `curl /healthz?strict=1` — that is the one that goes 503. | Point the monitor at `?strict=1`. |
 | The container restarts in a loop | Its healthcheck is failing. It uses plain `/healthz`, so this means the process itself is not answering — not that a receiver is down. | `docker logs`; the startup error is on stderr. | Almost always a config error the container cannot start with. |
-| The end-to-end tests "pass" suspiciously fast | `KYU_IMAGE` is not set, so they skipped themselves. | They print a skip line. | The commit gate sets it; set it by hand for a bare `cargo test`. |
+| The end-to-end tests cannot start a hub | `kyu-latest` could not reach GitHub, or the download failed its signature check. | The panic names kyu-latest and its stderr. | Check `gh auth status`, or set `KYU_BIN` to a kyu binary. |
 
 ## Reading a delivery failure
 

@@ -23,13 +23,19 @@ fn free_port() -> u16 {
     listener.local_addr().unwrap().port()
 }
 
-async fn read_topic(base_url: &str, topic: &str, subscription: &str) -> Vec<serde_json::Value> {
+async fn read_topic(
+    base_url: &str,
+    token: &str,
+    topic: &str,
+    subscription: &str,
+) -> Vec<serde_json::Value> {
     let mut out = Vec::new();
     for _ in 0..10 {
         let response = reqwest::Client::new()
             .get(format!(
                 "{base_url}/t/{topic}/next?as={subscription}&envelope=json&wait=1&from=beginning"
             ))
+            .bearer_auth(token)
             .send()
             .await
             .unwrap();
@@ -42,6 +48,7 @@ async fn read_topic(base_url: &str, topic: &str, subscription: &str) -> Vec<serd
         out.push(envelope["payload"].clone());
         let _ = reqwest::Client::new()
             .post(format!("{base_url}/t/{topic}/ack/{id}?as={subscription}"))
+            .bearer_auth(token)
             .send()
             .await;
     }
@@ -51,8 +58,7 @@ async fn read_topic(base_url: &str, topic: &str, subscription: &str) -> Vec<serd
 #[tokio::test]
 async fn w11_e2e_a_failing_profile_reports_once_and_recovery_reports_once() {
     let Some(hub) = KyuHarness::start().await else {
-        eprintln!("skipped: set KYU_IMAGE to run this against a real kyu");
-        return;
+        unreachable!("KyuHarness::start always starts a kyu");
     };
     // The receiver refuses the first three messages, then accepts.
     let receiver = TestServer::start(vec![500, 500, 500, 200]).await;
@@ -61,6 +67,7 @@ async fn w11_e2e_a_failing_profile_reports_once_and_recovery_reports_once() {
         r#"
 [kyu]
 base_url = "{}"
+token = "{}"
 
 [reporting]
 topic = "switchboard.events"
@@ -74,7 +81,7 @@ retries = 0
 timeout_ms = 2000
 body = '''{{"alert": {{{{ name }}}}}}'''
 "#,
-        hub.base_url, receiver.base_url
+        hub.base_url, hub.token, receiver.base_url
     );
     let cfg = config::load("t.toml", &text, &env()).unwrap();
     let (stop_tx, stop_rx) = tokio::sync::oneshot::channel::<()>();
@@ -127,7 +134,7 @@ body = '''{{"alert": {{{{ name }}}}}}'''
     );
     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 
-    let events = read_topic(&hub.base_url, "switchboard.events", "reader").await;
+    let events = read_topic(&hub.base_url, &hub.token, "switchboard.events", "reader").await;
     let failing: Vec<_> = events
         .iter()
         .filter(|e| e["event"] == "profile.failing")
@@ -169,8 +176,7 @@ async fn w11_e2e_an_inbound_profile_reports_itself_too() {
     // profile fed by a webhook fell over in silence — and that is the
     // source shape every second profile tends to use.
     let Some(hub) = KyuHarness::start().await else {
-        eprintln!("skipped: set KYU_IMAGE to run this against a real kyu");
-        return;
+        unreachable!("KyuHarness::start always starts a kyu");
     };
     let receiver = TestServer::start(vec![500, 200]).await;
     let port = free_port();
@@ -178,6 +184,7 @@ async fn w11_e2e_an_inbound_profile_reports_itself_too() {
         r#"
 [kyu]
 base_url = "{}"
+token = "{}"
 
 [reporting]
 topic = "switchboard.events"
@@ -191,7 +198,7 @@ retries = 0
 timeout_ms = 2000
 body = '''{{"alert": {{{{ name }}}}}}'''
 "#,
-        hub.base_url, receiver.base_url
+        hub.base_url, hub.token, receiver.base_url
     );
     let cfg = config::load("t.toml", &text, &env()).unwrap();
     let (stop_tx, stop_rx) = tokio::sync::oneshot::channel::<()>();
@@ -234,7 +241,7 @@ body = '''{{"alert": {{{{ name }}}}}}'''
     assert_eq!(post(r#"{"name": "second"}"#).await, 200, "and then accepts");
     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 
-    let events = read_topic(&hub.base_url, "switchboard.events", "reader2").await;
+    let events = read_topic(&hub.base_url, &hub.token, "switchboard.events", "reader2").await;
     let failing = events
         .iter()
         .filter(|e| e["event"] == "profile.failing")
