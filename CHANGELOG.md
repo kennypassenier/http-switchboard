@@ -7,6 +7,8 @@ endpoints and the CLI verbs — not about the internals.
 
 ## [Unreleased]
 
+## [3.3.5] - 2026-10-04
+
 ### Fixed (fix-8)
 
 - **A profile's `timeout_ms` now bounds every delivery attempt.** It was
