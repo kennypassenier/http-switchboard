@@ -107,14 +107,63 @@ retries = 0
 # long enough that the hanging attempt is still in flight when the kill
 # lands, and short enough that the config's own budget check accepts it
 # (it refused the first version of this test, correctly).
-lease_ms = 15000
-timeout_ms = 9000
+lease_ms = 6500
+timeout_ms = 1500
 body = '''{{"alert": {{{{ name }}}}}}'''
 "#,
         hub.base_url, hub.token, receiver.base_url
     )
     .unwrap();
     drop(file);
+
+    // The service pushes its lease to the hub after its first long poll
+    // (25 s) returns, which here is the poll that claims the message, so
+    // the claim would run on kyu's 30 s default. A service that has been
+    // up for a while has pushed it long before; set it the same way first.
+    // A topic exists once something is published to it, and a
+    // subscription once it has polled: publish a warm-up, take it as the
+    // service's subscription and ack it, so the receiver never sees it.
+    hub.publish("kill.raw", r#"{"name": "warmup"}"#).await;
+    let warm = reqwest::Client::new()
+        .get(format!(
+            "{}/t/kill.raw/next?as=survivor&envelope=json&wait=1&from=beginning",
+            hub.base_url
+        ))
+        .bearer_auth(&hub.token)
+        .send()
+        .await
+        .expect("the hub answers a poll")
+        .text()
+        .await
+        .unwrap();
+    let warm: serde_json::Value = serde_json::from_str(&warm).expect("an envelope");
+    let warm_id = warm["id"].as_str().expect("the warm-up has an id");
+    reqwest::Client::new()
+        .post(format!(
+            "{}/t/kill.raw/ack/{warm_id}?as=survivor",
+            hub.base_url
+        ))
+        .bearer_auth(&hub.token)
+        .send()
+        .await
+        .expect("the hub takes the ack");
+    let policy = reqwest::Client::new()
+        .put(format!(
+            "{}/api/t/kill.raw/subs/survivor/policy",
+            hub.base_url
+        ))
+        .bearer_auth(&hub.token)
+        .header("content-type", "application/json")
+        .body(r#"{"lease_ms":6500,"max_attempts":5}"#)
+        .send()
+        .await
+        .expect("the hub takes the policy");
+    let status = policy.status();
+    assert!(
+        status.is_success(),
+        "policy: {status} {}",
+        policy.text().await.unwrap_or_default()
+    );
 
     let mut child = Killed(spawn(&config, port));
     wait_healthy(port).await;
@@ -147,12 +196,12 @@ body = '''{{"alert": {{{{ name }}}}}}'''
     wait_healthy(port2).await;
 
     let mut delivered_again = false;
-    for _ in 0..90 {
+    for _ in 0..450 {
         if receiver.received().len() >= 2 {
             delivered_again = true;
             break;
         }
-        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
     }
 
     assert!(

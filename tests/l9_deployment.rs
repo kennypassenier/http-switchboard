@@ -130,6 +130,10 @@ async fn k8_no_secret_reaches_the_log_of_a_running_service() {
     // asserted on config errors and on sink errors, never on what the
     // running binary actually prints (Phase 7, G7).
     let dir = tempdir("logscan");
+    // A port nothing listens on, so the delivery is refused at once. Port 9
+    // was used until 2026-10-04: on WSL it drops the SYN instead of
+    // refusing it, and the attempt took 30 s to fail.
+    let dead = free_port();
     let config = dir.join("config.toml");
     let mut file = std::fs::File::create(&config).unwrap();
     write!(
@@ -138,7 +142,7 @@ async fn k8_no_secret_reaches_the_log_of_a_running_service() {
 [[profiles]]
 name = "hook"
 from = {{ http_path = "/hook" }}
-to = {{ url = "http://127.0.0.1:9/in" }}
+to = {{ url = "http://127.0.0.1:{dead}/in" }}
 content_type = "application/json"
 retries = 0
 timeout_ms = 500
