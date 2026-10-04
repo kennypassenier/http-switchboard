@@ -64,24 +64,13 @@ fi
 echo "gates.project: tier=$tier (version $version)"
 
 if [ "$tier" = commit ]; then
-  echo "gates.project: the real-kyu suite, cargo-deny and the image build run at the release tier"
+  echo "gates.project: tests and cargo-deny run in chassis release's gate"
   exit 0
 fi
 
 # ── release tier ──────────────────────────────────────────────────────
-# The end-to-end suite runs against a REAL kyu: the newest signed release
-# (workstation/bin/kyu-latest), or KYU_BIN. If it cannot be fetched the
-# tests fail, which is the honest outcome.
-echo "gates.project: end-to-end against the latest kyu"
-cargo test --test l4_pump
-
-echo "gates.project: cargo-deny"
-cargo deny check all
-
-echo "gates.project: the container image builds"
-docker build -q -t http-switchboard:release-gate . >/dev/null
-docker run --rm http-switchboard:release-gate --version
-if docker run --rm http-switchboard:release-gate --healthcheck http://127.0.0.1:1/healthz; then
-  echo "the healthcheck must fail against a closed port" >&2
-  exit 1
-fi
+# Nothing extra (Kenny, 2026-10-04). `chassis release`'s own gate already
+# runs the whole suite, the real-kyu suites included (they start the latest
+# signed kyu), and cargo-deny; running them again here doubled the time.
+# No container image either: this service ships as a native unit.
+echo "gates.project: release tier adds nothing to chassis release's gate"

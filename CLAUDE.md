@@ -67,8 +67,8 @@ brackets — the house scheme (`[feat-safety-4]`, `[fix-3]`, `[meta]`), with
 the old letter-plus-digit shape still accepted for history.
 
 **Two tiers** (Kenny's test policy, applied 2026-09-10): an ordinary
-commit runs fmt, clippy and the in-process suite; the release commit adds
-the real-kyu end-to-end suite, `cargo deny` and the container build. The
+commit runs fmt and clippy; tests, the real-kyu suites and cargo-deny run once,
+in `chassis release`'s gate, and no container image is built (native unit, 2026-10-04). The
 tier comes from `CHASSIS_RELEASE_GATE=1` (set by `chassis release`) or a commit that moves the package version
 (the release commit). The real-kyu suites run against the newest signed kyu (`workstation/bin/kyu-latest`). Nothing runs on GitHub Actions (ci.yml removed
 2026-09-29): `chassis release`'s gate runs what CI ran (fmt, clippy,

@@ -11,7 +11,7 @@
 //! A check that "moved" and a place it moved to, with nothing comparing
 //! them, is exactly the shape rule 38 was written about. So this test
 //! holds the repository to having no CI workflow, and the release tier to
-//! running the checks that used to be CI jobs.
+//! repeating nothing `chassis release` already runs (2026-10-04).
 //!
 //! Placement: integration test — it reads the repository. Timing: commit
 //! subset; it is three file reads and costs nothing.
@@ -27,12 +27,13 @@ fn read(rel: &str) -> String {
         .unwrap_or_else(|e| panic!("{rel} must be readable: {e}"))
 }
 
-/// The checks that used to be CI jobs and now live in the release tier. Each is named by the command that would run it, so the
-/// assertion cannot pass on a comment that merely mentions the word.
-const MOVED: [(&str, &str); 3] = [
-    ("cargo-deny", "cargo deny check all"),
-    ("the container build", "docker build"),
-    ("the real-kyu end-to-end suite", "cargo test --test l4_pump"),
+/// What the release tier must NOT do any more (Kenny, 2026-10-04): build
+/// a container image for a native service, or repeat what `chassis
+/// release`'s gate already runs.
+const NOT_IN_RELEASE_TIER: [(&str, &str); 3] = [
+    ("a container image build", "docker build"),
+    ("a second cargo-deny run", "cargo deny"),
+    ("a second real-kyu suite run", "cargo test"),
 ];
 
 #[test]
@@ -49,18 +50,21 @@ fn l12_the_repository_carries_no_ci_workflow() {
 }
 
 #[test]
-fn l12_every_check_ci_used_to_run_is_run_by_the_release_tier() {
+fn l12_the_release_tier_repeats_nothing_and_builds_no_image() {
     let gates = read(".claude/hooks/gates.project.sh");
     let (_, release_tier) = gates
         .split_once("# ── release tier ──")
         .expect("gates.project.sh must mark where its release tier starts");
-
-    for (name, command) in MOVED {
+    let commands: String = release_tier
+        .lines()
+        .filter(|l| !l.trim_start().starts_with('#'))
+        .collect::<Vec<_>>()
+        .join("\n");
+    for (name, command) in NOT_IN_RELEASE_TIER {
         assert!(
-            release_tier.contains(command),
-            "{name} is not run by the release tier — nothing else on GitHub runs it either.\n  \
-             expected the release tier to run: {command}\n\
-             What now: add it back to .claude/hooks/gates.project.sh."
+            !commands.contains(command),
+            "the release tier runs {name} ({command}); chassis release's gate already covers it, \
+             and this service ships no image. What now: remove it from .claude/hooks/gates.project.sh."
         );
     }
 }
