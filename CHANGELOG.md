@@ -7,6 +7,8 @@ endpoints and the CLI verbs — not about the internals.
 
 ## [Unreleased]
 
+## [3.3.7] - 2026-10-08
+
 ## [3.3.6] - 2026-10-04
 
 ## [3.3.5] - 2026-10-04
