@@ -93,10 +93,16 @@ impl Profile {
     /// is how a design that looks like it fits the lease does not.
     pub fn retry_budget_ms(&self) -> u64 {
         let attempts = self.timeout_ms * u64::from(self.retries + 1);
-        let pauses: u64 = (0..self.retries)
+        attempts + self.pauses_ms().iter().sum::<u64>()
+    }
+
+    /// The pauses between tries, in order: 1 s, 2 s, 4 s, doubling. One
+    /// list for the budget above and for the dashboard that draws it, so
+    /// the page cannot disagree with the check that guards the lease.
+    pub fn pauses_ms(&self) -> Vec<u64> {
+        (0..self.retries)
             .map(|i| BACKOFF_BASE_MS * 2u64.pow(i))
-            .sum();
-        attempts + pauses
+            .collect()
     }
 }
 
