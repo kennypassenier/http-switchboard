@@ -21,6 +21,13 @@ endpoints and the CLI verbs — not about the internals.
   four key figures with trends (or sparklines with *Failed* as a filter),
   an uptime strip of 24 hour cells per profile, and a refresh chooser
   (default 30 s) that now sets the page's poll instead of the fixed 10 s.
+- **Profile cards, finished.** A hover card on every profile name (status,
+  source, destination host only, content type, a short template label,
+  received, delivered, failed, last success); the profiles card has its
+  four states (cards, loading, no profiles, could not be read) at one
+  height; each card says "last delivery … ago" and turns to a warning
+  after a day of silence. `GET /profiles.json` gains `template`, a label
+  made of the template's field names, never its body.
 
 ## [3.4.0] - 2026-10-18
 

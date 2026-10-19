@@ -14,6 +14,7 @@ import { toast } from '/static/kp/js/overlays.js';
 import { setMenu, attachMenuButtons } from '/static/kp/js/menu-button.js';
 import { attachDataTables } from '/static/kp/js/datatable.js';
 import { attachFootprints } from '/static/kp/js/footprint.js';
+import { AREA_RELOAD_EVENT, attachArea, attachProfileHover, markName, paintFresh, refreshHover, setArea, watchEntityNames } from './profiles.js';
 
 const POLL_MS = 10_000;
 /** The poll in seconds; history.js takes it over with the refresh chooser (0 = paused). */
@@ -40,7 +41,7 @@ const said = (list) => (list.length > 1 ? `${list.slice(0, -1).map(seconds).join
 const percent = (v) => `${(Math.floor(v * 1000) / 10).toFixed(1)} %`;
 
 /** @typedef {{ kind: string, label: string, sub: string, path: string | null }} End */
-/** @typedef {{ name: string, state: keyof typeof HEALTH_WORD, received: number, delivered: number, failed: number, avg_ms: number | null, last_success_unix: number | null,
+/** @typedef {{ name: string, template: string, state: keyof typeof HEALTH_WORD, received: number, delivered: number, failed: number, avg_ms: number | null, last_success_unix: number | null,
  *   source: End, sink: End, content_type: string, timeout_ms: number, retries: number, pauses_ms: number[], budget_ms: number, lease_ms: number | null,
  *   max_attempts: number | null }} Profile */
 
@@ -61,6 +62,7 @@ let traceName = profiles[0]?.name ?? '';
 /** @type {Set<string>} profiles with a recheck in flight */
 const rechecking = new Set();
 
+const area = /** @type {HTMLElement} */ ($('hsb-area'));
 const grid = /** @type {HTMLElement} */ ($('hsb-grid'));
 const map = /** @type {HTMLElement} */ ($('hsb-map'));
 const traceEl = /** @type {HTMLElement} */ ($('hsb-trace'));
@@ -133,22 +135,24 @@ function drawProfiles() {
     grid.hidden = view !== 'cards';
     map.hidden = view !== 'map';
     for (const b of all('[data-hsb-view]')) b.setAttribute('aria-pressed', String(b.getAttribute('data-hsb-view') === view));
+    // One state for the whole card (js/card-state.js): the cards and the map are its data, the note its other three faces.
     if (status === 'loading') {
-        setEntityGridState(grid, 'loading', { count: Math.max(profiles.length, 2) });
-        setMatrix(map, { ...mapSpec(), view: 'lines', state: 'loading', skeleton: Math.max(profiles.length, 2) });
+        setArea(area, 'loading');
     } else if (status === 'error') {
-        setEntityGridState(grid, 'error', { title: 'The profiles could not be read', message: 'HTTPSwitchboard did not answer. Check that the service is running.' });
-        setMatrix(map, { view: 'lines', rows: [], columns: [], state: 'error', message: 'The profiles could not be read' });
+        setArea(area, 'error');
     } else if (profiles.length === 0) {
-        setEntityGridState(grid, 'empty', {
-            title: 'No profiles yet',
-            message: 'Profiles are read from the configuration on disk. Add one and reload.',
-            actionLabel: 'Reload profiles',
-        });
+        grid.replaceChildren();
+        grid.removeAttribute('role');
         setMatrix(map, { view: 'lines', rows: [], columns: [], state: 'empty', message: 'No profiles yet' });
+        setArea(area, 'empty');
     } else {
         setEntityGrid(grid, profiles.map(entityOf));
+        for (const p of profiles) {
+            const card = grid.querySelector(`[data-kp-entity-key="${CSS.escape(p.name)}"]`);
+            if (card instanceof HTMLElement) paintFresh(card, p);
+        }
         setMatrix(map, { ...mapSpec(), view: 'lines' });
+        setArea(area, 'ready');
     }
 }
 
@@ -196,6 +200,7 @@ function drawTrace() {
             b.className = 'kp-button kp-button--sm';
             b.dataset.hsbTrace = p.name;
             b.textContent = p.name;
+            markName(b, p.name);
             pick.append(b);
         }
         for (const b of all('button', pick)) b.setAttribute('aria-pressed', String(b.dataset.hsbTrace === traceName));
@@ -204,7 +209,10 @@ function drawTrace() {
     if (p) traceName = p.name;
     const name = $('hsb-trace-name');
     const badge = $('hsb-trace-badge');
-    if (name) name.textContent = p?.name ?? '';
+    if (name) {
+        name.textContent = p?.name ?? '';
+        if (p) markName(name, p.name);
+    }
     if (badge) {
         badge.textContent = p ? HEALTH_WORD[p.state] : '';
         badge.className = p ? `kp-badge kp-badge--${HEALTH_TONE[p.state]}` : 'kp-badge';
@@ -237,7 +245,10 @@ const code = (text) => el('code', 'kp-id', text);
 function makeCard(name) {
     const card = el('article', 'kp-card hsb-profile');
     const head = el('header', 'hsb-profile__head');
-    const title = el('h3', 'kp-card__title', name);
+    const title = el('h3', 'kp-card__title');
+    const label = el('span', '', name);
+    markName(label, name);
+    title.append(label);
     const inline = el('span', 'kp-meter kp-meter--inline kp-meter--over-spill');
     const badge = el('span', 'kp-badge');
     head.append(title, inline, badge);
@@ -529,6 +540,7 @@ function drawAll() {
     drawTrace();
     drawSettings();
     drawRecheck();
+    refreshHover();
 }
 
 let inFlight = false;
@@ -565,6 +577,12 @@ attachMenuButtons(document);
 attachDataTables(document);
 attachFlashButtons(document);
 attachFootprints(document);
+attachArea(area);
+attachProfileHover(
+    [area, ...all('.hsb-trace'), settingsEl, ...all('.hsb-table')].filter((root, i, list) => list.indexOf(root) === i),
+    (name) => profiles.find((p) => p.name === name),
+);
+watchEntityNames(grid);
 
 for (const b of all('[data-hsb-view]')) {
     b.addEventListener('click', () => {
@@ -588,8 +606,8 @@ grid.addEventListener('kp-entity-action', (event) => {
     if (id === 'recheck') void recheckOne(key);
     else void copyTest(key);
 });
-grid.addEventListener('kp-entity-new', () => void reload());
-grid.addEventListener('kp-entity-grid-retry', () => void reload());
+area.addEventListener(AREA_RELOAD_EVENT, () => void reload());
+area.addEventListener('kp-card-retry', () => void reload());
 map.addEventListener('kp-uses-retry', () => void reload());
 traceEl.addEventListener('kp-trace-retry', () => void reload());
 allButton.addEventListener('click', () => void recheckAll());
@@ -601,7 +619,8 @@ document.addEventListener('kp-menu-select', (event) => {
     else if (detail.value === 'copy') void copyTest(name);
 });
 
-drawAll();
+if (Array.isArray(embedded.profiles)) drawAll();
+else void reload();
 /** @param {number} seconds how often to read again; 0 pauses the poll. */
 function setPoll(seconds) {
     pollSeconds = seconds;

@@ -1,0 +1,56 @@
+/* The profiles card's frame (kp-themes 11): the card that holds the cards, the freshness line under each profile and the
+   hover card's rows. Everything with a kp- class is the package; colours, spacing and radii come from the theme's tokens. */
+
+/* The card keeps one height in all four states: room for the empty and failed notes, which are as tall as two rows. */
+.hsb-area {
+    --kp-card-stage-min: 18rem;
+}
+
+.hsb-area > .hsb-controls {
+    margin-block-end: var(--kp-space-md, 1rem);
+}
+
+/* The frame no longer sets its own minimum: the stage does. */
+.hsb-area .hsb-frame--profiles > #hsb-grid,
+.hsb-area .hsb-frame--profiles > #hsb-map {
+    min-block-size: 0;
+}
+
+/* The freshness line is the last row of a profile card: the words, and how long a silence is allowed. */
+.hsb-fresh {
+    margin-block-start: var(--kp-space-xs, 0.25rem);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--kp-space-xs, 0.25rem) var(--kp-space-sm, 0.5rem);
+    min-inline-size: 0;
+}
+
+.hsb-fresh .kp-ago,
+.hsb-fresh .hsb-quiet {
+    padding-inline: var(--kp-space-xs, 0.25rem);
+}
+
+/* The name that carries a hover card is a name, not a link: it shows nothing until it is rested on or focused. */
+[data-hsb-profile] {
+    cursor: default;
+}
+
+/* The hover card's rows: the label column as wide as the longest label. formal sets a tooltip's words in small capitals;
+   the labels keep that voice, the values (hosts, templates, dates) are data and read as written. */
+.hsb-card-kv {
+    min-inline-size: min(22rem, 80vw);
+}
+
+.hsb-card-kv dd {
+    font-variant-caps: normal;
+    letter-spacing: normal;
+}
+
+/* On a phone the cards stack and are taller than the empty and failed notes, so the stage's least height covers the
+   tallest of the four states: the card keeps its height whichever one it shows. */
+@media (max-width: 40rem) {
+    .hsb-area {
+        --kp-card-stage-min: 32.5rem;
+    }
+}
