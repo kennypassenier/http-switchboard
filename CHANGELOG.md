@@ -7,6 +7,15 @@ endpoints and the CLI verbs — not about the internals.
 
 ## [Unreleased]
 
+### Added
+
+- **Status page on kp-themes 11.** Profiles as cards or a map, the path of
+  one profile, settings with the retry budget against the lease, and
+  Recheck as a flash button with toasts plus a per-profile *Recheck this
+  profile* (`POST /profiles/{name}/recheck`). Data comes from
+  `GET /profiles.json` (admin login; no header values, payloads or webhook
+  paths). The kit's `webapp` feature serves the module under `/app/hsb`.
+
 ## [3.4.0] - 2026-10-18
 
 ## [3.3.8] - 2026-10-16

@@ -220,10 +220,32 @@ message.
 ## The status page (3.0.0)
 
 The door brought a dashboard with it. Behind the admin login (the
-`HTTP_SWITCHBOARD_TOKEN` from `gen-secret`) there is a **Profiles**
-section: one row per profile with its state, its source, its
-destination's host and its counters, and one button — **Recheck
-profiles**.
+`HTTP_SWITCHBOARD_TOKEN` from `gen-secret`) the status page carries four
+sections of its own (kp-themes 11 views; the page refreshes itself every
+ten seconds):
+
+- **Profiles**: one card per profile (the default) with its state in
+  words, delivered, failed and average time, flags for the source and
+  destination kind, a bar with the share delivered, and the buttons
+  *Recheck this profile* and *Copy test command*. The **View** switch
+  shows the same data as a **Map** instead: sources left, destinations
+  right, one line per profile (dashed while `starting`, toned where it
+  stops); the choice is remembered in the browser.
+- **Path of a profile**: sender, door, translation, destination; it stops
+  at the first refusing hop (hub refused our credentials, hub down,
+  receiver failing) and says why.
+- **Settings and retry budget**: source, destination host and port (never
+  the path: it is the webhook credential), content type, timeout, retries,
+  max attempts (hub hand-outs before a dead letter), lease, and a bar for
+  the retry budget against the lease with a mark at 100 %. A profile over
+  its lease shows a red piece past the end. An HTTP source holds no lease
+  and has no hub, so it shows the budget in words only.
+- **Recheck**: the **Recheck profiles** button (spinner and
+  "Rechecking…", then a toast "N profiles back to starting"; a failure is
+  a toast that stays, with *Try again*) and a table with an *Actions* menu
+  per row: *Recheck this profile* (greyed with its reason when the
+  profile is already starting) and *Copy test command* (a curl line for an
+  HTTP source; the `test` dry-run command for a kyu source).
 
 That button exists for one situation. A profile's state only changes
 when a message goes through it, so a profile whose source is an HTTP
