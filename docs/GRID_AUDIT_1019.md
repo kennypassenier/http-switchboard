@@ -80,3 +80,11 @@ same main found the needs-attention band broken (our `grid-template-columns` ove
 named icon | words | actions lines, alerts 59.7 px off the band at 1280): health.css now only shares the rows, as
 research/app-hsb-align. Align is 0 for all our sections at 1280 and 390; the three chassis "Status" card lines remain.
 The app has no graph or network-graph component, so there are no graph lines.
+
+Measuring after the bump: no hand-written wrapper any more. kp-themes
+43d46255 gives measure-gaps, measure-states and measure-align one option
+set: `--url`, `--login-form <url>,<userField>,<passField>,<submitSelector>`
+(credentials from `KP_LOGIN_USER` / `KP_LOGIN_PASS`, never on argv),
+`--cookie`, `--storage-state`, `--assets-from /static/kp=<kp-themes
+checkout>` and `--ignore-https-errors`. Against the real 3.9.0 build no
+`--assets-from` is needed.
