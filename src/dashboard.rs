@@ -82,12 +82,14 @@ const WEB_FILES: &[(&str, &[u8])] = &[
     ("index.html", include_bytes!("../web/index.html")),
     ("dashboard.js", include_bytes!("../web/dashboard.js")),
     ("dashboard.css", include_bytes!("../web/dashboard.css")),
+    ("health.js", include_bytes!("../web/health.js")),
+    ("health.css", include_bytes!("../web/health.css")),
 ];
 
 /// The `?v=` of the module and the stylesheet: the kit serves a year of
 /// `immutable` for a versioned URL, so the version has to move when the
 /// bytes do, not only when the package version does.
-fn asset_version() -> String {
+pub(crate) fn asset_version() -> String {
     let mut hasher = DefaultHasher::new();
     for (name, bytes) in WEB_FILES {
         name.hash(&mut hasher);
@@ -261,6 +263,8 @@ impl Profiles {
 /// that draws them. `main.rs` and the door tests call this one function,
 /// so what runs is what is tested.
 pub fn install(app: &mut chassis::App, profiles: Arc<Profiles>) {
+    // First, so what needs a person stands above everything else.
+    app.status_section(crate::dashboard_health::HealthSection);
     app.status_section(ProfilesSection(Arc::clone(&profiles)));
     app.status_section(TraceSection);
     app.status_section(SettingsSection);

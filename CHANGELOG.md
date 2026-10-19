@@ -15,6 +15,11 @@ endpoints and the CLI verbs — not about the internals.
   profile* (`POST /profiles/{name}/recheck`). Data comes from
   `GET /profiles.json` (admin login; no header values, payloads or webhook
   paths). The kit's `webapp` feature serves the module under `/app/hsb`.
+- **Needs attention** section above the profiles: attention band (worst
+  first, *See the fix*), one problem alert per unwell profile (what, why,
+  remedy, command with Copy, a recheck button) and a kyu hub connection
+  banner (unreachable, refused, reconnecting, back) with *Retry now*.
+  It reads the profiles view's existing poll; no new route.
 
 ## [3.4.0] - 2026-10-18
 

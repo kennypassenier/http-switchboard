@@ -521,6 +521,8 @@ async function copyTest(name) {
 // ── data ───────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 function drawAll() {
+    // The health section above (web/health.js) draws from the same snapshot: one poll for the page.
+    document.dispatchEvent(new CustomEvent('hsb:profiles', { detail: { profiles, status } }));
     drawProfiles();
     drawTrace();
     drawSettings();
@@ -596,6 +598,7 @@ document.addEventListener('kp-menu-select', (event) => {
     else if (detail.value === 'copy') void copyTest(name);
 });
 
+document.addEventListener('hsb:refresh', () => void refresh());
 drawAll();
 window.setInterval(() => {
     if (!document.hidden) void refresh();

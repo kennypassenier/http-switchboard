@@ -1,0 +1,30 @@
+/* The top of the status page: the attention band beside the problem alerts, the hub banner above both. Everything with a
+   kp- class is the package; the hsbh- rules only lay it out on a grid. */
+
+.hsbh-frame {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--kp-space-md, 1rem);
+    min-inline-size: 0;
+}
+
+.hsbh-frame [hidden] {
+    display: none;
+}
+
+/* Band and alerts side by side while each has room for 26 rem, one under the other below that. */
+.hsbh-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr));
+    align-items: start;
+    gap: var(--kp-space-md, 1rem);
+    min-inline-size: 0;
+}
+
+.hsbh-attention,
+.hsbh-problems {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--kp-space-sm, 0.5rem);
+    min-inline-size: 0;
+}
