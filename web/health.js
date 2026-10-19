@@ -126,6 +126,23 @@ function button(label, data) {
 const list = (/** @type {string[]} */ names) =>
     names.length < 3 ? names.join(' and ') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
 
+// ── the band and the alerts stand on shared rows ─────────────────────────────────────────────────────────────────────
+
+/** Side by side, the Nth item of the band and the Nth alert get one height, so they share a top and a bottom. The kit's
+ * two lists are containers of their own (a subgrid cannot size through them), so the shared row is measured here. */
+function alignRows() {
+    const items = (/** @type {Element} */ list, /** @type {string} */ sel) => /** @type {HTMLElement[]} */ ([...list.querySelectorAll(sel)]);
+    const left = items(band, '.kp-attention__item');
+    const right = items(problems, '.kp-problem');
+    for (const el of [...left, ...right]) el.style.minBlockSize = '';
+    if (right.length === 0 || left.length === 0 || band.getBoundingClientRect().left === problems.getBoundingClientRect().left) return;
+    for (let i = 0; i < Math.min(left.length, right.length); i++) {
+        const tall = Math.max(left[i].getBoundingClientRect().height, right[i].getBoundingClientRect().height);
+        left[i].style.minBlockSize = right[i].style.minBlockSize = `${tall}px`;
+    }
+}
+new ResizeObserver(() => alignRows()).observe(frame);
+
 // ── the band and the alerts ────────────────────────────────────────────────────────────────────────────────────────
 
 function paintHealth() {
@@ -162,6 +179,7 @@ function paintHealth() {
             })),
         );
         problems.hidden = shown.length === 0;
+        alignRows();
     }
     const allWell = profiles.length > 0 && unwell.length === 0;
     clear.hidden = !allWell;
