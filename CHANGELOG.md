@@ -15,6 +15,13 @@ endpoints and the CLI verbs — not about the internals.
   profile* (`POST /profiles/{name}/recheck`). Data comes from
   `GET /profiles.json` (admin login; no header values, payloads or webhook
   paths). The kit's `webapp` feature serves the module under `/app/hsb`.
+- **Try a translation page** (`/translate`, admin login): pick a profile,
+  paste a sample message, see the translated body, the template, a
+  before/after diff, template errors in three parts and defaults filled in
+  as notes. `POST /translate/{name}` renders with the pump's own
+  `translate::prepare` and delivers nothing; 256 KiB cap; no header values
+  or destination path in the answer. Linked from *Try a translation* in a
+  profile's menu.
 
 ## [3.4.0] - 2026-10-18
 

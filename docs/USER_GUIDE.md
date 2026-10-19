@@ -256,6 +256,25 @@ been tried since". It changes no message and no configuration.
 *Proven by* `v1_the_status_page_names_the_profiles_and_calls_a_client_a_sender`
 and `v1_recheck_clears_a_failure_a_profile_can_no_longer_clear_itself`.
 
+### Try a translation
+
+The **Try a translation** page (navigation, or *Try a translation* in a
+profile's menu) shows what a profile makes of a message without sending
+anything. Pick a profile, paste a sample message into the box (it checks
+the JSON as you type, names the line that is wrong, and has line numbers
+and Format/Minify), and the body that would be delivered appears next to
+the profile's template, with a before/after comparison of the message and
+the body. The box starts with an example built from the fields the
+template reads. A default the template filled in (`| default(...)` on a
+field the message lacks) is a quiet note; a template error says what,
+why (the line, and which field the message lacks) and what to do, with a
+button that puts the example message back. A message over 256 KiB is
+refused with a sentence. Nothing is delivered: the page posts to
+`POST /translate/{name}` (admin login), which runs the same
+`translate::prepare` the pump uses; the answer never carries a header
+value or the destination path. The shell equivalent is
+`http-switchboard test`.
+
 Everything else on those pages comes from the kit and is described in
 `docs/KIT.md`, which `chassis sync` regenerates for the pinned kit
 version — this guide deliberately does not retell it.
