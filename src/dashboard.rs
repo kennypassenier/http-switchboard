@@ -82,12 +82,14 @@ const WEB_FILES: &[(&str, &[u8])] = &[
     ("index.html", include_bytes!("../web/index.html")),
     ("dashboard.js", include_bytes!("../web/dashboard.js")),
     ("dashboard.css", include_bytes!("../web/dashboard.css")),
+    ("reloads.js", include_bytes!("../web/reloads.js")),
+    ("reloads.css", include_bytes!("../web/reloads.css")),
 ];
 
 /// The `?v=` of the module and the stylesheet: the kit serves a year of
 /// `immutable` for a versioned URL, so the version has to move when the
 /// bytes do, not only when the package version does.
-fn asset_version() -> String {
+pub(crate) fn asset_version() -> String {
     let mut hasher = DefaultHasher::new();
     for (name, bytes) in WEB_FILES {
         name.hash(&mut hasher);
@@ -266,6 +268,7 @@ pub fn install(app: &mut chassis::App, profiles: Arc<Profiles>) {
     app.status_section(SettingsSection);
     app.status_section(RecheckSection(Arc::clone(&profiles)));
     app.dashboard_routes(profiles.routes());
+    crate::dashboard_reloads::install(app, Arc::clone(&profiles.store));
     app.webapp(WebApp::embedded(WEB_FILES).at(WEB_MOUNT));
 }
 
@@ -332,7 +335,7 @@ fn esc(text: &str) -> String {
 
 /// JSON that is safe inside a `<script type="application/json">`: a `<`
 /// can never close the element, whatever a profile is called.
-fn script_safe(json: &str) -> String {
+pub(crate) fn script_safe(json: &str) -> String {
     json.replace('<', "\\u003c")
 }
 
