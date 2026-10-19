@@ -246,6 +246,17 @@ ten seconds):
   per row: *Recheck this profile* (greyed with its reason when the
   profile is already starting) and *Copy test command* (a curl line for an
   HTTP source; the `test` dry-run command for a kyu source).
+- **Reloads**: every time the profile file was read again
+  (`systemctl reload http-switchboard`), newest first, as a timeline with
+  its date (dd/mm/yyyy HH:MM) and the outcome in one column: *Applied*
+  (names the profiles that changed), *Needs a restart* and *Invalid* (both
+  say why). A count line ("8 reloads · 4 applied · 2 need a restart · 2
+  invalid") follows every arrival; while you read older rows a pill counts
+  the new ones ("1 new reload · back to the top"). When the latest reload
+  was refused, an alert says so with the command to reload again (Copy); it
+  goes away when a later reload is applied. The history is kept in memory,
+  holds the last 50 and starts empty after every restart. Reasons never
+  quote the file: values and the lines a parse error echoes are left out.
 
 That button exists for one situation. A profile's state only changes
 when a message goes through it, so a profile whose source is an HTTP

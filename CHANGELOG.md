@@ -15,6 +15,11 @@ endpoints and the CLI verbs — not about the internals.
   profile* (`POST /profiles/{name}/recheck`). Data comes from
   `GET /profiles.json` (admin login; no header values, payloads or webhook
   paths). The kit's `webapp` feature serves the module under `/app/hsb`.
+- **Reload history on the status page.** A "Reloads" card with the last
+  50 reloads (applied with the changed profiles, needs a restart, invalid
+  with a redacted reason), counts, a new-reload pill and an alert for a
+  refused latest reload. In memory only; `GET /reloads.json` behind the
+  admin login.
 
 ## [3.4.0] - 2026-10-18
 
