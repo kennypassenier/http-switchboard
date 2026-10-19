@@ -1,7 +1,8 @@
 /* The top of the status page: the attention band beside the problem alerts, the hub banner above both. Everything with a
-   kp- class is the package; the hsbh- rules only lay it out on a grid. */
+   kp- class is the package; the hsbh- rules only lay it out on a grid (kp-themes 11.1, data-kp-subgrid). */
 
 .hsbh-frame {
+    container: hsbh / inline-size;
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: var(--kp-space-md, 1rem);
@@ -12,19 +13,86 @@
     display: none;
 }
 
-/* Band and alerts side by side while each has room for 26 rem, one under the other below that. */
+/* Two columns, one set of rows shared by both: the Nth band item and the Nth alert share a top and a bottom, with no script
+   measuring it. `--hsbh-rows` is the number of band items (health.js). */
 .hsbh-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr));
-    align-items: start;
-    gap: var(--kp-space-md, 1rem);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(var(--hsbh-rows, 1), auto);
+    column-gap: var(--kp-space-md, 1rem);
+    row-gap: var(--kp-space-sm, 0.5rem);
+    align-items: stretch;
     min-inline-size: 0;
 }
 
-.hsbh-attention,
-.hsbh-problems {
+/* Each list spans the rows as a subgrid, one item per row. Inside, the icon, the words and the button are three tracks every
+   item shares (the alerts have a fourth, the dismiss cross of a note that may be closed; it has no width while none can be). */
+.hsbh-grid > :is(.kp-attention, .kp-problems):has(> *) {
     display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--kp-space-sm, 0.5rem);
-    min-inline-size: 0;
+    grid-row: 1 / span var(--hsbh-rows, 1);
+    grid-template-rows: subgrid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    column-gap: var(--kp-space-md, 1rem);
+    row-gap: inherit;
+    inline-size: auto;
+}
+
+.hsbh-grid > .kp-problems:has(> *) {
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+}
+
+.hsbh-grid > .kp-attention > .kp-attention__item,
+.hsbh-grid > .kp-problems > .kp-problem {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
+    align-items: first baseline;
+}
+
+/* The words and the button of an item share the first baseline; the icon and the cross stand at the top. */
+.hsbh-grid :is(.kp-attention__actions, .kp-problem > .kp-alert__actions) {
+    grid-column: 3;
+    align-self: first baseline;
+    align-items: baseline;
+}
+
+.hsbh-grid .kp-alert__close {
+    grid-column: 4;
+    align-self: start;
+    margin: 0;
+}
+
+.hsbh-grid :is(.kp-attention__icon, .kp-alert__icon) {
+    align-self: start;
+}
+
+.hsbh-grid :is(.kp-attention__actions, .kp-alert__actions) > .kp-button {
+    flex: 1 1 auto;
+}
+
+/* Narrow: the band above the alerts, each item on two tracks (the icon, the words) with the button under the words. */
+@container hsbh (max-width: 44rem) {
+    .hsbh-grid {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: none;
+    }
+
+    .hsbh-grid > :is(.kp-attention, .kp-problems):has(> *) {
+        grid-row: auto;
+        grid-template-rows: none;
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .hsbh-grid :is(.kp-attention__actions, .kp-problem > .kp-alert__actions) {
+        grid-column: 2;
+    }
+
+    .hsbh-grid > .kp-problems:has(> *) {
+        grid-template-columns: auto minmax(0, 1fr) auto;
+    }
+
+    .hsbh-grid .kp-problem > .kp-alert__close {
+        grid-column: 3;
+        grid-row: 1;
+    }
 }

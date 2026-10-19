@@ -23,15 +23,13 @@ impl StatusSection for HealthSection {
 <script type="module" src="{WEB_MOUNT}/health.js?v={version}"></script>
 <div class="hsbh-frame">
   <div id="hsbh-connection" data-kp-connection data-kp-connection-source="app" data-kp-connection-grace="1500" data-kp-placement="top"></div>
-  <div class="hsbh-grid">
-    <div class="hsbh-attention">
-      <div class="kp-attention" id="hsbh-band" role="region" aria-label="Profiles that need attention"></div>
-      <div class="kp-empty hsbh-clear" id="hsbh-clear" data-kp-art="done" data-kp-art-size="sm" hidden>
-        <p class="kp-empty__title">All profiles are working</p>
-        <p class="kp-empty__body" id="hsbh-clear-body"></p>
-      </div>
-    </div>
-    <div class="kp-problems hsbh-problems" id="hsbh-problems" data-kp-problems data-kp-problems-mode="each" hidden></div>
+  <div class="kp-empty hsbh-clear" id="hsbh-clear" data-kp-art="done" data-kp-art-size="sm" hidden>
+    <p class="kp-empty__title">All profiles are working</p>
+    <p class="kp-empty__body" id="hsbh-clear-body"></p>
+  </div>
+  <div class="hsbh-grid" id="hsbh-pair">
+    <div class="kp-attention" id="hsbh-band" data-kp-subgrid role="region" aria-label="Profiles that need attention"></div>
+    <div class="kp-problems" id="hsbh-problems" data-kp-subgrid data-kp-problems data-kp-problems-mode="each" hidden></div>
   </div>
 </div>"##
         );
