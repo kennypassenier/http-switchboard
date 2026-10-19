@@ -1,0 +1,78 @@
+/* "Try a translation": the page's own frame. Everything with a kp- class is the package; the hsbt- rules only lay the
+   sections out on a 12-column grid (one column on a phone). Colours, spacing and radii come from the theme's tokens. */
+
+.hsbt-try {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: var(--kp-space-md, 1rem) var(--kp-space-lg, 1.5rem);
+    align-items: stretch;
+}
+
+.hsbt-try__profile {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    align-items: center;
+    gap: var(--kp-space-sm, 0.5rem) var(--kp-space-md, 1rem);
+}
+
+.hsbt-try__input {
+    grid-column: span 5;
+    display: grid;
+    align-content: start;
+    gap: var(--kp-space-md, 1rem);
+    min-inline-size: 0;
+}
+
+.hsbt-try__result {
+    grid-column: span 7;
+    min-inline-size: 0;
+}
+
+.hsbt-try__diff {
+    grid-column: 1 / -1;
+    min-inline-size: 0;
+}
+
+@media (max-width: 60rem) {
+    .hsbt-try__input,
+    .hsbt-try__result {
+        grid-column: 1 / -1;
+    }
+
+    .hsbt-try__profile {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+.hsbt-meta,
+.hsbt-counts {
+    margin: 0;
+    color: var(--muted-foreground);
+    font-size: var(--kp-text-sm, 0.8125rem);
+}
+
+.hsbt-counts {
+    font-variant-numeric: tabular-nums;
+}
+
+/* A card that holds a data area keeps one least height in every state, so loading, empty and filled stand on the same footprint. */
+.hsbt-card {
+    --kp-card-stage-min: 22rem;
+    block-size: 100%;
+}
+
+.hsbt-card--diff {
+    --kp-card-stage-min: 18rem;
+}
+
+.hsbt-card__data {
+    display: grid;
+    gap: var(--kp-space-md, 1rem);
+    min-inline-size: 0;
+}
+
+.hsbt-diff {
+    max-block-size: 24rem;
+    overflow: auto;
+}
