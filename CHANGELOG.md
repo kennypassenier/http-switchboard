@@ -33,6 +33,11 @@ endpoints and the CLI verbs — not about the internals.
   remedy, command with Copy, a recheck button) and a kyu hub connection
   banner (unreachable, refused, reconnecting, back) with *Retry now*.
   It reads the profiles view's existing poll; no new route.
+- **Reload history on the status page.** A "Reloads" card with the last
+  50 reloads (applied with the changed profiles, needs a restart, invalid
+  with a redacted reason), counts, a new-reload pill and an alert for a
+  refused latest reload. In memory only; `GET /reloads.json` behind the
+  admin login.
 
 ## [3.4.0] - 2026-10-18
 

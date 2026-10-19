@@ -561,6 +561,8 @@ async function refresh() {
     }
     drawAll();
     return status === 'ready';
+    // Other cards of the page (the reload history) ride on this poll rather than run a timer of their own.
+    document.dispatchEvent(new CustomEvent('hsb-poll'));
 }
 
 /** Load again: loading for a moment, then the data. */

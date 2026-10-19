@@ -28,12 +28,15 @@ use crate::config::{Config, Profile};
 #[derive(Debug)]
 pub struct ProfileStore {
     current: RwLock<Arc<BTreeMap<String, Arc<Profile>>>>,
+    /// [feat-dash-kp11-40] the last reloads, for the dashboard.
+    pub log: crate::reload_log::ReloadLog,
 }
 
 impl ProfileStore {
     pub fn new(config: &Config) -> Self {
         Self {
             current: RwLock::new(Arc::new(index(config))),
+            log: crate::reload_log::ReloadLog::new(),
         }
     }
 
@@ -96,6 +99,12 @@ impl Outcome {
 /// against the shape the service was started with. Nothing changes unless
 /// the result is `Applied`.
 pub fn apply(started: &Config, store: &ProfileStore, loaded: Result<Config, String>) -> Outcome {
+    let outcome = apply_inner(started, store, loaded);
+    store.log.push(&outcome);
+    outcome
+}
+
+fn apply_inner(started: &Config, store: &ProfileStore, loaded: Result<Config, String>) -> Outcome {
     let new = match loaded {
         Ok(config) => config,
         Err(reason) => return Outcome::Invalid { reason },

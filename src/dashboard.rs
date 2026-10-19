@@ -88,6 +88,8 @@ const WEB_FILES: &[(&str, &[u8])] = &[
     ("profiles.css", include_bytes!("../web/profiles.css")),
     ("health.js", include_bytes!("../web/health.js")),
     ("health.css", include_bytes!("../web/health.css")),
+    ("reloads.js", include_bytes!("../web/reloads.js")),
+    ("reloads.css", include_bytes!("../web/reloads.css")),
 ];
 
 /// The `?v=` of the module and the stylesheet: the kit serves a year of
@@ -280,6 +282,7 @@ pub fn install(app: &mut chassis::App, profiles: Arc<Profiles>) {
     // The last 24 hours: key figures, uptime strips, refresh chooser.
     crate::dashboard_history::install(app, Arc::clone(&profiles.registry), profiles.order.clone());
     app.dashboard_routes(profiles.routes());
+    crate::dashboard_reloads::install(app, Arc::clone(&profiles.store));
     app.webapp(WebApp::embedded(WEB_FILES).at(WEB_MOUNT));
 }
 
@@ -346,7 +349,7 @@ fn esc(text: &str) -> String {
 
 /// JSON that is safe inside a `<script type="application/json">`: a `<`
 /// can never close the element, whatever a profile is called.
-fn script_safe(json: &str) -> String {
+pub(crate) fn script_safe(json: &str) -> String {
     json.replace('<', "\\u003c")
 }
 

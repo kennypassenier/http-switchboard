@@ -1,0 +1,70 @@
+/* The reload history card (kp-themes 11). Everything with a kp- class is the package; the hsb- rules only lay it out.
+   Colours, spacing and radii come from the theme's tokens, never from here. */
+
+.hsb-reloads-card {
+    --kp-card-stage-min: 24rem;
+    block-size: 100%;
+}
+
+.hsb-reloads {
+    display: grid;
+    gap: var(--kp-space-md, 1rem);
+    min-inline-size: 0;
+}
+
+.hsb-reloads__host {
+    position: relative;
+    min-inline-size: 0;
+}
+
+.hsb-reloads__list {
+    max-block-size: 19rem;
+    overflow: auto;
+    padding-inline-end: var(--kp-space-sm, 0.5rem);
+}
+
+/* One reload: its outcome in a column of its own, so the same word stands in the same place in every row. */
+.hsb-reload {
+    display: grid;
+    grid-template-columns: 9.5rem minmax(0, 1fr);
+    gap: var(--kp-space-xs, 0.25rem) var(--kp-space-md, 1rem);
+    align-items: start;
+    min-inline-size: 0;
+}
+
+.hsb-reload > time {
+    grid-column: 1 / -1;
+}
+
+.hsb-reload__outcome {
+    display: flex;
+}
+
+.hsb-reload__what {
+    display: grid;
+    gap: var(--kp-space-xs, 0.25rem);
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+}
+
+.hsb-reload__what > span:first-child {
+    font-weight: 600;
+}
+
+.hsb-reload__what > span:last-child {
+    color: var(--muted-foreground);
+    font-size: var(--kp-text-sm, 0.8125rem);
+}
+
+@media (max-width: 40rem) {
+    .hsb-reload {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+.hsb-reloads-counts {
+    margin: 0;
+    color: var(--muted-foreground);
+    font-size: var(--kp-text-sm, 0.8125rem);
+    font-variant-numeric: tabular-nums;
+}
