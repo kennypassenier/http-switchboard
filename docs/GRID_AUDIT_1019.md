@@ -68,3 +68,15 @@ dismiss cross in its own column) and 31 (`data-kp-formgrid-stage` +
 fixed. Drop the app's workarounds for all five; this app does not load
 auto.js, so call `attachFormgridStages` from web/dashboard.js itself
 (see kp-themes research/app-hsb-align for the use).
+
+## States, ab7a749b (19/10/2026)
+
+kp-themes `measure-states.mjs` at main ab7a749b (one loading look per kind), formal and dark, against the real
+app with `/static/kp/**` served from that checkout. Before: `/` 0 lines at 1280 and 390; `/translate` 1 line at each
+width (result code view had no failed plate when the preview request failed). After: 0 and 0 everywhere. Fixed:
+the unreachable-service answer now leaves the result card ready and draws the code view's own failed plate
+(`setCode` error, Retry wired to `kp-code-retry`), the reason going into the problems list. `measure-align` against the
+same main found the needs-attention band broken (our `grid-template-columns` override removed the package's
+named icon | words | actions lines, alerts 59.7 px off the band at 1280): health.css now only shares the rows, as
+research/app-hsb-align. Align is 0 for all our sections at 1280 and 390; the three chassis "Status" card lines remain.
+The app has no graph or network-graph component, so there are no graph lines.
