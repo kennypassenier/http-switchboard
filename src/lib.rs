@@ -12,6 +12,7 @@ pub mod adapters;
 pub mod app;
 pub mod config;
 pub mod dashboard;
+pub mod dashboard_profiles;
 pub mod inbound;
 pub mod obs;
 pub mod pump;

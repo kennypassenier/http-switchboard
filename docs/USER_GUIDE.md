@@ -231,6 +231,22 @@ ten seconds):
   shows the same data as a **Map** instead: sources left, destinations
   right, one line per profile (dashed while `starting`, toned where it
   stops); the choice is remembered in the browser.
+
+  The card that holds the profile cards has four faces and keeps one
+  height in all of them: the cards, *Reading the profiles…* (the busy card
+  over the dimmed cards), *No profiles are configured* (with *Reload
+  profiles*) and *The profiles could not be read* (with *Try again*; a
+  failed refresh shows it too). Each card ends with **last delivery 3 min
+  ago** (or **no delivery yet**), ticking by itself; the exact moment
+  (dd/mm/yyyy HH:mm, Brussels time) is in its tooltip. The line turns to a
+  warning plate after **a day** without a delivery: the configuration has
+  no expected quiet time per profile, and an alert profile is quiet exactly
+  when nothing is wrong, so one day is the default for every profile
+  (`QUIET_AFTER_S` in `web/profiles.js`). Rest the pointer on (or tab to) a
+  **profile name**, on a card, in the path picker, in the settings and in
+  the Recheck table, and a small card shows its status, source,
+  destination host only, content type, a short template label (the field
+  names, never the template), the three exact counts and the last success.
 - **Path of a profile**: sender, door, translation, destination; it stops
   at the first refusing hop (hub refused our credentials, hub down,
   receiver failing) and says why.

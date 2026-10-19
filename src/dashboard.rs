@@ -82,6 +82,8 @@ const WEB_FILES: &[(&str, &[u8])] = &[
     ("index.html", include_bytes!("../web/index.html")),
     ("dashboard.js", include_bytes!("../web/dashboard.js")),
     ("dashboard.css", include_bytes!("../web/dashboard.css")),
+    ("profiles.js", include_bytes!("../web/profiles.js")),
+    ("profiles.css", include_bytes!("../web/profiles.css")),
 ];
 
 /// The `?v=` of the module and the stylesheet: the kit serves a year of
@@ -112,6 +114,9 @@ pub struct ProfileView {
     pub source: EndView,
     pub sink: EndView,
     pub content_type: String,
+    /// A short label for the template (its content type and field names,
+    /// never the body): the hover card on a profile name shows it.
+    pub template: String,
     pub timeout_ms: u64,
     pub retries: u32,
     /// The pauses between tries, in order.
@@ -203,6 +208,7 @@ fn view_of(profile: &Profile, stats: Option<&ProfileStats>) -> ProfileView {
         source,
         sink,
         content_type: profile.content_type.clone(),
+        template: crate::dashboard_profiles::template_label(&profile.body, &profile.content_type),
         timeout_ms: profile.timeout_ms,
         retries: profile.retries,
         pauses_ms: profile.pauses_ms(),
@@ -366,17 +372,25 @@ impl StatusSection for ProfilesSection {
             .collect();
         let html = format!(
             r##"<link rel="stylesheet" href="{WEB_MOUNT}/dashboard.css?v={version}">
+<link rel="stylesheet" href="{WEB_MOUNT}/profiles.css?v={version}">
 <script type="application/json" id="hsb-data">{data}</script>
 <script type="module" src="{WEB_MOUNT}/dashboard.js?v={version}"></script>
-<div class="hsb-controls" role="group" aria-label="View" id="hsb-view">
-  <b>View</b>
-  <button type="button" class="kp-button kp-button--sm" aria-pressed="true" data-hsb-view="cards">Cards</button>
-  <button type="button" class="kp-button kp-button--sm" aria-pressed="false" data-hsb-view="map">Map</button>
-</div>
-<div class="hsb-frame hsb-frame--profiles">
-  <div class="kp-entity-grid" data-kp-entity-grid data-kp-entity-min="22rem" data-kp-entity-meters="1" id="hsb-grid"></div>
-  <div class="kp-matrix" data-kp-matrix data-kp-view="lines" data-kp-matrix-owned data-kp-remember="hsb-profiles" aria-label="Which source feeds which destination" id="hsb-map" hidden></div>
-</div>
+<section class="kp-card hsb-area" id="hsb-area" data-kp-state="ready" data-kp-loading-words="Reading the profiles…" aria-label="Profiles">
+  <div class="hsb-controls" role="group" aria-label="View" id="hsb-view">
+    <b>View</b>
+    <button type="button" class="kp-button kp-button--sm" aria-pressed="true" data-hsb-view="cards">Cards</button>
+    <button type="button" class="kp-button kp-button--sm" aria-pressed="false" data-hsb-view="map">Map</button>
+  </div>
+  <div class="kp-card__stage">
+    <div class="kp-card__data">
+      <div class="hsb-frame hsb-frame--profiles">
+        <div class="kp-entity-grid" data-kp-entity-grid data-kp-entity-min="22rem" data-kp-entity-meters="1" id="hsb-grid"></div>
+        <div class="kp-matrix" data-kp-matrix data-kp-view="lines" data-kp-matrix-owned data-kp-remember="hsb-profiles" aria-label="Which source feeds which destination" id="hsb-map" hidden></div>
+      </div>
+    </div>
+    <div class="kp-card__state" hidden></div>
+  </div>
+</section>
 <noscript><ul>{plain}</ul><p>The cards, the map and the buttons need JavaScript.</p></noscript>"##,
             data = script_safe(&data),
         );
@@ -444,7 +458,7 @@ impl StatusSection for RecheckSection {
                 let n = esc(name);
                 format!(
                     r#"<tr data-kp-row-key="{n}" data-hsb-row="{n}">
-  <td data-label="Profile"><b>{n}</b></td>
+  <td data-label="Profile"><b data-kp-hovercard="" data-hsb-profile="{n}" tabindex="0">{n}</b></td>
   <td data-label="State"><span class="kp-badge" data-hsb-state></span></td>
   <td data-label="Retry budget" data-kp-sort-value="0" data-hsb-budget></td>
   <td data-label="Actions" class="hsb-col-act">

@@ -15,6 +15,13 @@ endpoints and the CLI verbs — not about the internals.
   profile* (`POST /profiles/{name}/recheck`). Data comes from
   `GET /profiles.json` (admin login; no header values, payloads or webhook
   paths). The kit's `webapp` feature serves the module under `/app/hsb`.
+- **Profile cards, finished.** A hover card on every profile name (status,
+  source, destination host only, content type, a short template label,
+  received, delivered, failed, last success); the profiles card has its
+  four states (cards, loading, no profiles, could not be read) at one
+  height; each card says "last delivery … ago" and turns to a warning
+  after a day of silence. `GET /profiles.json` gains `template`, a label
+  made of the template's field names, never its body.
 
 ## [3.4.0] - 2026-10-18
 
