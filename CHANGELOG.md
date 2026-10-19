@@ -7,6 +7,8 @@ endpoints and the CLI verbs — not about the internals.
 
 ## [Unreleased]
 
+## [3.5.0] - 2026-10-19
+
 ### Added
 
 - **Status page on kp-themes 11.** Profiles as cards or a map, the path of
