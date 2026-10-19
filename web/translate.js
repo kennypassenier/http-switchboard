@@ -121,8 +121,10 @@ function empty(title, text, diffTitle = 'Nothing to compare yet', diffText = 'Th
 
 /** @param {string} title @param {string} text */
 function unreachable(title, text) {
-    setProblems(problems, []);
-    setCardState(resultCard, 'error', { title, text });
+    // The result card stays ready: its code view draws the failed plate itself (Retry fires kp-code-retry).
+    setCardState(resultCard, 'ready');
+    setProblems(problems, [{ key: 'service', severity: 'warning', what: title, why: text }]);
+    setCode(body, { state: 'error', title: 'Translated body', message: title });
     setCardState(diffCard, 'error', { title, text });
 }
 
@@ -289,6 +291,7 @@ function showResult(text, answer) {
 area.addEventListener('input', () => schedule(SETTLE_MS));
 area.addEventListener('kp-json-state', () => schedule(SETTLE_MS));
 for (const card of [resultCard, diffCard]) card.addEventListener('kp-card-retry', () => void run());
+body.addEventListener('kp-code-retry', () => void run());
 bar.addEventListener('kp-segmented-change', (event) => {
     const value = /** @type {CustomEvent} */ (event).detail?.value;
     if (!value || value === current) return;
