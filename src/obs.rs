@@ -35,6 +35,8 @@ pub struct Registry {
     /// feat-reload-1: reloads per outcome (`applied`, `needs-restart`,
     /// `invalid`), so a reload that did nothing is visible in a scrape.
     reloads: Mutex<BTreeMap<&'static str, u64>>,
+    /// The last 24 hours per profile, in memory (feat-dash-kp11-30).
+    pub history: crate::history::History,
 }
 
 impl Registry {
@@ -67,9 +69,12 @@ impl Registry {
         } else {
             stats.failed += 1;
         }
+        drop(guard);
+        self.history.record(profile, delivered, duration_ms);
     }
 
     pub fn set_health(&self, profile: &str, health: Health) {
+        self.history.note_health(profile, health);
         self.profiles
             .lock()
             .unwrap()
@@ -91,8 +96,9 @@ impl Registry {
     /// Returns how many profiles were reset.
     pub fn reset_health(&self) -> usize {
         let mut profiles = self.profiles.lock().unwrap();
-        for stats in profiles.values_mut() {
+        for (name, stats) in profiles.iter_mut() {
             stats.health = Some(Health::Starting);
+            self.history.note_health(name, Health::Starting);
         }
         profiles.len()
     }
@@ -104,6 +110,7 @@ impl Registry {
         match self.profiles.lock().unwrap().get_mut(profile) {
             Some(stats) => {
                 stats.health = Some(Health::Starting);
+                self.history.note_health(profile, Health::Starting);
                 true
             }
             None => false,

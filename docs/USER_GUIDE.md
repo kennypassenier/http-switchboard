@@ -247,6 +247,25 @@ ten seconds):
   profile is already starting) and *Copy test command* (a curl line for an
   HTTP source; the `test` dry-run command for a kyu source).
 
+- **Last 24 hours** (feat-dash-kp11-30..39): received, delivered, failed
+  and the average delivery time of one profile (pick it above the card),
+  each with its trend by the hour; numbers count to their new value. The
+  *Tiles* buttons switch to quiet sparklines where *Failed* is a filter
+  that lists only the failed deliveries. Under it, *Uptime by the hour*:
+  one strip of 24 cells per profile (green up, amber some deliveries
+  failed, red every delivery failed or the hub refused or was away, grey
+  before the service started); point at a cell for the hover card, press
+  it for the hour's quick info (*Hover card only* turns that off). An hour
+  without traffic keeps the health the profile had when it began.
+  The history is **in memory and starts empty at every restart**; it keeps
+  at most 24 hours (`GET /history.json`, admin login; counts, times and a
+  cause word, never a payload, header, URL or error text).
+- **Page refresh**: a chooser (Paused, 15 s, 30 s, 1 min, 5 min, any
+  number of seconds; 30 s to start, remembered per browser) sets how often
+  the profiles and the history are read again, with *Refresh now* and the
+  R key. A failed refresh keeps what is drawn and retries. It replaces the
+  earlier fixed ten-second poll.
+
 That button exists for one situation. A profile's state only changes
 when a message goes through it, so a profile whose source is an HTTP
 path stays `failing` for as long as nobody posts to it — long after the

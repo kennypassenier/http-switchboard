@@ -82,12 +82,14 @@ const WEB_FILES: &[(&str, &[u8])] = &[
     ("index.html", include_bytes!("../web/index.html")),
     ("dashboard.js", include_bytes!("../web/dashboard.js")),
     ("dashboard.css", include_bytes!("../web/dashboard.css")),
+    ("history.js", include_bytes!("../web/history.js")),
+    ("history.css", include_bytes!("../web/history.css")),
 ];
 
 /// The `?v=` of the module and the stylesheet: the kit serves a year of
 /// `immutable` for a versioned URL, so the version has to move when the
 /// bytes do, not only when the package version does.
-fn asset_version() -> String {
+pub(crate) fn asset_version() -> String {
     let mut hasher = DefaultHasher::new();
     for (name, bytes) in WEB_FILES {
         name.hash(&mut hasher);
@@ -265,6 +267,8 @@ pub fn install(app: &mut chassis::App, profiles: Arc<Profiles>) {
     app.status_section(TraceSection);
     app.status_section(SettingsSection);
     app.status_section(RecheckSection(Arc::clone(&profiles)));
+    // The last 24 hours: key figures, uptime strips, refresh chooser.
+    crate::dashboard_history::install(app, Arc::clone(&profiles.registry), profiles.order.clone());
     app.dashboard_routes(profiles.routes());
     app.webapp(WebApp::embedded(WEB_FILES).at(WEB_MOUNT));
 }
@@ -382,11 +386,12 @@ impl StatusSection for ProfilesSection {
         );
         Section {
             title: "Profiles".to_string(),
-            explain: "One profile is one source, one translation and one destination. \
+            explain:
+                "One profile is one source, one translation and one destination. \
                       A profile is 'starting' until a message has gone through it, and \
                       goes back to 'working' the moment one does. The page refreshes \
-                      itself every ten seconds."
-                .to_string(),
+                      itself as often as the refresh chooser says (every 30 seconds to start with)."
+                    .to_string(),
             rows: Vec::new(),
             html: Some(html),
         }

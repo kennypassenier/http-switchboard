@@ -1,0 +1,143 @@
+/* The last 24 hours on the status page (feat-dash-kp11-30..39). Everything with a kp- class is the package; these
+   hsb-h- rules only lay the sections out. Colours, spacing and radii come from the theme's tokens, never from here. */
+
+/* The bar over the figures: the refresh chooser on the left, the one-line note about the history on the right. */
+.hsb-h-bar {
+    display: grid;
+    grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+    align-items: center;
+    gap: var(--kp-space-sm, 0.5rem) var(--kp-space-lg, 1.5rem);
+    margin-block-end: var(--kp-space-sm, 0.5rem);
+}
+
+.hsb-h-bar__chooser {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: var(--kp-space-sm, 0.5rem);
+    min-block-size: 4.5rem;
+}
+
+.hsb-h-note {
+    margin: 0;
+    justify-self: end;
+    text-align: end;
+    color: var(--muted-foreground);
+    font-size: var(--kp-text-sm, 0.8125rem);
+}
+
+.hsb-h-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 var(--kp-space-lg, 1.5rem);
+}
+
+/* The card keeps one footprint in every state: the stage is as tall as the loaded data. */
+.hsb-h-card {
+    --kp-card-stage-min: 20rem;
+}
+
+.hsb-h-data {
+    display: grid;
+    gap: var(--kp-space-md, 1rem);
+    align-content: start;
+}
+
+/* Latest deliveries: one grid, so a time, an outcome and a duration line up in every row. */
+.hsb-h-recent {
+    display: grid;
+    gap: var(--kp-space-xs, 0.25rem);
+}
+
+.hsb-h-recent__title {
+    margin: 0;
+}
+
+.hsb-h-recent__list {
+    display: grid;
+    grid-auto-rows: 2.75rem;
+    align-content: start;
+    min-block-size: calc(4 * 2.75rem);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.hsb-h-row {
+    display: grid;
+    grid-template-columns: 10.5rem 7rem 5rem minmax(0, 1fr);
+    align-items: center;
+    gap: 0 var(--kp-space-sm, 0.5rem);
+    padding: var(--kp-space-xs, 0.25rem) var(--kp-space-sm, 0.5rem);
+    border-block-end: 1px solid var(--border);
+}
+
+.hsb-h-row > time {
+    font-variant-numeric: tabular-nums;
+}
+
+.hsb-h-row > .kp-badge {
+    justify-self: start;
+}
+
+.hsb-h-row > .hsb-h-row__ms {
+    font-variant-numeric: tabular-nums;
+    text-align: end;
+}
+
+.hsb-h-row > .hsb-h-row__why {
+    min-inline-size: 0;
+    color: var(--muted-foreground);
+    font-size: var(--kp-text-sm, 0.8125rem);
+}
+
+.hsb-h-row--none {
+    display: block;
+    color: var(--muted-foreground);
+}
+
+@media (max-width: 40rem) {
+    .hsb-h-bar {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .hsb-h-note {
+        justify-self: start;
+        text-align: start;
+    }
+
+    .hsb-h-recent__list {
+        grid-auto-rows: auto;
+        min-block-size: calc(4 * 5rem);
+    }
+
+    .hsb-h-row {
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas:
+            'time ms'
+            'outcome outcome'
+            'why why';
+        gap: var(--kp-space-xs, 0.25rem) var(--kp-space-sm, 0.5rem);
+    }
+
+    .hsb-h-row > time {
+        grid-area: time;
+    }
+
+    .hsb-h-row > .kp-badge {
+        grid-area: outcome;
+    }
+
+    .hsb-h-row > .hsb-h-row__ms {
+        grid-area: ms;
+    }
+
+    .hsb-h-row > .hsb-h-row__why {
+        grid-area: why;
+    }
+}
+
+.hsb-h-strips {
+    display: grid;
+    gap: var(--kp-space-lg, 1.5rem);
+}

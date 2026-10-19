@@ -15,6 +15,12 @@ endpoints and the CLI verbs — not about the internals.
   profile* (`POST /profiles/{name}/recheck`). Data comes from
   `GET /profiles.json` (admin login; no header values, payloads or webhook
   paths). The kit's `webapp` feature serves the module under `/app/hsb`.
+- **Last 24 hours on the status page.** A per-hour record per profile (received,
+  delivered, failed, delivery time, worst health), in memory, capped and
+  lost on restart, read at `GET /history.json` (admin login). The page shows
+  four key figures with trends (or sparklines with *Failed* as a filter),
+  an uptime strip of 24 hour cells per profile, and a refresh chooser
+  (default 30 s) that now sets the page's poll instead of the fixed 10 s.
 
 ## [3.4.0] - 2026-10-18
 

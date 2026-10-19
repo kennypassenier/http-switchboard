@@ -16,6 +16,10 @@ import { attachDataTables } from '/static/kp/js/datatable.js';
 import { attachFootprints } from '/static/kp/js/footprint.js';
 
 const POLL_MS = 10_000;
+/** The poll in seconds; history.js takes it over with the refresh chooser (0 = paused). */
+let pollSeconds = POLL_MS / 1000;
+/** @type {number | undefined} */
+let pollTimer;
 const VIEW_KEY = 'hsb-profiles-view';
 const UNREACHABLE = 'Could not reach HTTPSwitchboard. Check that the service is running, then try again.';
 
@@ -542,6 +546,7 @@ async function refresh() {
         inFlight = false;
     }
     drawAll();
+    return status === 'ready';
 }
 
 /** Load again: loading for a moment, then the data. */
@@ -597,9 +602,21 @@ document.addEventListener('kp-menu-select', (event) => {
 });
 
 drawAll();
-window.setInterval(() => {
-    if (!document.hidden) void refresh();
-}, POLL_MS);
+/** @param {number} seconds how often to read again; 0 pauses the poll. */
+function setPoll(seconds) {
+    pollSeconds = seconds;
+    window.clearInterval(pollTimer);
+    pollTimer = seconds > 0 ? window.setInterval(() => !document.hidden && void refresh(), seconds * 1000) : undefined;
+}
+setPoll(pollSeconds);
 document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) void refresh();
+    if (!document.hidden && pollSeconds > 0) void refresh();
 });
+
+// The last 24 hours (history.js): its refresh chooser sets the poll for the whole page. If the module cannot load, the
+// ten-second poll above simply stays.
+const historyUrl = new URL('history.js', import.meta.url);
+historyUrl.search = new URL(import.meta.url).search;
+import(historyUrl.href)
+    .then((m) => m.start({ setPoll, refresh }))
+    .catch(() => {});
