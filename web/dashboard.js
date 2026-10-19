@@ -12,7 +12,7 @@ import { setMeter } from '/static/kp/js/kpi.js';
 import { runFlashButton, attachFlashButtons } from '/static/kp/js/flash.js';
 import { toast } from '/static/kp/js/overlays.js';
 import { setMenu, attachMenuButtons } from '/static/kp/js/menu-button.js';
-import { attachDataTables } from '/static/kp/js/datatable.js';
+import { attachDataTables, dataTable } from '/static/kp/js/datatable.js';
 import { attachFootprints } from '/static/kp/js/footprint.js';
 import { AREA_RELOAD_EVENT, attachArea, attachProfileHover, markName, paintFresh, refreshHover, setArea, watchEntityNames } from './profiles.js';
 
@@ -397,7 +397,20 @@ function budgetCell(meter, words) {
     return box;
 }
 
+/** The recheck table is a data table: it has its own loading, failed and ready faces, like the cards above it. */
+let tableShown = '';
+function drawTableState() {
+    const table = document.querySelector('[data-kp-datatable][data-kp-key="hsb-profiles"]');
+    const handle = table instanceof HTMLElement ? dataTable(table) : null;
+    if (!handle || tableShown === status) return;
+    tableShown = status;
+    if (status === 'loading') handle.state('loading');
+    else if (status === 'error') handle.fail('The profiles could not be read. Nothing was changed.');
+    else handle.state('ready');
+}
+
 function drawRecheck() {
+    drawTableState();
     for (const row of all('[data-hsb-row]')) {
         const name = row.getAttribute('data-hsb-row') ?? '';
         const p = profiles.find((x) => x.name === name);
@@ -620,6 +633,7 @@ area.addEventListener(AREA_RELOAD_EVENT, () => void reload());
 area.addEventListener('kp-card-retry', () => void reload());
 map.addEventListener('kp-uses-retry', () => void reload());
 traceEl.addEventListener('kp-trace-retry', () => void reload());
+document.querySelector('[data-kp-datatable][data-kp-key="hsb-profiles"]')?.addEventListener('kp-datatable-retry', () => void reload());
 allButton.addEventListener('click', () => void recheckAll());
 document.addEventListener('kp-menu-select', (event) => {
     const detail = /** @type {CustomEvent} */ (event).detail;

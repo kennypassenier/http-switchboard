@@ -7,6 +7,13 @@ endpoints and the CLI verbs — not about the internals.
 
 ## [Unreleased]
 
+### Changed
+
+- **Everything on the grid, standard states.** Every status-page view and
+  `/translate` stand on `.kp-formgrid`, `data-kp-subgrid` and subgrids (the
+  approved layout demo); the profiles card and the recheck table use the
+  package's own loading, empty and failed states. Needs kp-themes 11.1 (chassis 3.9.0).
+
 ## [3.5.0] - 2026-10-19
 
 ### Added

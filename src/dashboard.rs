@@ -413,7 +413,6 @@ impl StatusSection for ProfilesSection {
         <div class="kp-matrix" data-kp-matrix data-kp-view="lines" data-kp-matrix-owned data-kp-remember="hsb-profiles" aria-label="Which source feeds which destination" id="hsb-map" hidden></div>
       </div>
     </div>
-    <div class="kp-card__state" hidden></div>
   </div>
 </section>
 <noscript><ul>{plain}</ul><p>The cards, the map and the buttons need JavaScript.</p></noscript>"##,
@@ -522,6 +521,10 @@ impl StatusSection for RecheckSection {
       </tr></thead>
       <tbody>{rows}</tbody>
     </table>
+  </div>
+  <div class="kp-empty" data-kp-datatable-empty hidden>
+    <p class="kp-empty__title">No profiles are configured</p>
+    <p class="kp-empty__body">A profile says where messages come from and where they go. Add one to the configuration and reload.</p>
   </div>
 </div>"##
         );

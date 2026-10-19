@@ -8,8 +8,7 @@
 import { attachHoverCards } from '/static/kp/js/hovercard.js';
 import { attachCardStates, setCardState } from '/static/kp/js/card-state.js';
 import { agoMoment, attachAgo, humanDuration, setAgo } from '/static/kp/js/freshness.js';
-import { attachArt } from '/static/kp/js/art.js';
-import { getStrings, setStrings } from '/static/kp/js/strings.js';
+import { setStrings } from '/static/kp/js/strings.js';
 
 /**
  * How long a profile may go without a delivery before its line turns to a warning, in seconds. The configuration has no
@@ -114,48 +113,6 @@ export function watchEntityNames(grid) {
 
 // ── the states of the profiles card ────────────────────────────────────────────────────────────────────────────────
 
-/** @param {string} text @param {string} className @param {string} [tag] */
-const made = (text, className, tag = 'p') => {
-    const node = document.createElement(tag);
-    node.className = className;
-    node.textContent = text;
-    return node;
-};
-
-/**
- * The page's own note for a state: the package's empty plate with a drawing (CardStateOptions has no art).
- * @param {HTMLElement} card @param {HTMLElement | null} plate
- */
-function ownNote(card, plate) {
-    const stage = /** @type {HTMLElement} */ (card.querySelector(':scope > .kp-card__stage'));
-    for (const old of stage.querySelectorAll(':scope > .kp-card__state')) old.remove();
-    if (plate === null) return;
-    const note = document.createElement('div');
-    note.className = 'kp-card__state';
-    note.setAttribute('role', 'status');
-    note.append(plate);
-    stage.append(note);
-    // A note made after the boot is attached by the page that made it.
-    attachArt(note);
-}
-
-/** @param {'none' | 'error'} art @param {string} title @param {string} body @param {{ label: string, attr: string }} action */
-function plateOf(art, title, body, action) {
-    const box = document.createElement('div');
-    box.className = 'kp-empty kp-card__empty';
-    box.setAttribute('data-kp-art', art);
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'kp-button';
-    button.setAttribute(action.attr, '');
-    button.textContent = action.label;
-    const actions = document.createElement('div');
-    actions.className = 'kp-card__state-actions';
-    actions.append(button);
-    box.append(made(title, 'kp-empty__title'), made(body, 'kp-empty__body'), actions);
-    return box;
-}
-
 /** Fired on the card when its "Reload profiles" is pressed (the empty state's one action). */
 export const AREA_RELOAD_EVENT = 'hsb-area-reload';
 
@@ -171,28 +128,22 @@ export function setArea(card, state) {
     if (shown.get(card) === state) return;
     shown.set(card, state);
     if (state === 'ready') {
-        ownNote(card, null);
         setCardState(card, 'ready');
     } else if (state === 'loading') {
         setCardState(card, 'loading', { words: 'Reading the profiles…' });
     } else if (state === 'empty') {
-        ownNote(
-            card,
-            plateOf('none', 'No profiles are configured', 'A profile says where messages come from and where they go. Add one to the configuration and reload.', {
-                label: 'Reload profiles',
-                attr: 'data-hsb-reload',
-            }),
-        );
-        setCardState(card, 'empty');
+        const reload = document.createElement('button');
+        reload.type = 'button';
+        reload.className = 'kp-button';
+        reload.setAttribute('data-hsb-reload', '');
+        reload.textContent = 'Reload profiles';
+        setCardState(card, 'empty', {
+            title: 'No profiles are configured',
+            text: 'A profile says where messages come from and where they go. Add one to the configuration and reload.',
+            action: reload,
+        });
     } else {
-        ownNote(
-            card,
-            plateOf('error', 'The profiles could not be read', 'The status service did not answer in time. Nothing was changed.', {
-                label: getStrings().cardRetry,
-                attr: 'data-kp-card-retry',
-            }),
-        );
-        setCardState(card, 'error');
+        setCardState(card, 'error', { title: 'The profiles could not be read', text: 'The status service did not answer in time. Nothing was changed.' });
     }
 }
 
