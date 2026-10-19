@@ -19,11 +19,16 @@
 /* The freshness line is the last row of a profile card: the words, and how long a silence is allowed. */
 .hsb-fresh {
     margin-block-start: var(--kp-space-xs, 0.25rem);
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     gap: var(--kp-space-xs, 0.25rem) var(--kp-space-sm, 0.5rem);
     min-inline-size: 0;
+}
+
+/* The allowance stands at the card's end edge, in the column of the state badge and the meter's value above it. */
+.hsb-fresh .hsb-quiet {
+    text-align: end;
 }
 
 .hsb-fresh .kp-ago,

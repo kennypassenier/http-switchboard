@@ -1,16 +1,43 @@
 /* The status page's own frame for the profiles views (kp-themes 11). Everything with a kp- class is the package; the
    hsb- rules only lay the sections out. Colours, spacing and radii come from the theme's tokens, never from here. */
 
+.kp-page {
+    /* The page's one control grid: a label column and equal control tracks, shared by every row of pickers below
+       (View, Profile, Tiles, Press a cell, Page refresh), so a label and its first button stand at one x in all sections. */
+    --hsb-label: 6.5rem;
+    --hsb-track: 8rem;
+}
+
 .hsb-controls {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: var(--hsb-label) repeat(auto-fill, minmax(0, var(--hsb-track)));
     align-items: center;
     gap: var(--kp-space-xs, 0.25rem) var(--kp-space-sm, 0.5rem);
     margin-block-end: var(--kp-space-sm, 0.5rem);
 }
 
 .hsb-controls > b {
-    margin-inline-end: var(--kp-space-xs, 0.25rem);
+    min-inline-size: 0;
+}
+
+/* A choice fills its track, so the same-role buttons of every row stand in the same columns. */
+.hsb-controls > button {
+    inline-size: 100%;
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+@media (max-width: 40rem) {
+    /* On a phone the label takes a line of its own and the choices share two equal columns. */
+    .hsb-controls {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .hsb-controls > b {
+        grid-column: 1 / -1;
+    }
 }
 
 .hsb-frame {
