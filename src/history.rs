@@ -438,7 +438,7 @@ mod tests {
         h.note_health_at("a", 13 * H + 60, Health::Working);
         let view = h.view_at(14 * H, &names());
         let hours = &view.profiles[0].hours;
-        let at = |hour: u64| &hours[HOURS - 1 - (14 - hour) as usize];
+        let at = |hour: u64| &hours[hours.len() - 1 - (14 - hour) as usize];
         assert_eq!(at(10).state, "down");
         assert_eq!(at(11).state, "down");
         assert_eq!(at(12).state, "down");
