@@ -82,12 +82,14 @@ const WEB_FILES: &[(&str, &[u8])] = &[
     ("index.html", include_bytes!("../web/index.html")),
     ("dashboard.js", include_bytes!("../web/dashboard.js")),
     ("dashboard.css", include_bytes!("../web/dashboard.css")),
+    ("translate.js", include_bytes!("../web/translate.js")),
+    ("translate.css", include_bytes!("../web/translate.css")),
 ];
 
 /// The `?v=` of the module and the stylesheet: the kit serves a year of
 /// `immutable` for a versioned URL, so the version has to move when the
 /// bytes do, not only when the package version does.
-fn asset_version() -> String {
+pub(crate) fn asset_version() -> String {
     let mut hasher = DefaultHasher::new();
     for (name, bytes) in WEB_FILES {
         name.hash(&mut hasher);
@@ -231,6 +233,11 @@ impl Profiles {
         }
     }
 
+    /// The profiles as they stand now (the translate page renders from them).
+    pub(crate) fn store(&self) -> &Arc<ProfileStore> {
+        &self.store
+    }
+
     /// Every profile in config order, as the browser sees it.
     pub fn snapshot(&self) -> Vec<ProfileView> {
         let stats = self.registry.snapshot();
@@ -266,6 +273,7 @@ pub fn install(app: &mut chassis::App, profiles: Arc<Profiles>) {
     app.status_section(SettingsSection);
     app.status_section(RecheckSection(Arc::clone(&profiles)));
     app.dashboard_routes(profiles.routes());
+    crate::dashboard_translate::install(app, Arc::clone(&profiles));
     app.webapp(WebApp::embedded(WEB_FILES).at(WEB_MOUNT));
 }
 
