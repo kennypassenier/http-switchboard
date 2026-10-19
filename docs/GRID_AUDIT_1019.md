@@ -48,3 +48,14 @@ shows no `.kp-stateplate`: 4 driven lines and 1 wiring line on `/translate`.
 The chassis Status card is not ours. Needs chassis 3.9.0 (kp-themes with
 `.kp-formgrid`) to confirm in production; verified here with the new css and
 js served by interception.
+
+## At the bump to chassis-rs 3.9.0 (kp-themes 11.1.0)
+
+kp-themes 11.1.0 fixes gaps 23 (tool-row heights), 26 (trace state word
+column), 27 (`.kp-diff__line` minmax) and 33 (entity action tracks), and
+35 (code view state plate). Remove the app's workarounds for them, as
+kp-themes eb9d9825 did in research/app-hsb-align and app-hsb-translate,
+then measure align and states again on `/` and `/translate` at 1280 and
+390 against the real 3.9.0 (no interception). 11.1.0 also makes buttons
+and toggles at least 44 x 44 px on a coarse pointer: check the phone
+layouts still hold.
