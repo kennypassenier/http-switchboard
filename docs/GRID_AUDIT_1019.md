@@ -1,36 +1,50 @@
-# Grid and vertical alignment audit (19/10/2026)
+# Grid and vertical alignment audit (19/10/2026): done
 
-Held until the kp-themes subgrid primitive and its 1 px alignment check
-land (coordinator, 19/10/2026 06:59). Then every view moves onto it, the
-check runs, the changes go to Kenny as one bundled demo, and 3.5.1 follows
-only after his verdict.
+Kenny approved the bundled demo "HTTPSwitchboard: everything on the grid"
+(kp-themes `research/app-hsb-align/`, 12 of 12). Every status-page view and
+`/translate` now stand on `.kp-formgrid`, `data-kp-subgrid` and subgrids as
+that demo lays them out; the two early commits' script (`alignRows()`) and
+flex pickers are gone.
 
-Measured with a 1 px edge checker on 3.5.0 (two profiles, one kyu with the
-hub unreachable, one HTTP): `/` 15 faults at 1280 px and 15 at 390 px;
-after the two commits on this branch 11 and 12. `/translate`: 13 at both
-widths, untouched.
+## Measured (kp-themes `measure-align.mjs`, per section, Firefox)
 
-Done on this branch:
-- Needs-attention band items and problem alerts share row heights.
-- View / Profile / Press-a-cell rows on one label column and equal tracks;
-  "Quiet time allowed" at the card's end edge.
+Before (3.5.0 plus the two early commits): `/` 11 lines at 1280 px and 12 at
+390 px; `/translate` 1 at 1280 and 0 at 390 (measured per section of the page).
+After: every section of `/` and `/translate` 0 at 1280 and 390 px, except
+the chassis "Status" card (Service / Health / Updates), which the shell
+renders and this app cannot lay out: 3 lines at each width
+(state badge and word of its rows). A kp-themes `measure-states.mjs` run
+(`/` 0 lines at both widths; `/translate` 5 lines, all the code view, see
+below).
 
-Still open:
-- Last 24 hours: Page refresh label and chooser off the shared column;
-  "Refresh now" ends 104 px short of the card edge; the history note sits
-  outside the control track; history Profile and Tiles rows are flex;
-  title and timestamp centres 2.5 px apart.
-- Recheck table: budget column text at 561 px, meter at 571 px.
-- Reloads: title and count centres 3.5 px apart.
-- Settings head at 390 px: title and badge centres 32 px apart.
-- Path of a profile head: name and state badge not on a grid.
-- /translate: tool rows of unequal widths (27 px spread) and heights
-  (28 vs 36 px); Wrap and Copy not in shared columns; the profile note
-  starts 196 px left of the result column; input column bottom 34 px off
-  the result card.
-- Not audited: the Map view; history rows (no deliveries in the window).
+## Views
 
-Kit/package wishes: `.kp-code__tools` buttons 36 px vs `.kp-jsonfield__tools`
-28 px; `.kp-refresh__bar` is flex, so "Refresh now" cannot sit on a track;
-`.kp-attention` and `.kp-problems` are inline-size containers, which stops
-a subgrid from sizing through them.
+| View | Before | After |
+| --- | --- | --- |
+| Needs attention | flex band, measured heights | two subgrid lists on shared rows, three tracks each |
+| Profiles card, Path | flex pickers, badge off the grid | form grid rows, equal choice tracks; name and badge in the label and control columns |
+| Settings | two cards, own rows | nine shared subgrid rows, head a grid |
+| Recheck | meter and words off one edge | meter track and words track |
+| Last 24 hours, Uptime | flex bar, flex pickers, flex rows | refresh bar and pickers on the form grid, deliveries on four tracks |
+| Reloads | title and count off one line | two-track head, outcome column |
+| /translate | unequal columns | 12-column grid, profile row a subgrid, shared tool tracks, diff card head |
+
+Not built, because the real app has no such view: the demo's sections
+"Profiles: the figures and the last delivery in rows" and "Profile names with
+their hover card" (a mock list of names); the hover card and the cards'
+freshness line exist and are laid out.
+
+## Standard states
+
+Profiles card: empty and failed notes now come from `setCardState` (the
+hand-made `.kp-card__state` slot and plate are gone). Recheck table: the
+`data-kp-datatable-empty` slot was missing; loading and failed now follow the
+poll (`state('loading')`, `fail()`, Try again reloads).
+
+## Open (package)
+
+Code view (`js/code.js`, empty and error drawn as its own text, lines 382 to 391)
+shows no `.kp-stateplate`: 4 driven lines and 1 wiring line on `/translate`.
+The chassis Status card is not ours. Needs chassis 3.9.0 (kp-themes with
+`.kp-formgrid`) to confirm in production; verified here with the new css and
+js served by interception.
