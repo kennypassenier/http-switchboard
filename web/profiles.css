@@ -6,7 +6,7 @@
     --kp-card-stage-min: 18rem;
 }
 
-.hsb-area > .hsb-controls {
+.hsb-area > .kp-formgrid {
     margin-block-end: var(--kp-space-md, 1rem);
 }
 
@@ -16,17 +16,28 @@
     min-block-size: 0;
 }
 
-/* The freshness line is the last row of a profile card: the words, and how long a silence is allowed. */
+/* The three actions of a card are three equal tracks of one grid, the same in every card. */
+.hsb-area .kp-entity__actions {
+    grid-template-columns: repeat(var(--kp-entity-cols, 3), minmax(0, 1fr));
+    align-items: stretch;
+}
+
+.hsb-area .kp-entity__actions > .kp-button {
+    white-space: normal;
+    line-height: 1.2;
+}
+
+/* The freshness line is the last row of a profile card: two tracks, the moment at the start edge and how long a silence is
+   allowed at the end edge, in the column of the state badge and the meter's value above it. */
 .hsb-fresh {
-    margin-block-start: var(--kp-space-xs, 0.25rem);
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
+    align-items: baseline;
     gap: var(--kp-space-xs, 0.25rem) var(--kp-space-sm, 0.5rem);
+    margin-block-start: var(--kp-space-xs, 0.25rem);
     min-inline-size: 0;
 }
 
-/* The allowance stands at the card's end edge, in the column of the state badge and the meter's value above it. */
 .hsb-fresh .hsb-quiet {
     text-align: end;
 }
@@ -34,6 +45,16 @@
 .hsb-fresh .kp-ago,
 .hsb-fresh .hsb-quiet {
     padding-inline: var(--kp-space-xs, 0.25rem);
+}
+
+@media (max-width: 36rem) {
+    .hsb-fresh {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .hsb-fresh .hsb-quiet {
+        text-align: start;
+    }
 }
 
 /* The name that carries a hover card is a name, not a link: it shows nothing until it is rested on or focused. */

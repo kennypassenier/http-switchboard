@@ -2,42 +2,26 @@
    hsb- rules only lay the sections out. Colours, spacing and radii come from the theme's tokens, never from here. */
 
 .kp-page {
-    /* The page's one control grid: a label column and equal control tracks, shared by every row of pickers below
-       (View, Profile, Tiles, Press a cell, Page refresh), so a label and its first button stand at one x in all sections. */
-    --hsb-label: 6.5rem;
+    /* The page's one label column: every picker's label is at least this wide (the form grid's own knob), so a label and its
+       first button stand at one x in every card. The choice tracks are equal and shared by every picker. */
+    --kp-formgrid-label-min: 7rem;
     --hsb-track: 8rem;
 }
 
-.hsb-controls {
+/* A choice: a word's buttons on equal tracks, the same in every picker, in the form grid's control column. */
+.hsb-choices {
     display: grid;
-    grid-template-columns: var(--hsb-label) repeat(auto-fill, minmax(0, var(--hsb-track)));
-    align-items: center;
+    grid-template-columns: repeat(auto-fill, minmax(7rem, var(--hsb-track)));
     gap: var(--kp-space-xs, 0.25rem) var(--kp-space-sm, 0.5rem);
-    margin-block-end: var(--kp-space-sm, 0.5rem);
+    justify-content: start;
 }
 
-.hsb-controls > b {
-    min-inline-size: 0;
-}
-
-/* A choice fills its track, so the same-role buttons of every row stand in the same columns. */
-.hsb-controls > button {
+.hsb-choices > button {
     inline-size: 100%;
     min-inline-size: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-}
-
-@media (max-width: 40rem) {
-    /* On a phone the label takes a line of its own and the choices share two equal columns. */
-    .hsb-controls {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .hsb-controls > b {
-        grid-column: 1 / -1;
-    }
 }
 
 .hsb-frame {
@@ -70,15 +54,14 @@
     align-content: start;
 }
 
-.hsb-trace__head {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--kp-space-sm, 0.5rem);
+.hsb-badge {
+    justify-self: start;
 }
 
-.hsb-trace__head > b {
-    margin-inline-end: var(--kp-space-xs, 0.25rem);
+/* The state word's column has one width in every hop ("Allowed" and "Not Reached" alike), so every hop's words end on one edge
+   (the trace sets this floor to 0; kp-gaps http-switchboard). */
+.hsb-trace .kp-steplist--trace .kp-steplist__time {
+    min-inline-size: 5.5rem;
 }
 
 .hsb-quiet {

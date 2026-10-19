@@ -187,12 +187,8 @@ function hopsOf(p) {
 function drawTrace() {
     const pick = $('hsb-trace-pick');
     if (pick) {
-        pick.hidden = profiles.length < 2;
-        if (!pick.querySelector('b')) {
-            const label = document.createElement('b');
-            label.textContent = 'Profile';
-            pick.append(label);
-        }
+        const row = $('hsb-trace-pick-row');
+        if (row) row.hidden = profiles.length < 2;
         for (const old of all('button', pick)) if (!profiles.some((p) => p.name === old.dataset.hsbTrace)) old.remove();
         for (const p of profiles) {
             if (all('button', pick).some((b) => b.dataset.hsbTrace === p.name)) continue;
@@ -216,7 +212,7 @@ function drawTrace() {
     }
     if (badge) {
         badge.textContent = p ? HEALTH_WORD[p.state] : '';
-        badge.className = p ? `kp-badge kp-badge--${HEALTH_TONE[p.state]}` : 'kp-badge';
+        badge.className = p ? `kp-badge kp-badge--${HEALTH_TONE[p.state]} hsb-badge` : 'kp-badge hsb-badge';
     }
     if (status === 'ready' && p) {
         setTrace(traceEl, hopsOf(p));

@@ -395,10 +395,16 @@ impl StatusSection for ProfilesSection {
 <script type="application/json" id="hsb-data">{data}</script>
 <script type="module" src="{WEB_MOUNT}/dashboard.js?v={version}"></script>
 <section class="kp-card hsb-area" id="hsb-area" data-kp-state="ready" data-kp-loading-words="Reading the profiles…" aria-label="Profiles">
-  <div class="hsb-controls" role="group" aria-label="View" id="hsb-view">
-    <b>View</b>
-    <button type="button" class="kp-button kp-button--sm" aria-pressed="true" data-hsb-view="cards">Cards</button>
-    <button type="button" class="kp-button kp-button--sm" aria-pressed="false" data-hsb-view="map">Map</button>
+  <div class="kp-formgrid">
+    <div class="kp-formgrid__row">
+      <b class="kp-formgrid__label" id="hsb-view-l">View</b>
+      <div class="kp-formgrid__control">
+        <div class="hsb-choices" role="group" aria-labelledby="hsb-view-l" id="hsb-view">
+          <button type="button" class="kp-button kp-button--sm" aria-pressed="true" data-hsb-view="cards">Cards</button>
+          <button type="button" class="kp-button kp-button--sm" aria-pressed="false" data-hsb-view="map">Map</button>
+        </div>
+      </div>
+    </div>
   </div>
   <div class="kp-card__stage">
     <div class="kp-card__data">
@@ -439,8 +445,16 @@ impl StatusSection for TraceSection {
             rows: Vec::new(),
             html: Some(
                 r#"<div class="hsb-frame hsb-trace">
-  <div class="hsb-controls" role="group" aria-label="Profile" id="hsb-trace-pick" hidden></div>
-  <div class="hsb-trace__head"><b id="hsb-trace-name"></b><span class="kp-badge" id="hsb-trace-badge"></span></div>
+  <div class="kp-formgrid">
+    <div class="kp-formgrid__row" id="hsb-trace-pick-row" hidden>
+      <b class="kp-formgrid__label" id="hsb-trace-pick-l">Profile</b>
+      <div class="kp-formgrid__control"><div class="hsb-choices" role="group" aria-labelledby="hsb-trace-pick-l" id="hsb-trace-pick"></div></div>
+    </div>
+    <div class="kp-formgrid__row">
+      <b class="kp-formgrid__label" id="hsb-trace-name"></b>
+      <div class="kp-formgrid__control"><span class="kp-badge hsb-badge" id="hsb-trace-badge"></span></div>
+    </div>
+  </div>
   <div class="kp-trace" data-kp-trace data-kp-trace-copy id="hsb-trace"></div>
 </div>"#
                     .to_string(),
