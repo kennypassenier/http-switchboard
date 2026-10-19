@@ -59,3 +59,12 @@ then measure align and states again on `/` and `/translate` at 1280 and
 390 against the real 3.9.0 (no interception); wire the translate result's load to `kp-code-retry` (the code view's plate Retry, kp-themes 2b2bed2a). 11.1.0 also makes buttons
 and toggles at least 44 x 44 px on a coarse pointer: check the phone
 layouts still hold.
+
+Also in 11.1.0 (kp-themes fd795018): gaps 28 and 29 (`.kp-attention`
+with `data-kp-subgrid` gets icon | words | actions tracks and keeps the
+dismiss cross in its own column) and 31 (`data-kp-formgrid-stage` +
+`data-kp-formgrid-rows="subgrid"` lets cards share rows). Gaps 30
+(`.kp-refresh` label slot and fold) and 32 (`.kp-field` cap) were already
+fixed. Drop the app's workarounds for all five; this app does not load
+auto.js, so call `attachFormgridStages` from web/dashboard.js itself
+(see kp-themes research/app-hsb-align for the use).
