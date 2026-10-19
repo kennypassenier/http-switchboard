@@ -1,6 +1,11 @@
 /* "Try a translation": the page's own frame. Everything with a kp- class is the package; the hsbt- rules only lay the
    sections out on a 12-column grid (one column on a phone). Colours, spacing and radii come from the theme's tokens. */
 
+/* The page is one container, so the grid below folds by its own width (kp-themes 11.1, the approved grid demo). */
+.hsbt-wrap {
+    container: hsbt / inline-size;
+}
+
 .hsbt-try {
     display: grid;
     grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -8,20 +13,56 @@
     align-items: stretch;
 }
 
+/* The profile row shares the two columns below it: the chooser over the input, the note over the result. */
 .hsbt-try__profile {
     grid-column: 1 / -1;
     display: grid;
-    grid-template-columns: max-content minmax(0, 1fr);
+    grid-template-columns: subgrid;
     align-items: center;
-    gap: var(--kp-space-sm, 0.5rem) var(--kp-space-md, 1rem);
+}
+
+.hsbt-try__profile > .kp-segmented {
+    grid-column: 1 / span 5;
+    justify-self: start;
+}
+
+.hsbt-try__profile > .hsbt-meta {
+    grid-column: 6 / -1;
 }
 
 .hsbt-try__input {
     grid-column: span 5;
     display: grid;
-    align-content: start;
+    grid-template-columns: minmax(0, 1fr);
+    /* The template block takes what is left of the column, so its bottom edge stands on the result card's. */
+    grid-template-rows: auto minmax(0, 1fr);
     gap: var(--kp-space-md, 1rem);
     min-inline-size: 0;
+}
+
+.hsbt-try__input :is(.kp-code, .kp-jsonfield) {
+    min-inline-size: 0;
+}
+
+/* The field fills its column (the field's own cap is 28 rem), so the box, the template and the result stand on one width. */
+.hsbt-try__input .kp-field {
+    --kp-field-max-width: none;
+}
+
+/* The box's tools stand on the tracks of the template's: Format and Minify at the start, Wrap and Copy at the end edge, where the
+   template's and the result's own Wrap and Copy stand. */
+.hsbt-try .kp-jsonfield__tools {
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+    column-gap: var(--kp-space-xs, 0.25rem);
+}
+
+.hsbt-try .kp-jsonfield__tools > [data-kp-json-tool='wrap'] {
+    grid-column: 4;
+}
+
+.hsbt-try .kp-jsonfield__tools > [data-kp-json-tool='copy'] {
+    grid-column: 5;
 }
 
 .hsbt-try__result {
@@ -34,14 +75,19 @@
     min-inline-size: 0;
 }
 
-@media (max-width: 60rem) {
-    .hsbt-try__input,
-    .hsbt-try__result {
-        grid-column: 1 / -1;
+/* Side by side: the card beside the column starts its title one border and one padding lower; the label stands on that line. */
+@container hsbt (min-width: 52rem) {
+    .hsbt-try__input {
+        padding-block-start: var(--hsbt-label-drop, 0.87rem);
     }
+}
 
-    .hsbt-try__profile {
-        grid-template-columns: minmax(0, 1fr);
+@container hsbt (max-width: 52rem) {
+    .hsbt-try .hsbt-try__input,
+    .hsbt-try .hsbt-try__result,
+    .hsbt-try__profile > .kp-segmented,
+    .hsbt-try__profile > .hsbt-meta {
+        grid-column: 1 / -1;
     }
 }
 
@@ -75,4 +121,44 @@
 .hsbt-diff {
     max-block-size: 24rem;
     overflow: auto;
+}
+
+.hsbt-try .hsbt-try__result {
+    block-size: auto;
+}
+
+/* The head of the diff card: the title and the count on one baseline, the count at the end edge. */
+.hsbt-card--diff .kp-card__header {
+    display: grid;
+    grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+    align-items: baseline;
+    column-gap: var(--kp-space-lg, 1.5rem);
+}
+
+.hsbt-card--diff .hsbt-counts {
+    justify-self: end;
+    text-align: end;
+}
+
+/* A diff line: the number, the sign and the text are three columns, and the text column is minmax(0, 1fr), not 1fr, so a long
+   token wraps inside the card instead of running past the others. */
+.hsbt-diff .kp-diff__line {
+    grid-template-columns: 3rem 1ch minmax(0, 1fr);
+    overflow-wrap: anywhere;
+}
+
+@container hsbt (max-width: 40rem) {
+    .hsbt-card--diff .kp-card__header {
+        grid-template-columns: minmax(0, 1fr);
+        row-gap: var(--kp-space-xs, 0.25rem);
+    }
+
+    .hsbt-card--diff .hsbt-counts {
+        justify-self: start;
+        text-align: start;
+    }
+
+    .hsbt-diff .kp-diff__line {
+        grid-template-columns: 2rem 1ch minmax(0, 1fr);
+    }
 }

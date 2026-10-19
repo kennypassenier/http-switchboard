@@ -6,6 +6,7 @@
 <p class="explain">Pick a profile, paste a sample message, and see the body that would be delivered, next to what changed. Nothing is delivered: the message is translated by the same code the service uses and the result stays on this page.</p>
 <script type="application/json" id="hsbt-data">{{ data|safe }}</script>
 <script type="module" src="{{ mount }}/translate.js?v={{ version }}"></script>
+<div class="hsbt-wrap">
 <div class="hsbt-try" id="hsbt-try">
   <div class="hsbt-try__profile">
     <div class="kp-segmented" data-kp-segmented="single" role="radiogroup" aria-label="Profile to try" id="hsbt-profile">
@@ -49,6 +50,7 @@
       </div>
     </div>
   </section>
+</div>
 </div>
 <noscript><p>The sample box and the translation need JavaScript. The same can be done on the host with <code>http-switchboard test --config … --profile … --input …</code>.</p></noscript>
 {% endblock %}

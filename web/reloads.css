@@ -37,7 +37,12 @@
 }
 
 .hsb-reload__outcome {
-    display: flex;
+    display: grid;
+}
+
+.hsb-reload__outcome > .kp-badge {
+    justify-self: stretch;
+    text-align: center;
 }
 
 .hsb-reload__what {
@@ -62,9 +67,31 @@
     }
 }
 
+/* The head: the title and the count on one baseline, the count at the end edge. */
+.hsb-reloads-card .kp-card__header {
+    display: grid;
+    grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+    align-items: baseline;
+    column-gap: var(--kp-space-lg, 1.5rem);
+}
+
 .hsb-reloads-counts {
     margin: 0;
+    justify-self: end;
+    text-align: end;
     color: var(--muted-foreground);
     font-size: var(--kp-text-sm, 0.8125rem);
     font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 40rem) {
+    .hsb-reloads-card .kp-card__header {
+        grid-template-columns: minmax(0, 1fr);
+        row-gap: var(--kp-space-xs, 0.25rem);
+    }
+
+    .hsb-reloads-counts {
+        justify-self: start;
+        text-align: start;
+    }
 }
