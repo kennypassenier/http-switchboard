@@ -82,19 +82,24 @@ impl StatusSection for FiguresSection {
         let html = format!(
             r##"<link rel="stylesheet" href="{WEB_MOUNT}/history.css?v={version}">
 <script type="application/json" id="hsb-history-data">{data}</script>
-<div class="hsb-h-bar">
-  <div class="hsb-h-bar__chooser">
-    <b>Page refresh</b>
-    <div id="hsb-h-refresh" data-hsb-refresh-host></div>
+<div class="kp-formgrid" id="hsb-h-grid">
+  <div class="kp-refresh" id="hsb-h-refresh" data-kp-refresh="30" data-kp-remember="hsb-refresh" data-kp-look="segmented"></div>
+  <div class="kp-formgrid__row">
+    <span class="kp-formgrid__label" aria-hidden="true"></span>
+    <div class="kp-formgrid__control" data-kp-formgrid-span="wide"><p class="hsb-h-note">History since the last start, at most 24 hours.</p></div>
   </div>
-  <p class="hsb-h-note">History since the last start, at most 24 hours.</p>
-</div>
-<div class="hsb-h-controls">
-  <div class="hsb-controls" role="group" aria-label="Profile" id="hsb-h-pick" hidden></div>
-  <div class="hsb-controls" role="group" aria-label="Tiles" id="hsb-h-tiles" hidden>
-    <b>Tiles</b>
-    <button type="button" class="kp-button kp-button--sm" aria-pressed="true" data-hsb-tiles="trend">Trend</button>
-    <button type="button" class="kp-button kp-button--sm" aria-pressed="false" data-hsb-tiles="spark">Sparklines</button>
+  <div class="kp-formgrid__row" id="hsb-h-pick-row" hidden>
+    <b class="kp-formgrid__label" id="hsb-h-pick-l">Profile</b>
+    <div class="kp-formgrid__control"><div class="hsb-choices" role="group" aria-labelledby="hsb-h-pick-l" id="hsb-h-pick"></div></div>
+  </div>
+  <div class="kp-formgrid__row" id="hsb-h-tiles" hidden>
+    <b class="kp-formgrid__label" id="hsb-h-tiles-l">Tiles</b>
+    <div class="kp-formgrid__control">
+      <div class="hsb-choices" role="group" aria-labelledby="hsb-h-tiles-l">
+        <button type="button" class="kp-button kp-button--sm" aria-pressed="true" data-hsb-tiles="trend">Trend</button>
+        <button type="button" class="kp-button kp-button--sm" aria-pressed="false" data-hsb-tiles="spark">Sparklines</button>
+      </div>
+    </div>
   </div>
 </div>
 <section class="kp-card hsb-h-card" id="hsb-h-card" data-kp-state="ready" aria-labelledby="hsb-h-title" data-kp-loading-words="Reading the last 24 hours">
@@ -143,11 +148,15 @@ impl StatusSection for UptimeSection {
                 .to_string(),
             rows: Vec::new(),
             html: Some(
-                r#"<div class="hsb-h-ustate">
-  <div class="hsb-controls" role="group" aria-label="Press a cell" id="hsb-h-press" hidden>
-    <b>Press a cell</b>
-    <button type="button" class="kp-button kp-button--sm" aria-pressed="true" data-hsb-press="info">Quick info</button>
-    <button type="button" class="kp-button kp-button--sm" aria-pressed="false" data-hsb-press="hover">Hover card only</button>
+                r#"<div class="kp-formgrid">
+  <div class="kp-formgrid__row" id="hsb-h-press" hidden>
+    <b class="kp-formgrid__label" id="hsb-h-press-l">Press a cell</b>
+    <div class="kp-formgrid__control">
+      <div class="hsb-choices" role="group" aria-labelledby="hsb-h-press-l">
+        <button type="button" class="kp-button kp-button--sm" aria-pressed="true" data-hsb-press="info">Quick info</button>
+        <button type="button" class="kp-button kp-button--sm" aria-pressed="false" data-hsb-press="hover">Hover card only</button>
+      </div>
+    </div>
   </div>
 </div>
 <div class="hsb-h-strips" id="hsb-h-strips"></div>"#
