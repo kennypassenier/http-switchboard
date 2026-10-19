@@ -15,7 +15,6 @@
 use std::process::ExitCode;
 use std::sync::Arc;
 
-use axum::routing::post;
 use axum::Router;
 use chassis::{App, AppSpec, Control};
 use http_switchboard::app::App as Switchboard;
@@ -128,15 +127,16 @@ async fn main() -> ExitCode {
     // V1: what a "client" is called here. Presentation only — the routes,
     // the JSON keys and the log fields keep saying `client`.
     app.vocabulary("sender", "senders");
-    app.status_section(http_switchboard::dashboard::Profiles::new(
-        &switchboard.config,
-        Arc::clone(&switchboard.profiles),
-        Arc::clone(&switchboard.registry),
-    ));
-    app.dashboard_routes(Router::new().route(
-        http_switchboard::dashboard::RECHECK_ROUTE,
-        post(http_switchboard::dashboard::recheck).with_state(Arc::clone(&switchboard.registry)),
-    ));
+    // The four status sections, their routes and the module that draws
+    // them (kp-themes 11 views): one call, shared with the door tests.
+    http_switchboard::dashboard::install(
+        &mut app,
+        Arc::new(http_switchboard::dashboard::Profiles::new(
+            &switchboard.config,
+            Arc::clone(&switchboard.profiles),
+            Arc::clone(&switchboard.registry),
+        )),
+    );
 
     let switchboard = Arc::new(switchboard);
     if app.control.is_none() {

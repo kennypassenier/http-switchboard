@@ -1,0 +1,141 @@
+/* The status page's own frame for the profiles views (kp-themes 11). Everything with a kp- class is the package; the
+   hsb- rules only lay the sections out. Colours, spacing and radii come from the theme's tokens, never from here. */
+
+.hsb-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--kp-space-xs, 0.25rem) var(--kp-space-sm, 0.5rem);
+    margin-block-end: var(--kp-space-sm, 0.5rem);
+}
+
+.hsb-controls > b {
+    margin-inline-end: var(--kp-space-xs, 0.25rem);
+}
+
+.hsb-frame {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--kp-space-sm, 0.5rem);
+    min-inline-size: 0;
+}
+
+.hsb-frame > [hidden] {
+    display: none;
+}
+
+/* The map and the cards stand in one frame, so switching the view moves nothing around them. */
+.hsb-frame--profiles {
+    align-content: start;
+}
+
+.hsb-frame--profiles > #hsb-grid {
+    min-block-size: 16rem;
+}
+
+.hsb-frame--profiles > #hsb-map {
+    min-block-size: 18rem;
+}
+
+/* The trace: a heading row (profile name and its state word) over the hops, in a frame of one height. */
+.hsb-trace {
+    min-block-size: 16rem;
+    align-content: start;
+}
+
+.hsb-trace__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--kp-space-sm, 0.5rem);
+}
+
+.hsb-trace__head > b {
+    margin-inline-end: var(--kp-space-xs, 0.25rem);
+}
+
+.hsb-quiet {
+    color: var(--muted-foreground);
+    font-size: var(--kp-text-sm, 0.8125rem);
+}
+
+/* Settings: one card per profile on a grid, one height. */
+.hsb-stage {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(28rem, 100%), 1fr));
+    gap: var(--kp-space-lg, 1.5rem);
+    align-items: stretch;
+    min-inline-size: 0;
+}
+
+.hsb-profile {
+    display: grid;
+    align-content: start;
+    gap: var(--kp-space-md, 1rem);
+    min-inline-size: 0;
+}
+
+.hsb-profile__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--kp-space-sm, 0.5rem);
+}
+
+.hsb-profile__head .kp-card__title {
+    margin: 0;
+    margin-inline-end: auto;
+}
+
+/* The budget row: words, then the bar across the whole value column, then how it adds up. */
+.hsb-budget {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--kp-space-xs, 0.25rem);
+}
+
+.hsb-budget .kp-meter {
+    inline-size: 100%;
+    margin-block: var(--kp-space-xs, 0.25rem);
+    /* Room for the sign that spills past the end. */
+    max-inline-size: calc(100% - 1rem);
+}
+
+.hsb-budget__sum {
+    overflow-wrap: anywhere;
+}
+
+/* Recheck: the button, then its refusal sentence (read aloud, drawn only when the toast could not be shown). */
+.hsb-bar {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    align-items: center;
+    gap: var(--kp-space-md, 1rem);
+    margin-block-end: var(--kp-space-md, 1rem);
+}
+
+.hsb-line {
+    margin: 0;
+    color: var(--destructive);
+    font-size: var(--kp-text-sm, 0.8125rem);
+}
+
+/* The failed recheck is said in a toast; the sentence stays in the page for a screen reader only. */
+.hsb-line {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.hsb-table .hsb-col-act {
+    inline-size: 12rem;
+    text-align: end;
+    white-space: nowrap;
+}
+
+.hsb-table .kp-meter--inline {
+    margin-inline-end: var(--kp-space-sm, 0.5rem);
+}
