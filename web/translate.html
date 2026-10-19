@@ -1,0 +1,54 @@
+{% extends "layout.html" %}
+{% block title %}Try a translation · {{ app_name }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ mount }}/translate.css?v={{ version }}">{% endblock %}
+{% block content %}
+<h1>Try a translation</h1>
+<p class="explain">Pick a profile, paste a sample message, and see the body that would be delivered, next to what changed. Nothing is delivered: the message is translated by the same code the service uses and the result stays on this page.</p>
+<script type="application/json" id="hsbt-data">{{ data|safe }}</script>
+<script type="module" src="{{ mount }}/translate.js?v={{ version }}"></script>
+<div class="hsbt-try" id="hsbt-try">
+  <div class="hsbt-try__profile">
+    <div class="kp-segmented" data-kp-segmented="single" role="radiogroup" aria-label="Profile to try" id="hsbt-profile">
+      {% for name in profiles %}
+      <button type="button" class="kp-segmented__item" data-value="{{ name }}" role="radio" aria-checked="{{ 'true' if loop.first else 'false' }}"><span class="kp-segmented__label">{{ name }}</span></button>
+      {% endfor %}
+    </div>
+    <p class="hsbt-meta" id="hsbt-takes"></p>
+  </div>
+  <div class="hsbt-try__input">
+    <div class="kp-field">
+      <label class="kp-field__label" for="hsbt-message">Sample message</label>
+      <textarea class="kp-field__input kp-field__input--multiline" id="hsbt-message" rows="14" data-kp-json="strict" data-kp-json-wrap="false" spellcheck="false" aria-describedby="hsbt-message-hint"></textarea>
+      <p class="kp-field__hint" id="hsbt-message-hint">Paste the message as the sender posts it. Nothing is sent anywhere. The most this page takes is <span id="hsbt-limit"></span>.</p>
+    </div>
+    <figure class="kp-code" data-kp-code id="hsbt-template" data-kp-code-title="Template" data-kp-code-language="minijinja" data-kp-code-state="loading">
+      <pre class="kp-code__body"><code></code></pre>
+    </figure>
+  </div>
+  <section class="kp-card hsbt-card hsbt-try__result" id="hsbt-result" data-kp-state="loading" aria-labelledby="hsbt-result-t">
+    <div class="kp-card__header"><h3 class="kp-card__title" id="hsbt-result-t">Translated body</h3></div>
+    <p class="kp-card__body">What the destination would receive for this message.</p>
+    <div class="kp-card__stage">
+      <div class="kp-card__data hsbt-card__data">
+        <div class="kp-problems" data-kp-problems data-kp-problems-mode="each" id="hsbt-problems"></div>
+        <figure class="kp-code" data-kp-code id="hsbt-body" data-kp-code-title="Translated body" data-kp-code-language="JSON" data-kp-code-state="loading">
+          <pre class="kp-code__body"><code></code></pre>
+        </figure>
+      </div>
+    </div>
+  </section>
+  <section class="kp-card hsbt-card hsbt-card--diff hsbt-try__diff" id="hsbt-diffcard" data-kp-state="loading" aria-labelledby="hsbt-diff-t">
+    <div class="kp-card__header">
+      <h3 class="kp-card__title" id="hsbt-diff-t">Before and after</h3>
+      <p class="hsbt-counts" id="hsbt-diffcount"></p>
+    </div>
+    <p class="kp-card__body">The message as it arrived against the body that is delivered. Indentation is ignored when lines are matched.</p>
+    <div class="kp-card__stage">
+      <div class="kp-card__data hsbt-card__data">
+        <pre class="kp-diff hsbt-diff" id="hsbt-diff" tabindex="0"></pre>
+      </div>
+    </div>
+  </section>
+</div>
+<noscript><p>The sample box and the translation need JavaScript. The same can be done on the host with <code>http-switchboard test --config … --profile … --input …</code>.</p></noscript>
+{% endblock %}

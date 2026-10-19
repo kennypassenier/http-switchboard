@@ -103,6 +103,7 @@ function entityOf(p) {
         actions: [
             { id: 'recheck', label: 'Recheck this profile' },
             { id: 'copy-test', label: 'Copy test command' },
+            { id: 'try', label: 'Try a translation' },
         ],
     };
 }
@@ -387,6 +388,7 @@ const entriesOf = (p) => {
                     disabled: rechecking.has(name) ? 'It is being rechecked now.' : p?.state === 'starting' ? 'It is already starting.' : null,
                 },
                 { label: 'Copy test command', hint: copyHint, value: 'copy' },
+                { label: 'Try a translation', hint: 'Renders one sample message here, without sending it', value: 'try' },
             ],
         },
     ];
@@ -608,6 +610,7 @@ $('hsb-trace-pick')?.addEventListener('click', (event) => {
 grid.addEventListener('kp-entity-action', (event) => {
     const { key, id } = /** @type {CustomEvent} */ (event).detail;
     if (id === 'recheck') void recheckOne(key);
+    else if (id === 'try') location.assign(`/translate?profile=${encodeURIComponent(key)}`);
     else void copyTest(key);
 });
 area.addEventListener(AREA_RELOAD_EVENT, () => void reload());
@@ -621,6 +624,7 @@ document.addEventListener('kp-menu-select', (event) => {
     if (!name) return;
     if (detail.value === 'recheck') void recheckOne(name);
     else if (detail.value === 'copy') void copyTest(name);
+    else if (detail.value === 'try') location.assign(`/translate?profile=${encodeURIComponent(name)}`);
 });
 
 document.addEventListener('hsb:refresh', () => void refresh());

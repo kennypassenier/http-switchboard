@@ -90,6 +90,8 @@ const WEB_FILES: &[(&str, &[u8])] = &[
     ("health.css", include_bytes!("../web/health.css")),
     ("reloads.js", include_bytes!("../web/reloads.js")),
     ("reloads.css", include_bytes!("../web/reloads.css")),
+    ("translate.js", include_bytes!("../web/translate.js")),
+    ("translate.css", include_bytes!("../web/translate.css")),
 ];
 
 /// The `?v=` of the module and the stylesheet: the kit serves a year of
@@ -243,6 +245,11 @@ impl Profiles {
         }
     }
 
+    /// The profiles as they stand now (the translate page renders from them).
+    pub(crate) fn store(&self) -> &Arc<ProfileStore> {
+        &self.store
+    }
+
     /// Every profile in config order, as the browser sees it.
     pub fn snapshot(&self) -> Vec<ProfileView> {
         let stats = self.registry.snapshot();
@@ -283,6 +290,7 @@ pub fn install(app: &mut chassis::App, profiles: Arc<Profiles>) {
     crate::dashboard_history::install(app, Arc::clone(&profiles.registry), profiles.order.clone());
     app.dashboard_routes(profiles.routes());
     crate::dashboard_reloads::install(app, Arc::clone(&profiles.store));
+    crate::dashboard_translate::install(app, Arc::clone(&profiles));
     app.webapp(WebApp::embedded(WEB_FILES).at(WEB_MOUNT));
 }
 

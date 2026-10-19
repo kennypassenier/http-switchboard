@@ -16,6 +16,7 @@ pub mod dashboard_health;
 pub mod dashboard_history;
 pub mod dashboard_profiles;
 pub mod dashboard_reloads;
+pub mod dashboard_translate;
 pub mod history;
 pub mod inbound;
 pub mod obs;

@@ -38,6 +38,13 @@ endpoints and the CLI verbs — not about the internals.
   with a redacted reason), counts, a new-reload pill and an alert for a
   refused latest reload. In memory only; `GET /reloads.json` behind the
   admin login.
+- **Try a translation page** (`/translate`, admin login): pick a profile,
+  paste a sample message, see the translated body, the template, a
+  before/after diff, template errors in three parts and defaults filled in
+  as notes. `POST /translate/{name}` renders with the pump's own
+  `translate::prepare` and delivers nothing; 256 KiB cap; no header values
+  or destination path in the answer. Linked from *Try a translation* in a
+  profile's menu.
 
 ## [3.4.0] - 2026-10-18
 
