@@ -28,6 +28,11 @@ endpoints and the CLI verbs — not about the internals.
   height; each card says "last delivery … ago" and turns to a warning
   after a day of silence. `GET /profiles.json` gains `template`, a label
   made of the template's field names, never its body.
+- **Needs attention** section above the profiles: attention band (worst
+  first, *See the fix*), one problem alert per unwell profile (what, why,
+  remedy, command with Copy, a recheck button) and a kyu hub connection
+  banner (unreachable, refused, reconnecting, back) with *Retry now*.
+  It reads the profiles view's existing poll; no new route.
 
 ## [3.4.0] - 2026-10-18
 

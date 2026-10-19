@@ -224,6 +224,17 @@ The door brought a dashboard with it. Behind the admin login (the
 sections of its own (kp-themes 11 views; the page refreshes itself every
 ten seconds):
 
+- **Needs attention** (first of them): the profiles that are not well,
+  worst first, each with *See the fix* (scrolls to its alert); a profile
+  leaves the list when it works again, and "All profiles are working"
+  takes its place. Under it, one alert per profile says what is wrong,
+  why and what to do, with a command to copy where there is one (*hub
+  down*: `systemctl status kyu`; *failing*: `journalctl -u
+  http-switchboard`) and a button that rechecks that profile. Only the
+  "has not tried yet" note can be closed. When a profile that reads from
+  the kyu hub is hub down or denied, a banner above them says the hub is
+  unreachable or refused our token; *Retry now* rechecks the profiles and
+  looks again, and the banner says so when the hub is back.
 - **Profiles**: one card per profile (the default) with its state in
   words, delivered, failed and average time, flags for the source and
   destination kind, a bar with the share delivered, and the buttons

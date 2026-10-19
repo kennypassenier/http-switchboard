@@ -86,6 +86,8 @@ const WEB_FILES: &[(&str, &[u8])] = &[
     ("history.css", include_bytes!("../web/history.css")),
     ("profiles.js", include_bytes!("../web/profiles.js")),
     ("profiles.css", include_bytes!("../web/profiles.css")),
+    ("health.js", include_bytes!("../web/health.js")),
+    ("health.css", include_bytes!("../web/health.css")),
 ];
 
 /// The `?v=` of the module and the stylesheet: the kit serves a year of
@@ -269,6 +271,8 @@ impl Profiles {
 /// that draws them. `main.rs` and the door tests call this one function,
 /// so what runs is what is tested.
 pub fn install(app: &mut chassis::App, profiles: Arc<Profiles>) {
+    // First, so what needs a person stands above everything else.
+    app.status_section(crate::dashboard_health::HealthSection);
     app.status_section(ProfilesSection(Arc::clone(&profiles)));
     app.status_section(TraceSection);
     app.status_section(SettingsSection);
