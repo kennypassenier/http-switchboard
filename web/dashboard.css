@@ -69,32 +69,84 @@
     font-size: var(--kp-text-sm, 0.8125rem);
 }
 
-/* Settings: one card per profile on a grid, one height. */
+/* Settings: one card per profile. A card is a grid of two columns (label, value) whose rows are a subgrid of the stage's:
+   nine rows (the head and the eight settings), so Source stands beside Source and Retry budget beside Retry budget in
+   every card. The form grid's own pair of tracks is used by hand, since a form grid cannot take its rows from the stage. */
 .hsb-stage {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(28rem, 100%), 1fr));
-    gap: var(--kp-space-lg, 1.5rem);
+    column-gap: var(--kp-space-lg, 1.5rem);
+    row-gap: var(--kp-space-lg, 1.5rem);
     align-items: stretch;
     min-inline-size: 0;
 }
 
 .hsb-profile {
     display: grid;
-    align-content: start;
-    gap: var(--kp-space-md, 1rem);
+    grid-row: span 9;
+    grid-template-rows: subgrid;
+    grid-template-columns: fit-content(40%) minmax(0, 1fr);
+    column-gap: var(--kp-space-lg, 1rem);
+    row-gap: 0;
+    box-sizing: border-box;
     min-inline-size: 0;
 }
 
-.hsb-profile__head {
-    display: flex;
-    flex-wrap: wrap;
+/* The head is a grid: the name, the small meter and the badge. */
+.hsb-profile > .hsb-head {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(min-content, 1fr) auto auto;
+    grid-template-areas: 'title meter badge';
     align-items: center;
-    gap: var(--kp-space-sm, 0.5rem);
+    column-gap: var(--kp-space-md, 1rem);
+    padding-block-end: var(--kp-space-sm, 0.5rem);
 }
 
-.hsb-profile__head .kp-card__title {
+.hsb-head .kp-card__title {
+    grid-area: title;
     margin: 0;
-    margin-inline-end: auto;
+}
+
+.hsb-head .kp-meter {
+    grid-area: meter;
+}
+
+.hsb-head .kp-badge {
+    grid-area: badge;
+}
+
+.hsb-profile > .kp-kv {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-row: span 8;
+    grid-template-rows: subgrid;
+    grid-template-columns: subgrid;
+    margin: 0;
+}
+
+.hsb-profile .kp-kv__row {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
+    align-items: first baseline;
+    padding-block: var(--kp-space-sm, 0.5rem);
+    border-block-end: 1px solid var(--border);
+}
+
+.hsb-profile .kp-kv__row > dd {
+    min-inline-size: 0;
+    margin: 0;
+}
+
+@media (max-width: 44rem) {
+    .hsb-profile > .hsb-head {
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas:
+            'title title'
+            'meter badge';
+        row-gap: var(--kp-space-xs, 0.25rem);
+    }
 }
 
 /* The budget row: words, then the bar across the whole value column, then how it adds up. */
@@ -113,6 +165,7 @@
 
 .hsb-budget__sum {
     overflow-wrap: anywhere;
+    text-wrap: pretty;
 }
 
 /* Recheck: the button, then its refusal sentence (read aloud, drawn only when the toast could not be shown). */
@@ -146,6 +199,20 @@
     white-space: nowrap;
 }
 
-.hsb-table .kp-meter--inline {
-    margin-inline-end: var(--kp-space-sm, 0.5rem);
+/* The budget cell: the meter and the words are two tracks of the cell, so the meters of every row start on one edge and the
+   words of every row on another (a row with no lease keeps the words' track). */
+.hsb-bcell {
+    display: grid;
+    grid-template-columns: 8rem minmax(0, 1fr);
+    align-items: center;
+    column-gap: var(--kp-space-sm, 0.5rem);
+}
+
+.hsb-bcell > .kp-meter {
+    inline-size: 100%;
+    margin: 0;
+}
+
+.hsb-bcell > .hsb-budget__words {
+    grid-column: 2;
 }

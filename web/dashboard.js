@@ -241,7 +241,7 @@ const code = (text) => el('code', 'kp-id', text);
 /** @param {string} name */
 function makeCard(name) {
     const card = el('article', 'kp-card hsb-profile');
-    const head = el('header', 'hsb-profile__head');
+    const head = el('header', 'hsb-head');
     const title = el('h3', 'kp-card__title');
     const label = el('span', '', name);
     markName(label, name);
@@ -249,7 +249,7 @@ function makeCard(name) {
     const inline = el('span', 'kp-meter kp-meter--inline kp-meter--over-spill');
     const badge = el('span', 'kp-badge');
     head.append(title, inline, badge);
-    const list = el('dl', 'kp-kv kp-kv--lines');
+    const list = el('dl', 'kp-kv');
     /** @type {Record<string, HTMLElement>} */
     const rows = {};
     for (const label of ['Source', 'Destination host', 'Content type', 'Timeout', 'Retries', 'Max attempts', 'Lease', 'Retry budget']) {
@@ -390,6 +390,13 @@ const entriesOf = (p) => {
     ];
 };
 
+/** The retry budget cell: the meter and the words are two tracks of the cell, the same in every row. @param {HTMLElement | null} meter @param {HTMLElement} words */
+function budgetCell(meter, words) {
+    const box = el('div', 'hsb-bcell');
+    box.append(...(meter ? [meter, words] : [words]));
+    return box;
+}
+
 function drawRecheck() {
     for (const row of all('[data-hsb-row]')) {
         const name = row.getAttribute('data-hsb-row') ?? '';
@@ -404,17 +411,17 @@ function drawRecheck() {
         if (cell && p) {
             if (p.lease_ms === null) {
                 cell.setAttribute('data-kp-sort-value', '0');
-                cell.replaceChildren(`No lease (${seconds(p.budget_ms)} worst case)`);
+                cell.replaceChildren(budgetCell(null, el('span', 'hsb-budget__words', `No lease (${seconds(p.budget_ms)} worst case)`)));
             } else {
                 const share = p.budget_ms / p.lease_ms;
                 cell.setAttribute('data-kp-sort-value', String(Math.round(share * 100)));
                 let meter = /** @type {HTMLElement | null} */ (cell.querySelector('.kp-meter'));
                 if (!meter) {
                     meter = el('span', 'kp-meter kp-meter--inline kp-meter--over-spill');
-                    cell.replaceChildren(meter, el('span'));
+                    cell.replaceChildren(budgetCell(meter, el('span', 'hsb-budget__words')));
                 }
                 setMeter(meter, { value: share, tone: share > 1 ? 'destructive' : null, label: 'of the lease' });
-                const text = /** @type {HTMLElement} */ (cell.lastElementChild);
+                const text = /** @type {HTMLElement} */ (cell.querySelector('.hsb-budget__words'));
                 text.textContent = `${Math.round(share * 100)} % of the lease`;
             }
         }
