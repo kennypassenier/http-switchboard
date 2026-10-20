@@ -125,7 +125,7 @@ export function start(dashboard) {
     let data = embedded.history;
     let skew = data.now_unix * 1000 - Date.now();
     /** @type {'ready' | 'loading' | 'error'} */
-    let state = 'ready';
+    let state = 'loading'; // the first read is in flight from the first frame; the embedded history only shapes the strips
     let profile = data.profiles[0]?.name ?? '';
     let failedOnly = false;
     const store = {
@@ -434,4 +434,5 @@ export function start(dashboard) {
     }
 
     paintAll();
+    void load(false);
 }

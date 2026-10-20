@@ -102,7 +102,7 @@ impl StatusSection for FiguresSection {
     </div>
   </div>
 </div>
-<section class="kp-card hsb-h-card" id="hsb-h-card" data-kp-state="ready" aria-labelledby="hsb-h-title" data-kp-loading-words="Reading the last 24 hours">
+<section class="kp-card hsb-h-card" id="hsb-h-card" data-kp-state="loading" aria-labelledby="hsb-h-title" data-kp-loading-words="Reading the last 24 hours">
   <div class="kp-card__header">
     <h3 class="kp-card__title" id="hsb-h-title">Last 24 hours</h3>
     <div class="kp-card__actions"><span class="kp-timestamp" id="hsb-h-read"></span></div>
