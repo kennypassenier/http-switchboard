@@ -6,7 +6,8 @@
 // /history.json (counts, times and a cause word per hour; no payload, header or URL), first embedded as #hsb-history-data.
 // The history is in memory on the server and starts empty at every service start.
 
-import { setCardState, attachCardStates } from '/static/kp/js/card-state.js';
+import { attachCardStates } from '/static/kp/js/card-state.js';
+import { holdCardState } from './profiles.js';
 import { attachTrendCharts, setTrendData } from '/static/kp/js/chart.js';
 import { attachSparklines, attachKpiToggles, attachKpiStrips, KPI_TOGGLE_EVENT } from '/static/kp/js/kpi.js';
 import { attachTicks } from '/static/kp/js/tick.js';
@@ -281,16 +282,16 @@ export function start(dashboard) {
         const body = $('hsb-h-body');
         if (body) body.textContent = `Counted per hour since the service started recording on ${stamp(data.since_unix * 1000)}.`;
         if (state === 'loading') {
-            setCardState(card, 'loading');
+            holdCardState(card, 'loading');
         } else if (state === 'error') {
-            setCardState(card, 'error', { title: 'Could not read the last 24 hours', text: 'The service did not answer. The counters keep running; nothing is lost.' });
+            holdCardState(card, 'error', { title: 'Could not read the last 24 hours', text: 'The service did not answer. The counters keep running; nothing is lost.' });
         } else if (!p || !t || t.r === 0) {
-            setCardState(card, 'empty', {
+            holdCardState(card, 'empty', {
                 title: 'Nothing received yet',
                 text: `Since the service started at ${stamp(data.since_unix * 1000)} no message has gone through ${p ? p.name : 'a profile'}. The figures appear with the first one.`,
             });
         } else {
-            setCardState(card, 'ready');
+            holdCardState(card, 'ready');
             if (built !== `${p.name}|${look}`) buildTiles();
             else updateTiles();
         }
