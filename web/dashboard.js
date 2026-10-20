@@ -52,7 +52,7 @@ const routes = embedded.routes ?? { snapshot: '/profiles.json', recheckAll: '/pr
 /** @type {Profile[]} */
 let profiles = embedded.profiles ?? [];
 /** @type {'ready' | 'loading' | 'error'} */
-let status = 'ready';
+let status = 'loading'; // the first read is in flight from the first frame: the page holds no answer until it comes
 let view = 'cards';
 try {
     view = localStorage.getItem(VIEW_KEY) === 'map' ? 'map' : 'cards';
@@ -409,8 +409,11 @@ function drawTableState() {
     const handle = table instanceof HTMLElement ? dataTable(table) : null;
     if (!handle || tableShown === status) return;
     tableShown = status;
-    if (status === 'loading') handle.state('loading');
-    else if (status === 'error') handle.fail('The profiles could not be read. Nothing was changed.');
+    // The table's busy card (its own spinner and words) sits over the rows while it loads, also on the first read.
+    if (status === 'loading') {
+        handle.busy({ text: 'Reading the profiles…', overlay: true });
+        handle.state('loading');
+    } else if (status === 'error') handle.fail('The profiles could not be read. Nothing was changed.');
     else handle.state('ready');
 }
 
@@ -651,8 +654,8 @@ document.addEventListener('kp-menu-select', (event) => {
 });
 
 document.addEventListener('hsb:refresh', () => void refresh());
-if (Array.isArray(embedded.profiles)) drawAll();
-else void reload();
+// The first answer is read like every later one: the cards, the table and the strips load until it comes.
+void reload();
 /** @param {number} seconds how often to read again; 0 pauses the poll. */
 function setPoll(seconds) {
     pollSeconds = seconds;
