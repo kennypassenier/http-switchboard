@@ -21,7 +21,7 @@ use crate::reload::ProfileStore;
 /// The JSON the card is drawn from.
 pub const RELOADS_ROUTE: &str = "/reloads.json";
 
-struct ReloadsSection(Arc<ProfileStore>);
+struct ReloadsSection;
 
 async fn reloads(State(store): State<Arc<ProfileStore>>) -> impl IntoResponse {
     (
@@ -33,7 +33,7 @@ async fn reloads(State(store): State<Arc<ProfileStore>>) -> impl IntoResponse {
 
 /// Register the section and its route. Called by `dashboard::install`.
 pub fn install(app: &mut chassis::App, store: Arc<ProfileStore>) {
-    app.status_section(ReloadsSection(Arc::clone(&store)));
+    app.status_section(ReloadsSection);
     app.dashboard_routes(
         Router::new()
             .route(RELOADS_ROUTE, get(reloads))
@@ -45,7 +45,6 @@ impl StatusSection for ReloadsSection {
     fn render(&self) -> Section {
         let version = asset_version();
         let data = serde_json::json!({
-            "view": self.0.log.view(),
             "route": RELOADS_ROUTE,
         })
         .to_string();

@@ -1,9 +1,10 @@
 // The "Reloads" card of the status page [feat-dash-kp11-42]: the history of the profile file being read again, newest
 // first, as the approved kp-themes timeline. The data is GET /reloads.json (src/reload_log.rs: the last 50, in memory, no
-// secrets); the first answer is embedded in the page, and the card refreshes on the dashboard's own poll (the module
+// secrets); the card reads it from the first frame (loading until it answers) and then on the dashboard's own poll (the module
 // dashboard.js fires `hsb-poll` after each refresh), so there is no second timer here.
 
-import { setCardState, attachCardStates } from '/static/kp/js/card-state.js';
+import { attachCardStates } from '/static/kp/js/card-state.js';
+import { holdCardState } from './profiles.js';
 import { setProblems, attachProblems } from '/static/kp/js/problems.js';
 import { attachNewPills } from '/static/kp/js/newpill.js';
 
@@ -155,13 +156,13 @@ if (card && list && alert) {
         paintCounts();
         if (next.reloads.length === 0) {
             setState('empty', () =>
-                setCardState(card, 'empty', {
+                holdCardState(card, 'empty', {
                     title: 'No reloads yet',
                     text: 'The profile file has not been read again since the service started. This history is kept in memory, so it starts empty after every restart.',
                 }),
             );
         } else {
-            setState('ready', () => setCardState(card, 'ready'));
+            setState('ready', () => holdCardState(card, 'ready'));
         }
     }
 
@@ -175,7 +176,7 @@ if (card && list && alert) {
             show(await res.json());
         } catch {
             setState('error', () =>
-                setCardState(card, 'error', {
+                holdCardState(card, 'error', {
                     title: 'The reload history could not be read',
                     text: 'The service did not answer. Nothing was changed.',
                 }),
@@ -187,13 +188,15 @@ if (card && list && alert) {
 
     attachCardStates(document);
     attachProblems(document);
-    if (embedded.view) show(embedded.view);
-    else setCardState(card, 'loading', { words: 'Reading the reload history…' });
+    // The first answer is read like every later one: the card loads until it comes.
+    holdCardState(card, 'loading', { words: 'Reading the reload history…' });
+    shown = 'loading';
+    void refresh();
     attachNewPills(card);
 
     card.addEventListener('kp-card-retry', () => {
         shown = 'loading';
-        setCardState(card, 'loading', { words: 'Reading the reload history…' });
+        holdCardState(card, 'loading', { words: 'Reading the reload history…' });
         void refresh();
     });
     document.addEventListener('hsb-poll', () => void refresh());
