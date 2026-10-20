@@ -122,6 +122,7 @@ export const AREA_RELOAD_EVENT = 'hsb-area-reload';
 const meant = new WeakMap();
 
 /**
+ * TEMPORARY workaround until the chassis-rs wish "settleCards hook so an html section isn't set back to ready" lands.
  * Put a card in its state and keep it there. The kit shell reads its own status in the background and settles every
  * card of the page itself (loading while it reads, ready after), which would wipe a state the app set (the empty plate,
  * the busy card of a read in flight); when that happens the card's state is set again. A state already shown is left
@@ -134,7 +135,8 @@ export function holdCardState(card, state, options) {
     if (first) {
         card.addEventListener(CARD_STATE_EVENT, (event) => {
             const want = meant.get(card);
-            if (want && /** @type {CustomEvent} */ (event).detail?.state !== want.state) setCardState(card, want.state, want.options);
+            // Only the shell's 'ready' settle is undone; any other state someone sets (loading, empty, error) stands.
+            if (want && want.state !== 'ready' && /** @type {CustomEvent} */ (event).detail?.state === 'ready') setCardState(card, want.state, want.options);
         });
     }
     if (card.getAttribute('data-kp-state') === state && !first) return;
