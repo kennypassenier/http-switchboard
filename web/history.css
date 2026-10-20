@@ -34,6 +34,35 @@
     }
 }
 
+/* The refresh chooser shows every choice without scrolling (its six segments need about 32rem). On the form grid the chooser
+   spans the control and value tracks and its freshness line stands under it on the same two tracks, Refresh now stays on
+   the actions track. Under the grid's own fold (36rem) the segments stand in rows of three on the one column instead of
+   scrolling. */
+@container kp-formgrid (min-width: 36.01rem) {
+    .chassis-status .kp-formgrid .kp-refresh__bar > .kp-refresh__chooser {
+        grid-column: control-start / value-end;
+        grid-row: 1;
+    }
+
+    .chassis-status .kp-formgrid .kp-refresh__bar > .kp-refresh__line {
+        grid-column: control-start / value-end;
+        grid-row: 2;
+    }
+
+    .chassis-status .kp-formgrid .kp-refresh__bar > .kp-refresh__now {
+        grid-row: 1;
+    }
+}
+
+@container kp-formgrid (max-width: 36rem) {
+    .chassis-status .kp-formgrid .kp-refresh__segments {
+        grid-auto-flow: row;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        overflow: visible;
+        mask: none;
+    }
+}
+
 .kp-formgrid [hidden] {
     display: none;
 }
