@@ -88,3 +88,33 @@ set: `--url`, `--login-form <url>,<userField>,<passField>,<submitSelector>`
 `--cookie`, `--storage-state`, `--assets-from /static/kp=<kp-themes
 checkout>` and `--ignore-https-errors`. Against the real 3.9.0 build no
 `--assets-from` is needed.
+
+## Done at the bump to chassis-rs 3.9.0 (kp-themes 11.1.1, 20/10/2026)
+
+Dropped (the package does it now, checked against kp-themes v11.1.1 and on the real 3.9.0 build in Firefox at 1280 and 390):
+
+- 26: the trace state word's `min-inline-size` floor (`.hsb-trace .kp-steplist__time`).
+- 27: the app's `.kp-diff__line` columns (wide and narrow).
+- 28/29: already gone (health.css only shares the rows).
+- 30: the hand-made refresh label and its `grid-column: label` rule; `data-kp-refresh-label="Page refresh"` draws it.
+- 31: the settings stage and its hand-written subgrid cards; the stage is `data-kp-formgrid-stage`, a card is
+  `.kp-card.kp-formgrid[data-kp-formgrid-rows="subgrid"]` with `data-kp-formgrid-lines`, its head
+  `data-kp-formgrid-span="all"`; `attachFormgridStages(document)` is called from web/dashboard.js (no auto.js here).
+- 32: the `.kp-field` `--kp-field-max-width: none` override.
+- 33: the entity action tracks (`--kp-entity-cols`, wrapping labels). Consequence: at 390 the three card actions now fold
+  into one "More" button (the package's `fitActions`: a label that does not fit its equal column goes into More).
+- 23 (tool-row heights): no app rule existed; the `.kp-jsonfield__tools` track grid stays because the demo keeps it too.
+- 35: `kp-code-retry` was already wired (`body.addEventListener('kp-code-retry', ...)`); the failed plate is the package's.
+
+Stays (not fixed in 11.1.1 / 3.9.0):
+
+- The kit's chassis.css styles every `.kp-refresh__bar` inside `.chassis-status` outside the package's layer
+  (three auto tracks, a phone fold), which defeats the form grid's subgrid for the bar of Last 24 hours: label, chooser
+  and freshness stood in one column. history.css puts the package's rules back (subgrid above 36rem, one column below).
+  Belongs to chassis-rs: scope that rule to the kit's own header bar.
+- `.hsbt-card__data > .kp-code { grid-template-rows: auto minmax(0, 1fr) }`: a code view in a stage taller than itself
+  gives the extra to its head as well (package: two auto rows).
+- The refresh chooser's track (control, 29 rem wide with the wide note row) scrolls: "Other..." is out of view at 1280.
+  That is the package's behaviour for a chooser wider than its track.
+- The chassis "Status" card trio no longer exists (the kit status page is `.kp-ops`); the three standing measure lines
+  for it are to be re-measured by the lead.

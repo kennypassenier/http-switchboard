@@ -13,6 +13,9 @@ endpoints and the CLI verbs — not about the internals.
   `/translate` stand on `.kp-formgrid`, `data-kp-subgrid` and subgrids (the
   approved layout demo); the profiles card and the recheck table use the
   package's own loading, empty and failed states. Needs kp-themes 11.1 (chassis 3.9.0).
+- **chassis-rs 3.9.0 (kp-themes 11.1.1).** The settings cards share their rows through
+  `data-kp-formgrid-stage`, the page refresh label, entity action tracks, diff line tracks, field width and trace
+  state word now come from the package; the app's copies of them are gone.
 
 ## [3.5.0] - 2026-10-19
 
