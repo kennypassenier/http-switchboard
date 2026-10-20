@@ -118,3 +118,20 @@ Stays (not fixed in 11.1.1 / 3.9.0):
   That is the package's behaviour for a chooser wider than its track.
 - The chassis "Status" card trio no longer exists (the kit status page is `.kp-ops`); the three standing measure lines
   for it are to be re-measured by the lead.
+
+## Final measure on the real chassis-rs 3.9.0 (20/10/2026)
+
+measure-gaps (kp-themes v11.1.1 checkout, logged in by session cookie, no
+asset override), formal and dark, 1280 and 390:
+
+- `/translate`: clear in all four.
+- `/`: align clear; 4 state lines in each of the four runs, none of them
+  layout:
+  - Uptime by the hour: the held-back half looks for a busy card inside
+    every `.kp-uptime`, while kp-themes draws one shared card over the
+    group (gap 40, a checker issue; the strips do load with it).
+  - Profiles, Last 24 hours, Reloads: "card loading shows no loading look
+    (driven)". Driven by hand in Firefox the busy card shows and holds;
+    under the check it does not. Most likely the chassis shell's poll
+    settles the card back to ready while the check measures (gap 38, the
+    chassis-rs settleCards wish); not proven.
