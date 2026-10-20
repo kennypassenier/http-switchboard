@@ -7,10 +7,30 @@
     font-size: var(--kp-text-sm, 0.8125rem);
 }
 
-/* The label of the refresh chooser stands in the bar's first track, as the page's other labels do. */
+/* The kit's status page styles every `.kp-refresh__bar` inside `.chassis-status` (chassis.css, three auto tracks and a phone fold)
+   outside the package's layer, so it beats the form grid's own rows for the bar (subgrid on the label | control | value |
+   actions tracks, the stack under 36rem). This puts the package's rules back for this page's bar; chassis-rs and kp-themes
+   own the real fix (a kit rule scoped to the kit's own header bar). */
+.chassis-status .kp-formgrid .kp-refresh > .kp-refresh__bar {
+    column-gap: inherit;
+    align-items: first baseline;
+}
+
 @container kp-formgrid (min-width: 36.01rem) {
-    .hsb-h-refresh-label {
-        grid-column: label;
+    .chassis-status .kp-formgrid .kp-refresh > .kp-refresh__bar {
+        grid-template-columns: subgrid;
+    }
+}
+
+@container kp-formgrid (max-width: 36rem) {
+    .chassis-status .kp-formgrid .kp-refresh > .kp-refresh__bar {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .chassis-status .kp-formgrid .kp-refresh > .kp-refresh__bar > * {
+        grid-column: 1;
+        grid-row: auto;
+        justify-self: start;
     }
 }
 

@@ -421,15 +421,10 @@ export function start(dashboard) {
     // The refresh chooser (default mode; Segments): it reads the profiles snapshot and the history together, and
     // takes the page's poll over from dashboard.js.
     // The chooser is the form grid's own refresh bar: its choice, its freshness line and Refresh now stand on the tracks of
-    // the rows around it, and the page's label in the first track.
+    // the rows around it, and the page's label (data-kp-refresh-label) in the first track.
     const chooser = $('hsb-h-refresh');
     if (chooser) {
-        const bar = () => chooser.querySelector('.kp-refresh__bar');
         attachRefresh($('hsb-h-grid') ?? chooser);
-        const label = document.createElement('b');
-        label.className = 'kp-formgrid__label hsb-h-refresh-label';
-        label.textContent = 'Page refresh';
-        bar()?.prepend(label);
         dashboard.setPoll(0);
         chooser.addEventListener(REFRESH_EVENT, async (event) => {
             const detail = /** @type {CustomEvent} */ (event).detail;
