@@ -14,6 +14,7 @@ import { toast } from '/static/kp/js/overlays.js';
 import { setMenu, attachMenuButtons } from '/static/kp/js/menu-button.js';
 import { attachDataTables, dataTable } from '/static/kp/js/datatable.js';
 import { attachFootprints } from '/static/kp/js/footprint.js';
+import { attachFormgridStages } from '/static/kp/js/forms.js';
 import { AREA_RELOAD_EVENT, attachArea, attachProfileHover, markName, paintFresh, refreshHover, setArea, watchEntityNames } from './profiles.js';
 
 const POLL_MS = 10_000;
@@ -240,8 +241,12 @@ const code = (text) => el('code', 'kp-id', text);
 
 /** @param {string} name */
 function makeCard(name) {
-    const card = el('article', 'kp-card hsb-profile');
+    const card = el('article', 'kp-card kp-formgrid hsb-profile');
+    // The card takes its rows from the stage (data-kp-formgrid-stage): Source stands beside Source in every card.
+    card.setAttribute('data-kp-formgrid-rows', 'subgrid');
+    card.setAttribute('data-kp-formgrid-lines', 'lines');
     const head = el('header', 'hsb-head');
+    head.setAttribute('data-kp-formgrid-span', 'all');
     const title = el('h3', 'kp-card__title');
     const label = el('span', '', name);
     markName(label, name);
@@ -599,6 +604,7 @@ attachMenuButtons(document);
 attachDataTables(document);
 attachFlashButtons(document);
 attachFootprints(document);
+attachFormgridStages(document);
 attachArea(area);
 attachProfileHover(
     [area, ...all('.hsb-trace'), settingsEl, ...all('.hsb-table')].filter((root, i, list) => list.indexOf(root) === i),

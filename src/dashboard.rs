@@ -474,7 +474,10 @@ impl StatusSection for SettingsSection {
                       credential and is never shown."
                 .to_string(),
             rows: Vec::new(),
-            html: Some(r#"<div class="hsb-stage" id="hsb-settings"></div>"#.to_string()),
+            html: Some(
+                r#"<div class="hsb-stage" id="hsb-settings" data-kp-formgrid-stage></div>"#
+                    .to_string(),
+            ),
         }
     }
 }

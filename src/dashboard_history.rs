@@ -83,7 +83,7 @@ impl StatusSection for FiguresSection {
             r##"<link rel="stylesheet" href="{WEB_MOUNT}/history.css?v={version}">
 <script type="application/json" id="hsb-history-data">{data}</script>
 <div class="kp-formgrid" id="hsb-h-grid">
-  <div class="kp-refresh" id="hsb-h-refresh" data-kp-refresh="30" data-kp-remember="hsb-refresh" data-kp-look="segmented"></div>
+  <div class="kp-refresh" id="hsb-h-refresh" data-kp-refresh="30" data-kp-refresh-label="Page refresh" data-kp-remember="hsb-refresh" data-kp-look="segmented"></div>
   <div class="kp-formgrid__row">
     <span class="kp-formgrid__label" aria-hidden="true"></span>
     <div class="kp-formgrid__control" data-kp-formgrid-span="wide"><p class="hsb-h-note">History since the last start, at most 24 hours.</p></div>
