@@ -44,11 +44,6 @@
     min-inline-size: 0;
 }
 
-/* The field fills its column (the field's own cap is 28 rem), so the box, the template and the result stand on one width. */
-.hsbt-try__input .kp-field {
-    --kp-field-max-width: none;
-}
-
 /* The box's tools stand on the tracks of the template's: Format and Minify at the start, Wrap and Copy at the end edge, where the
    template's and the result's own Wrap and Copy stand. */
 .hsbt-try .kp-jsonfield__tools {
@@ -118,6 +113,12 @@
     min-inline-size: 0;
 }
 
+/* The result's code view stands in a stage taller than itself: its head keeps its height and the body takes the rest (the
+   package's two auto rows would share the extra between them and stretch the head). */
+.hsbt-card__data > .kp-code {
+    grid-template-rows: auto minmax(0, 1fr);
+}
+
 .hsbt-diff {
     max-block-size: 24rem;
     overflow: auto;
@@ -140,13 +141,6 @@
     text-align: end;
 }
 
-/* A diff line: the number, the sign and the text are three columns, and the text column is minmax(0, 1fr), not 1fr, so a long
-   token wraps inside the card instead of running past the others. */
-.hsbt-diff .kp-diff__line {
-    grid-template-columns: 3rem 1ch minmax(0, 1fr);
-    overflow-wrap: anywhere;
-}
-
 @container hsbt (max-width: 40rem) {
     .hsbt-card--diff .kp-card__header {
         grid-template-columns: minmax(0, 1fr);
@@ -156,9 +150,5 @@
     .hsbt-card--diff .hsbt-counts {
         justify-self: start;
         text-align: start;
-    }
-
-    .hsbt-diff .kp-diff__line {
-        grid-template-columns: 2rem 1ch minmax(0, 1fr);
     }
 }

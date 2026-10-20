@@ -16,17 +16,6 @@
     min-block-size: 0;
 }
 
-/* The three actions of a card are three equal tracks of one grid, the same in every card. */
-.hsb-area .kp-entity__actions {
-    grid-template-columns: repeat(var(--kp-entity-cols, 3), minmax(0, 1fr));
-    align-items: stretch;
-}
-
-.hsb-area .kp-entity__actions > .kp-button {
-    white-space: normal;
-    line-height: 1.2;
-}
-
 /* The freshness line is the last row of a profile card: two tracks, the moment at the start edge and how long a silence is
    allowed at the end edge, in the column of the state badge and the meter's value above it. */
 .hsb-fresh {
