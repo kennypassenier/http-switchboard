@@ -6,7 +6,7 @@
 // short label the server made, never the body.
 
 import { attachHoverCards } from '/static/kp/js/hovercard.js';
-import { attachCardStates, setCardState } from '/static/kp/js/card-state.js';
+import { attachCardStates, CARD_STATE_EVENT, setCardState } from '/static/kp/js/card-state.js';
 import { agoMoment, attachAgo, humanDuration, setAgo } from '/static/kp/js/freshness.js';
 import { setStrings } from '/static/kp/js/strings.js';
 
@@ -116,34 +116,53 @@ export function watchEntityNames(grid) {
 /** Fired on the card when its "Reload profiles" is pressed (the empty state's one action). */
 export const AREA_RELOAD_EVENT = 'hsb-area-reload';
 
-/** @type {WeakMap<HTMLElement, string>} */
-const shown = new WeakMap();
+/** @typedef {'ready' | 'loading' | 'empty' | 'error'} CardState */
+
+/** The state each card of the page is meant to be in, with the note it was given. @type {WeakMap<HTMLElement, { state: CardState, options?: import('/static/kp/js/card-state.js').CardStateOptions }>} */
+const meant = new WeakMap();
 
 /**
- * Put the profiles card in a state. A state that is already shown is left alone, so a poll does not rebuild the note
- * under a focused Try again.
- * @param {HTMLElement} card @param {'ready' | 'loading' | 'empty' | 'error'} state
+ * Put a card in its state and keep it there. The kit shell reads its own status in the background and settles every
+ * card of the page itself (loading while it reads, ready after), which would wipe a state the app set (the empty plate,
+ * the busy card of a read in flight); when that happens the card's state is set again. A state already shown is left
+ * alone, so a poll does not rebuild the note under a focused Try again.
+ * @param {HTMLElement} card @param {CardState} state @param {import('/static/kp/js/card-state.js').CardStateOptions} [options]
+ */
+export function holdCardState(card, state, options) {
+    const first = !meant.has(card);
+    meant.set(card, { state, options });
+    if (first) {
+        card.addEventListener(CARD_STATE_EVENT, (event) => {
+            const want = meant.get(card);
+            if (want && /** @type {CustomEvent} */ (event).detail?.state !== want.state) setCardState(card, want.state, want.options);
+        });
+    }
+    if (card.getAttribute('data-kp-state') === state && !first) return;
+    setCardState(card, state, options);
+}
+
+/**
+ * Put the profiles card in a state.
+ * @param {HTMLElement} card @param {CardState} state
  */
 export function setArea(card, state) {
-    if (shown.get(card) === state) return;
-    shown.set(card, state);
     if (state === 'ready') {
-        setCardState(card, 'ready');
+        holdCardState(card, 'ready');
     } else if (state === 'loading') {
-        setCardState(card, 'loading', { words: 'Reading the profiles…' });
+        holdCardState(card, 'loading', { words: 'Reading the profiles…' });
     } else if (state === 'empty') {
         const reload = document.createElement('button');
         reload.type = 'button';
         reload.className = 'kp-button';
         reload.setAttribute('data-hsb-reload', '');
         reload.textContent = 'Reload profiles';
-        setCardState(card, 'empty', {
+        holdCardState(card, 'empty', {
             title: 'No profiles are configured',
             text: 'A profile says where messages come from and where they go. Add one to the configuration and reload.',
             action: reload,
         });
     } else {
-        setCardState(card, 'error', { title: 'The profiles could not be read', text: 'The status service did not answer in time. Nothing was changed.' });
+        holdCardState(card, 'error', { title: 'The profiles could not be read', text: 'The status service did not answer in time. Nothing was changed.' });
     }
 }
 
