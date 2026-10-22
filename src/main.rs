@@ -16,6 +16,7 @@ use std::process::ExitCode;
 use std::sync::Arc;
 
 use axum::Router;
+use chassis::storage::{AppDbSpec, BrowserKeys};
 use chassis::{App, AppSpec, Control};
 use http_switchboard::app::App as Switchboard;
 use http_switchboard::config::{self, ProcessEnv, Source};
@@ -136,6 +137,24 @@ async fn main() -> ExitCode {
             Arc::clone(&switchboard.profiles),
             Arc::clone(&switchboard.registry),
         )),
+    );
+
+    // chassis-rs 3.12: the reader's own browser choices follow them across
+    // devices. The preferences are a table of the app database, which has no
+    // tables of its own here. Only user choices are declared, never a
+    // secret: the profiles View, the Last 24 hours tiles and press choice,
+    // and every `kp-remember:` choice kp-themes keeps (the refresh chooser's
+    // interval, the matrix view, a table's sort and columns).
+    if let Err(e) = app.app_db(AppDbSpec::new(Vec::new())) {
+        eprintln!("{e}");
+        return ExitCode::FAILURE;
+    }
+    app.sync_browser_keys(
+        BrowserKeys::new()
+            .exact("hsb-profiles-view")
+            .exact("hsb-history-tiles")
+            .exact("hsb-history-press")
+            .prefix("kp-remember:"),
     );
 
     let switchboard = Arc::new(switchboard);
