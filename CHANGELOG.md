@@ -7,6 +7,8 @@ endpoints and the CLI verbs — not about the internals.
 
 ## [Unreleased]
 
+## [4.0.0] - 2026-10-22
+
 ### Changed
 
 - **Everything on the grid, standard states.** Every status-page view and
