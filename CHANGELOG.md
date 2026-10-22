@@ -16,6 +16,19 @@ endpoints and the CLI verbs — not about the internals.
 - **chassis-rs 3.9.0 (kp-themes 11.1.1).** The settings cards share their rows through
   `data-kp-formgrid-stage`, the page refresh label, entity action tracks, diff line tracks, field width and trace
   state word now come from the package; the app's copies of them are gone.
+- **chassis-rs 3.13.0 (kp-themes 11.2.0).** The three workarounds it makes unnecessary are gone: the Profiles, Last 24
+  hours and Reloads cards carry `data-chassis-owned` and set their own state with the package's `setCardState`
+  (no `holdCardState`), the refresh bar's subgrid restore (the kit's rule now reaches only its own header bar) and the
+  code view's row override (kp-themes fixed the stretched head).
+
+### Added
+
+- **Trusted admin.** `HTTP_SWITCHBOARD_TRUSTED_ADMINS=10.10.10.10` (unit, `update_cmd`, handover) admits that one
+  machine as the admin without a login, on the service's own port (chassis-rs 3.13).
+- **Synced preferences.** The View of the profiles, the Last 24 hours tiles and press choice and every kp-themes
+  remembered choice (`kp-remember:`, the refresh interval among them) follow the reader across devices
+  (chassis-rs 3.12, `App::sync_browser_keys`). The app now has a small database of its own, `http-switchboard.db`,
+  for them; no secret is ever declared.
 
 ## [3.5.0] - 2026-10-19
 
