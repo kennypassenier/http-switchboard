@@ -394,7 +394,7 @@ impl StatusSection for ProfilesSection {
 <link rel="stylesheet" href="{WEB_MOUNT}/profiles.css?v={version}">
 <script type="application/json" id="hsb-data">{data}</script>
 <script type="module" src="{WEB_MOUNT}/dashboard.js?v={version}"></script>
-<section class="kp-card hsb-area" id="hsb-area" data-kp-state="loading" data-kp-loading-words="Reading the profiles…" aria-label="Profiles">
+<section class="kp-card hsb-area" id="hsb-area" data-chassis-owned data-kp-state="loading" data-kp-loading-words="Reading the profiles…" aria-label="Profiles">
   <div class="kp-formgrid">
     <div class="kp-formgrid__row">
       <b class="kp-formgrid__label" id="hsb-view-l">View</b>

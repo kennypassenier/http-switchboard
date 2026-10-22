@@ -113,12 +113,6 @@
     min-inline-size: 0;
 }
 
-/* The result's code view stands in a stage taller than itself: its head keeps its height and the body takes the rest (the
-   package's two auto rows would share the extra between them and stretch the head). */
-.hsbt-card__data > .kp-code {
-    grid-template-rows: auto minmax(0, 1fr);
-}
-
 .hsbt-diff {
     max-block-size: 24rem;
     overflow: auto;

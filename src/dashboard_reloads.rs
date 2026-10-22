@@ -52,7 +52,7 @@ impl StatusSection for ReloadsSection {
             r##"<link rel="stylesheet" href="{WEB_MOUNT}/reloads.css?v={version}">
 <script type="application/json" id="hsb-reloads-data">{data}</script>
 <script type="module" src="{WEB_MOUNT}/reloads.js?v={version}"></script>
-<section class="kp-card hsb-reloads-card" id="hsb-reloads" data-kp-state="loading" aria-labelledby="hsb-reloads-t">
+<section class="kp-card hsb-reloads-card" id="hsb-reloads" data-chassis-owned data-kp-state="loading" aria-labelledby="hsb-reloads-t">
   <div class="kp-card__header">
     <h3 class="kp-card__title" id="hsb-reloads-t">Reloads</h3>
     <p class="hsb-reloads-counts" id="hsb-reloads-counts" aria-live="polite"></p>
