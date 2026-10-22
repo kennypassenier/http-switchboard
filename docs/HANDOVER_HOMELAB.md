@@ -21,6 +21,15 @@
 > token today** — `chassis clients issue` is there for the first one that
 > does. `docs/KIT.md` describes the rest of what the kit now serves.
 
+> **Trusted admin (chassis-rs 3.13, 2026-10-22).** Kenny's PC, `10.10.10.10`, is the admin without a login or token:
+> `HTTP_SWITCHBOARD_TRUSTED_ADMINS=10.10.10.10` is an `Environment=` line of `deploy/http-switchboard.service` and the
+> matching `--property=Environment=` of `update_cmd` in `deploy/service.yml`, so the install and the self-update agree.
+> Only the TCP peer counts (never `X-Forwarded-For`), so the setting admits that machine on the service's own port and
+> nothing arriving through a reverse proxy; a bearer, when sent, still decides. `--check` and the start log print a
+> warning that names the address, by design. Empty or absent, nothing changes. Preferences (chassis 3.12) make the app
+> keep its own small database next to the kit's, `http-switchboard.db` in the state directory, for the reader's
+> synced browser choices; nothing else uses it.
+>
 > **2.0.0 (chassis migration, 2026-09-05):** the compose preset described
 > below is retired and `deploy/homelab-preset/` is gone. The switchboard now
 > deploys like every chassis service: native binary at

@@ -26,6 +26,7 @@ update_cmd: >-
   --property=WorkingDirectory=/appdata/kyu/http-switchboard-config
   --property=Environment=HTTP_SWITCHBOARD_STATE_DIR=/appdata/kyu/http-switchboard-config
   --property=Environment=HTTP_SWITCHBOARD_TIMEOUT_STOP_SECS=60
+  --property=Environment=HTTP_SWITCHBOARD_TRUSTED_ADMINS=10.10.10.10
   /opt/http-switchboard/bin/http-switchboard update
 release_repo: kennypassenier/http-switchboard
 release_asset: http-switchboard

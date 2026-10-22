@@ -11,6 +11,8 @@ services:
     # HTTP_SWITCHBOARD_PUBLIC_URL is not in this list: it is a passkeys knob, and
     # the scaffold builds without that feature (feat-build-1).
     env_file: /etc/http-switchboard/http-switchboard.env   # HTTP_SWITCHBOARD_TOKEN, HTTP_SWITCHBOARD_SECRET_KEY
+    # Optional (chassis-rs 3.13): HTTP_SWITCHBOARD_TRUSTED_ADMINS=10.10.10.10 admits that exact address without a login.
+    # Only the TCP peer counts, so it does nothing behind a reverse proxy.
     volumes:
       - http-switchboard-state:/var/lib/http-switchboard    # a named volume inherits the image's owner
     logging:

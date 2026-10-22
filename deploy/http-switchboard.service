@@ -49,6 +49,9 @@ TimeoutStopSec=60
 # still runs against this machine's measured directory.
 Environment=HTTP_SWITCHBOARD_STATE_DIR=/appdata/kyu/http-switchboard-config
 Environment=HTTP_SWITCHBOARD_TIMEOUT_STOP_SECS=60
+# chassis-rs 3.13: Kenny's PC is the admin without a login or token. Only the TCP peer counts, so this works when the
+# dashboard is opened straight on the service's port, never through a reverse proxy (the peer is then the proxy).
+Environment=HTTP_SWITCHBOARD_TRUSTED_ADMINS=10.10.10.10
 NoNewPrivileges=yes
 PrivateTmp=yes
 ProtectSystem=strict
