@@ -87,6 +87,8 @@ const WEB_FILES: &[(&str, &[u8])] = &[
     ("profiles.js", include_bytes!("../web/profiles.js")),
     ("profiles.css", include_bytes!("../web/profiles.css")),
     ("health.js", include_bytes!("../web/health.js")),
+    ("health-words.js", include_bytes!("../web/health-words.js")),
+    ("health-hub.js", include_bytes!("../web/health-hub.js")),
     ("health.css", include_bytes!("../web/health.css")),
     ("reloads.js", include_bytes!("../web/reloads.js")),
     ("reloads.css", include_bytes!("../web/reloads.css")),
