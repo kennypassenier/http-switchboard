@@ -12,14 +12,13 @@
 //! a client is called a *sender* here, and the status page carries the
 //! Profiles section from `dashboard.rs`.
 
-mod cli;
-
 use std::process::ExitCode;
 use std::sync::Arc;
 
 use axum::Router;
 use chassis::{App, Control};
 use http_switchboard::app::App as Switchboard;
+use http_switchboard::cli;
 
 #[tokio::main]
 async fn main() -> ExitCode {

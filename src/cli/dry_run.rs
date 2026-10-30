@@ -3,7 +3,7 @@
 
 use std::process::ExitCode;
 
-use http_switchboard::translate::{self, Delivery, Target};
+use crate::translate::{self, Delivery, Target};
 
 use super::config_file::load_config_file;
 use super::spec::usage;
@@ -62,7 +62,7 @@ fn print_delivery(delivery: &Delivery) {
 }
 
 /// Run the subcommand; the exit code is the result.
-pub(crate) fn dry_run(args: &[String]) -> ExitCode {
+pub fn dry_run(args: &[String]) -> ExitCode {
     match run(args) {
         Ok(()) => ExitCode::SUCCESS,
         Err(message) => {

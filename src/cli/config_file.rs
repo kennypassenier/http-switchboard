@@ -1,6 +1,6 @@
 //! Reading the switchboard's half of the shared config file.
 
-use http_switchboard::config::{self, ProcessEnv};
+use crate::config::{self, ProcessEnv};
 
 use super::spec::spec;
 
@@ -15,7 +15,7 @@ use super::spec::spec;
 /// fix-3: without the strip this verb answered "not valid TOML" on a file
 /// that is valid TOML and that the service starts from happily, which is
 /// exactly the file the operations runbook tells an operator to point it at.
-pub(crate) fn load_config_file(path: &str) -> Result<config::Config, String> {
+pub fn load_config_file(path: &str) -> Result<config::Config, String> {
     let text = std::fs::read_to_string(path).map_err(|e| {
         format!(
             "{path}: cannot be read ({e}). What now: check the path (--config / \
@@ -42,7 +42,7 @@ pub(crate) fn load_config_file(path: &str) -> Result<config::Config, String> {
 /// lines, one of which stripped `notify` on knowledge that lived nowhere
 /// and would have gone silently wrong the day the kit gained a second
 /// section.
-pub(crate) fn config_from_app(app: &chassis::App, path: &str) -> Result<config::Config, String> {
+pub fn config_from_app(app: &chassis::App, path: &str) -> Result<config::Config, String> {
     let table = app.project_table().map_err(|e| e.to_string())?;
     let own = toml::to_string(&table).map_err(|e| format!("{path}: cannot re-serialise: {e}"))?;
     config::load(path, &own, &ProcessEnv).map_err(|e| e.to_string())

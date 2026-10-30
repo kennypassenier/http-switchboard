@@ -3,14 +3,14 @@
 
 use std::sync::Arc;
 
+use crate::app::App as Switchboard;
+use crate::config::Source;
+use crate::obs::{ProfileSubsystem, RegistryMetrics};
 use chassis::storage::{AppDbSpec, BrowserKeys};
 use chassis::App;
-use http_switchboard::app::App as Switchboard;
-use http_switchboard::config::Source;
-use http_switchboard::obs::{ProfileSubsystem, RegistryMetrics};
 
 /// Health, metrics, inbound routes, vocabulary and dashboard.
-pub(crate) fn wire_service(app: &mut App, switchboard: &Switchboard) {
+pub fn wire_service(app: &mut App, switchboard: &Switchboard) {
     for profile in &switchboard.config.profiles {
         app.subsystem(ProfileSubsystem::new(
             &profile.name,
@@ -35,9 +35,9 @@ pub(crate) fn wire_service(app: &mut App, switchboard: &Switchboard) {
     app.vocabulary("sender", "senders");
     // The four status sections, their routes and the module that draws
     // them (kp-themes 11 views): one call, shared with the door tests.
-    http_switchboard::dashboard::install(
+    crate::dashboard::install(
         app,
-        Arc::new(http_switchboard::dashboard::Profiles::new(
+        Arc::new(crate::dashboard::Profiles::new(
             &switchboard.config,
             Arc::clone(&switchboard.profiles),
             Arc::clone(&switchboard.registry),
@@ -51,7 +51,7 @@ pub(crate) fn wire_service(app: &mut App, switchboard: &Switchboard) {
 /// secret: the profiles View, the Last 24 hours tiles and press choice,
 /// and every `kp-remember:` choice kp-themes keeps (the refresh chooser's
 /// interval, the matrix view, a table's sort and columns).
-pub(crate) fn wire_browser_prefs(app: &mut App) -> Result<(), String> {
+pub fn wire_browser_prefs(app: &mut App) -> Result<(), String> {
     app.app_db(AppDbSpec::new(Vec::new()))
         .map_err(|e| e.to_string())?;
     app.sync_browser_keys(
@@ -65,7 +65,7 @@ pub(crate) fn wire_browser_prefs(app: &mut App) -> Result<(), String> {
 }
 
 /// Start the pumps after the bind and stop them in the shutdown window.
-pub(crate) fn wire_lifecycle(app: &mut App, switchboard: Arc<Switchboard>) {
+pub fn wire_lifecycle(app: &mut App, switchboard: Arc<Switchboard>) {
     let stop: Arc<std::sync::Mutex<Option<tokio::sync::broadcast::Sender<()>>>> =
         Arc::new(std::sync::Mutex::new(None));
     {

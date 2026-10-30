@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use http_switchboard::app::App as Switchboard;
+use crate::app::App as Switchboard;
 
 use super::config_file::load_config_file;
 
@@ -10,12 +10,12 @@ use super::config_file::load_config_file;
 /// the file again and apply it if — and only if — it is a complete, valid
 /// config of the same shape. Registering the handler also means a stray
 /// hangup no longer ends the process, which is the signal's default.
-pub(crate) fn spawn_reload_on_hangup(path: String, switchboard: Arc<Switchboard>) {
+pub fn spawn_reload_on_hangup(path: String, switchboard: Arc<Switchboard>) {
     use tokio::signal::unix::{signal, SignalKind};
     let mut hangup = match signal(SignalKind::hangup()) {
         Ok(s) => s,
         Err(e) => {
-            http_switchboard::obs::log_warn(
+            crate::obs::log_warn(
                 "-",
                 "reload_unavailable",
                 &format!("cannot listen for SIGHUP ({e}); a config change needs a restart"),
@@ -26,15 +26,14 @@ pub(crate) fn spawn_reload_on_hangup(path: String, switchboard: Arc<Switchboard>
     tokio::spawn(async move {
         while hangup.recv().await.is_some() {
             let loaded = load_config_file(&path);
-            let outcome =
-                http_switchboard::reload::apply(&switchboard.config, &switchboard.profiles, loaded);
+            let outcome = crate::reload::apply(&switchboard.config, &switchboard.profiles, loaded);
             switchboard.registry.record_reload(outcome.label());
-            let line = http_switchboard::reload::describe(&outcome);
+            let line = crate::reload::describe(&outcome);
             match outcome {
-                http_switchboard::reload::Outcome::Applied { .. } => {
-                    http_switchboard::obs::log_info("-", "config_reloaded", &line)
+                crate::reload::Outcome::Applied { .. } => {
+                    crate::obs::log_info("-", "config_reloaded", &line)
                 }
-                _ => http_switchboard::obs::log_warn("-", "config_not_reloaded", &line),
+                _ => crate::obs::log_warn("-", "config_not_reloaded", &line),
             }
         }
     });

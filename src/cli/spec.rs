@@ -5,7 +5,7 @@ use chassis::AppSpec;
 
 /// The kit's description of this service. One definition, because the
 /// dry-run needs the same knob and section names the real start does.
-pub(crate) fn spec() -> AppSpec {
+pub fn spec() -> AppSpec {
     AppSpec {
         name: "http-switchboard",
         version: env!("CARGO_PKG_VERSION"),
@@ -14,7 +14,7 @@ pub(crate) fn spec() -> AppSpec {
     }
 }
 
-pub(crate) fn usage() -> String {
+pub fn usage() -> String {
     "http-switchboard [--config <config.toml>] [--listen host:port] [--state-dir <dir>]\n\
      http-switchboard --check [--config <config.toml>]\n\
      http-switchboard --healthcheck [http://127.0.0.1:8080/healthz]\n\
