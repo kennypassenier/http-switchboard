@@ -106,7 +106,7 @@ client token before this service reads a body; `inbound_token` is retired
 with a refusal that names `chassis clients issue`. A client is a *sender*
 here. The status page carries a Profiles section and one button, Recheck
 profiles, which clears a failure an http-source profile cannot clear
-itself. The door suite (`tests/l5b_door.rs`) runs on
+itself. The door suite (`tests/l5b_door/`) runs on
 `chassis::testing::TestApp`; the project's own fakes stay where the
 subject is the pump, the hub and the retry ladder.
 
