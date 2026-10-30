@@ -31,7 +31,7 @@ export function wordsOf(p) {
                 title: `${p.name}: the kyu hub cannot be reached`,
                 text: kyu ? `Nothing arrives on ${topic} while the hub does not answer.` : `Nothing can be published to ${sinkTopic} while the hub does not answer.`,
                 why: kyu ? `The switchboard reads ${topic} from the hub, and the hub does not answer.` : `The switchboard publishes to ${sinkTopic} on the hub, and the hub does not answer.`,
-                remedy: 'Check that kyu is running on CT 109.',
+                remedy: 'Check that the kyu hub is running.',
                 command: 'systemctl status kyu',
                 fix: 'Check again',
             };
