@@ -21,11 +21,14 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use axum::body::Bytes;
-use axum::extract::{DefaultBodyLimit, State};
+use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::post;
 use axum::Router;
+
+mod standalone;
+pub use standalone::router;
 
 use crate::adapters::{deliver_with_retry, Clock, Sink};
 use crate::config::{Config, Profile, Source};
@@ -98,65 +101,6 @@ pub fn profile_router(
     router
 }
 
-/// The pre-2.0.0 stand-alone router: profile paths plus `/healthz`,
-/// `/metrics` and the body cap. Kept for the in-process suites; the binary
-/// gets these three from the kit.
-pub fn router(
-    config: &Config,
-    store: Arc<ProfileStore>,
-    sink: Arc<dyn Sink>,
-    clock: Arc<dyn Clock>,
-    registry: Arc<Registry>,
-) -> Router {
-    let router = profile_router(config, store, sink, clock, Arc::clone(&registry));
-
-    // AR11: the same listener, on paths the config refuses to let a
-    // profile claim. Neither answers anything a message put there.
-    let health_registry = Arc::clone(&registry);
-    let metrics_registry = Arc::clone(&registry);
-    router
-        .route(
-            "/healthz",
-            axum::routing::get(
-                move |axum::extract::Query(q): axum::extract::Query<
-                    std::collections::HashMap<String, String>,
-                >| {
-                    let registry = Arc::clone(&health_registry);
-                    async move {
-                        let (healthy, body) = registry.healthz();
-                        // Plain /healthz answers liveness: the process is
-                        // up and can serve. ?strict=1 answers "is every
-                        // profile doing its job", for a monitor that should
-                        // alarm rather than restart (Phase 7, G2).
-                        let strict = matches!(
-                            q.get("strict").map(String::as_str),
-                            Some("1" | "true" | "yes")
-                        );
-                        let status = if healthy || !strict {
-                            StatusCode::OK
-                        } else {
-                            StatusCode::SERVICE_UNAVAILABLE
-                        };
-                        (status, [("content-type", "application/json")], body)
-                    }
-                },
-            ),
-        )
-        .route(
-            "/metrics",
-            axum::routing::get(move || {
-                let registry = Arc::clone(&metrics_registry);
-                async move {
-                    (
-                        [("content-type", "text/plain; version=0.0.4")],
-                        registry.metrics(),
-                    )
-                }
-            }),
-        )
-        .layer(DefaultBodyLimit::max(MAX_BODY_BYTES))
-}
-
 async fn handle(State(state): State<Arc<Inbound>>, body: Bytes) -> impl IntoResponse {
     // W8, as amended in 3.0.0 (H1): the door is the kit's client token,
     // checked by the kit's own layer before this handler is reached. What
@@ -178,75 +122,81 @@ async fn handle(State(state): State<Arc<Inbound>>, body: Bytes) -> impl IntoResp
         .collect();
     let mut failures = Vec::new();
     for profile in &profiles {
-        let started = std::time::Instant::now();
-        let (ok, attempts) = match translate::prepare(profile, &body) {
-            Err(e) => {
-                failures.push(format!("{e}"));
-                (false, 0)
-            }
-            Ok(delivery) => {
-                let outcome = deliver_with_retry(
-                    profile,
-                    &delivery,
-                    state.sink.as_ref(),
-                    state.clock.as_ref(),
-                )
-                .await;
-                let attempts = outcome.attempts;
-                match outcome.result {
-                    Ok(()) => (true, attempts),
-                    Err(e) => {
-                        failures.push(format!("profile '{}': {e}", profile.name));
-                        (false, attempts)
-                    }
-                }
-            }
-        };
-        let duration_ms = started.elapsed().as_millis() as u64;
-        state.registry.record(&profile.name, ok, duration_ms);
-
-        let before = state
-            .registry
-            .health_of(&profile.name)
-            .unwrap_or(Health::Starting);
-        let now = if ok { Health::Working } else { Health::Failing };
-        crate::app::note_transition(
-            state.registry.as_ref(),
-            state.sink.as_ref(),
-            state.reporting.as_deref(),
-            &profile.name,
-            before,
-            now,
-            if ok {
-                "back to normal"
-            } else {
-                "deliveries are failing"
-            },
-        )
-        .await;
-        crate::obs::log_message(
-            &profile.name,
-            "http",
-            if ok { "delivered" } else { "failed" },
-            duration_ms,
-            attempts,
-        );
+        if let Some(failure) = deliver_one(&state, profile, &body).await {
+            failures.push(failure);
+        }
     }
+    answer(&failures)
+}
 
-    if failures.is_empty() {
-        (StatusCode::OK, "delivered\n").into_response()
+/// Translate and deliver one message for one profile, then record what
+/// happened (counters, health transition, the message log line). Returns
+/// the failure sentence for the sender, or `None` when it was delivered.
+async fn deliver_one(state: &Inbound, profile: &Profile, body: &Bytes) -> Option<String> {
+    let started = std::time::Instant::now();
+    let (failure, attempts) = match translate::prepare(profile, body) {
+        Err(e) => (Some(format!("{e}")), 0),
+        Ok(delivery) => {
+            let outcome = deliver_with_retry(
+                profile,
+                &delivery,
+                state.sink.as_ref(),
+                state.clock.as_ref(),
+            )
+            .await;
+            let failure = outcome
+                .result
+                .err()
+                .map(|e| format!("profile '{}': {e}", profile.name));
+            (failure, outcome.attempts)
+        }
+    };
+    let duration_ms = started.elapsed().as_millis() as u64;
+    record(state, profile, failure.is_none(), duration_ms, attempts).await;
+    failure
+}
+
+/// Count the outcome, note a health transition (and report it, AR12) and
+/// write the per-message log line.
+async fn record(state: &Inbound, profile: &Profile, ok: bool, duration_ms: u64, attempts: u32) {
+    state.registry.record(&profile.name, ok, duration_ms);
+    let before = state
+        .registry
+        .health_of(&profile.name)
+        .unwrap_or(Health::Starting);
+    let (now, why) = if ok {
+        (Health::Working, "back to normal")
     } else {
-        // AR4: with several profiles on one path, all must succeed or the
-        // sender is told it failed — and the documented consequence is
-        // that their retry re-delivers the branch that did succeed.
-        (
-            StatusCode::BAD_GATEWAY,
-            format!(
-                "not delivered.\n{}\nWhat now: this message was NOT accepted; send it again once \
-                 the cause above is addressed.\n",
-                failures.join("\n")
-            ),
-        )
-            .into_response()
+        (Health::Failing, "deliveries are failing")
+    };
+    crate::app::note_transition(
+        state.registry.as_ref(),
+        state.sink.as_ref(),
+        state.reporting.as_deref(),
+        &profile.name,
+        before,
+        now,
+        why,
+    )
+    .await;
+    let outcome = if ok { "delivered" } else { "failed" };
+    crate::obs::log_message(&profile.name, "http", outcome, duration_ms, attempts);
+}
+
+/// The sender's answer. AR4: with several profiles on one path, all must
+/// succeed or the sender is told it failed — and the documented
+/// consequence is that their retry re-delivers the branch that did succeed.
+fn answer(failures: &[String]) -> axum::response::Response {
+    if failures.is_empty() {
+        return (StatusCode::OK, "delivered\n").into_response();
     }
+    (
+        StatusCode::BAD_GATEWAY,
+        format!(
+            "not delivered.\n{}\nWhat now: this message was NOT accepted; send it again once \
+             the cause above is addressed.\n",
+            failures.join("\n")
+        ),
+    )
+        .into_response()
 }
