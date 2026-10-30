@@ -224,7 +224,7 @@ fn check_template(
             file: file.to_string(),
             profile: name.to_string(),
             problem: format!(
-                "content_type is '{content_type}', and only JSON is supported today.                  What now: use application/json — values are escaped by the engine there,                  which is what stops a message from adding fields of its own. A non-JSON                  destination needs an escaping rule of its own first."
+                "content_type is '{content_type}', and only JSON is supported today. What now: use application/json — values are escaped by the engine there, which is what stops a message from adding fields of its own. A non-JSON destination needs an escaping rule of its own first."
             ),
         });
     }
