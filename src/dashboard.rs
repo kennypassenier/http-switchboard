@@ -83,6 +83,14 @@ const WEB_FILES: &[(&str, &[u8])] = &[
     ("dashboard.js", include_bytes!("../web/dashboard.js")),
     ("dashboard.css", include_bytes!("../web/dashboard.css")),
     ("history.js", include_bytes!("../web/history.js")),
+    (
+        "history-model.js",
+        include_bytes!("../web/history-model.js"),
+    ),
+    (
+        "history-figures.js",
+        include_bytes!("../web/history-figures.js"),
+    ),
     ("history.css", include_bytes!("../web/history.css")),
     ("profiles.js", include_bytes!("../web/profiles.js")),
     ("profiles.css", include_bytes!("../web/profiles.css")),
