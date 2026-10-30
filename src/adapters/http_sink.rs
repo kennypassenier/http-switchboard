@@ -77,7 +77,12 @@ impl HttpSink {
         // Only read the receiver's words when the profile asked for them;
         // otherwise they are not ours to carry around (W12).
         let answer = if delivery.forward_error_body {
-            readable_answer(&response.text().await.unwrap_or_default())
+            match response.text().await {
+                Ok(text) => readable_answer(&text),
+                // The status still decides the outcome; the sender is told the
+                // body could not be read instead of getting a silent blank.
+                Err(e) => format!("(the receiver's answer could not be read: {e})"),
+            }
         } else {
             String::new()
         };
