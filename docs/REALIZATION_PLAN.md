@@ -225,7 +225,7 @@ Projects thread and sent back with its button):
 |---|---|---|
 | flagship — does the 2026-09-19 test alert satisfy scope-flagship-1 | **Telt mee** (Claude's recommendation) | `SCOPE.md`, `TEST_PLAN.md`: the criterion is met |
 | internet — feat-internet-1, inbound from the internet | **Later** (Claude's recommendation) | unchanged in `FEATURES.md`; parked until a real sender outside the house exists |
-| reload — feat-reload-1, config reload without restart | **Onmisbaar**, against Claude's recommendation "Niet doen" | built the same evening: `src/reload.rs`, `tests/l14_reload.rs`, `ExecReload=` in the unit; release 3.2.0 follows, as the chosen consequence line said |
+| reload — feat-reload-1, config reload without restart | **Onmisbaar**, against Claude's recommendation "Niet doen" | built the same evening: `src/reload.rs`, `tests/l14_reload/`, `ExecReload=` in the unit; release 3.2.0 follows, as the chosen consequence line said |
 | fix-6 — the stale "Alertmanager not deployed" lines | **Klopt** | `CORRECTIONS.md` |
 
 The reload's design choices were made by Claude as defaults and are
