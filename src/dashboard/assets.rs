@@ -7,6 +7,22 @@ use std::hash::{Hash, Hasher};
 pub(super) const WEB_FILES: &[(&str, &[u8])] = &[
     ("index.html", include_bytes!("../../web/index.html")),
     ("dashboard.js", include_bytes!("../../web/dashboard.js")),
+    ("hsb-format.js", include_bytes!("../../web/hsb-format.js")),
+    ("hsb-state.js", include_bytes!("../../web/hsb-state.js")),
+    (
+        "view-profiles.js",
+        include_bytes!("../../web/view-profiles.js"),
+    ),
+    ("view-trace.js", include_bytes!("../../web/view-trace.js")),
+    (
+        "view-settings.js",
+        include_bytes!("../../web/view-settings.js"),
+    ),
+    ("recheck.js", include_bytes!("../../web/recheck.js")),
+    (
+        "test-command.js",
+        include_bytes!("../../web/test-command.js"),
+    ),
     ("dashboard.css", include_bytes!("../../web/dashboard.css")),
     ("history.js", include_bytes!("../../web/history.js")),
     ("history.css", include_bytes!("../../web/history.css")),
