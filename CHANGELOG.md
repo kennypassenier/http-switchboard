@@ -7,6 +7,8 @@ endpoints and the CLI verbs — not about the internals.
 
 ## [Unreleased]
 
+## [5.0.0] - 2026-10-31
+
 ### Changed
 
 - **chassis-rs 4.0.0 with kp-themes 12.** Every page imports kp-themes from
