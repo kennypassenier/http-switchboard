@@ -16,31 +16,9 @@ use std::process::ExitCode;
 use std::sync::Arc;
 
 use axum::Router;
-use chassis::storage::{AppDbSpec, BrowserKeys};
-use chassis::{App, AppSpec, Control};
+use chassis::{App, Control};
 use http_switchboard::app::App as Switchboard;
-use http_switchboard::config::{self, ProcessEnv, Source};
-use http_switchboard::obs::{ProfileSubsystem, RegistryMetrics};
-
-/// The kit's description of this service. One definition, because the
-/// dry-run needs the same knob and section names the real start does.
-fn spec() -> AppSpec {
-    AppSpec {
-        name: "http-switchboard",
-        version: env!("CARGO_PKG_VERSION"),
-        repository: Some("kennypassenier/http-switchboard"),
-        ..Default::default()
-    }
-}
-
-fn usage() -> String {
-    "http-switchboard [--config <config.toml>] [--listen host:port] [--state-dir <dir>]\n\
-     http-switchboard --check [--config <config.toml>]\n\
-     http-switchboard --healthcheck [http://127.0.0.1:8080/healthz]\n\
-     http-switchboard test --config <config.toml> --profile <name> --input <message.json>\n\
-     Every knob is also an environment variable (HTTP_SWITCHBOARD_CONFIG, _LISTEN, …); --help lists them.\n"
-        .to_string()
-}
+use http_switchboard::cli;
 
 #[tokio::main]
 async fn main() -> ExitCode {
@@ -49,22 +27,13 @@ async fn main() -> ExitCode {
     // go out, without sending anything. The switchboard's own subcommand;
     // the kit's parser does not know it, so it goes first.
     if args.first().map(String::as_str) == Some("test") {
-        return dry_run(&args[1..]);
+        return cli::dry_run(&args[1..]);
     }
 
-    let spec = spec();
-    let mut app = match App::from_env_and_args(spec, Router::new()) {
+    let mut app = match start_app() {
         Ok(app) => app,
-        Err(e) => {
-            eprintln!("{e}");
-            return ExitCode::FAILURE;
-        }
+        Err(code) => return code,
     };
-    // fix-15 (chassis-rs 3.2.0): without this the kit's dashboard pages and
-    // layout would show the binary name ("http-switchboard") as the brand;
-    // "HTTPSwitchboard" is the name the service uses everywhere else
-    // (README).
-    app.brand_title("HTTPSwitchboard");
     // Only a real start and `--check` need the switchboard's own config;
     // `--version`, `gen-secret`, `--healthcheck`, `--print-config`, `update`
     // and `rekey` are the kit's alone and must work without the file.
@@ -74,24 +43,8 @@ async fn main() -> ExitCode {
     if !matches!(app.control, None | Some(Control::Check)) {
         return app.run().await;
     }
-    // The switchboard's config shares the file with the kit's knobs: read
-    // the file, drop the kit's keys (and its [[notify.webhook]] tables) and
-    // validate the rest with the switchboard's own rules intact
-    // (deny_unknown_fields, reserved paths, `${VAR}` from the environment).
     let path = loaded.file_path.display().to_string();
-    // feat-config-1 (kit 2.0.0): the kit hands over its own half of the
-    // shared file — its knob keys AND its table sections. What this replaced
-    // was nineteen hand-written lines, one of which stripped `notify` on
-    // knowledge that lived nowhere and would have gone silently wrong the
-    // day the kit gained a second section.
-    let config = match app
-        .project_table()
-        .map_err(|e| e.to_string())
-        .and_then(|table| {
-            let own =
-                toml::to_string(&table).map_err(|e| format!("{path}: cannot re-serialise: {e}"))?;
-            config::load(&path, &own, &ProcessEnv).map_err(|e| e.to_string())
-        }) {
+    let config = match cli::config_from_app(&app, &path) {
         Ok(config) => config,
         Err(message) => {
             eprintln!("{message}");
@@ -106,214 +59,31 @@ async fn main() -> ExitCode {
     });
 
     let switchboard = Switchboard::from_config(config);
-    for profile in &switchboard.config.profiles {
-        app.subsystem(ProfileSubsystem::new(
-            &profile.name,
-            Arc::clone(&switchboard.registry),
-        ));
-        if let Source::Http { path } = &profile.source {
-            // A delivery may legitimately take longer than the kit's request
-            // timeout (retries × timeout_ms + settle); the sender waits for
-            // the real answer (W1), so the kit's clock stays out of it.
-            app.exempt_from_timeout(path.clone());
-        }
-    }
-    app.metrics_source(RegistryMetrics(Arc::clone(&switchboard.registry)));
-    // H1 (3.0.0): the profile paths are API routes, so the kit checks an
-    // `Authorization: Bearer <client token>` before this service sees the
-    // body, and revoking a sender's token locks it out the same second.
-    // `chassis clients issue <sender> --url … --token-env …` mints one
-    // without opening the dashboard.
-    app.api_routes(switchboard.profile_router());
-    // V1: what a "client" is called here. Presentation only — the routes,
-    // the JSON keys and the log fields keep saying `client`.
-    app.vocabulary("sender", "senders");
-    // The four status sections, their routes and the module that draws
-    // them (kp-themes 11 views): one call, shared with the door tests.
-    http_switchboard::dashboard::install(
-        &mut app,
-        Arc::new(http_switchboard::dashboard::Profiles::new(
-            &switchboard.config,
-            Arc::clone(&switchboard.profiles),
-            Arc::clone(&switchboard.registry),
-        )),
-    );
-
-    // chassis-rs 3.12: the reader's own browser choices follow them across
-    // devices. The preferences are a table of the app database, which has no
-    // tables of its own here. Only user choices are declared, never a
-    // secret: the profiles View, the Last 24 hours tiles and press choice,
-    // and every `kp-remember:` choice kp-themes keeps (the refresh chooser's
-    // interval, the matrix view, a table's sort and columns).
-    if let Err(e) = app.app_db(AppDbSpec::new(Vec::new())) {
+    cli::wire_service(&mut app, &switchboard);
+    if let Err(e) = cli::wire_browser_prefs(&mut app) {
         eprintln!("{e}");
         return ExitCode::FAILURE;
     }
-    app.sync_browser_keys(
-        BrowserKeys::new()
-            .exact("hsb-profiles-view")
-            .exact("hsb-history-tiles")
-            .exact("hsb-history-press")
-            .prefix("kp-remember:"),
-    );
 
     let switchboard = Arc::new(switchboard);
     if app.control.is_none() {
-        spawn_reload_on_hangup(path.clone(), Arc::clone(&switchboard));
+        cli::spawn_reload_on_hangup(path, Arc::clone(&switchboard));
     }
-    let stop: Arc<std::sync::Mutex<Option<tokio::sync::broadcast::Sender<()>>>> =
-        Arc::new(std::sync::Mutex::new(None));
-    {
-        let switchboard = Arc::clone(&switchboard);
-        let stop = Arc::clone(&stop);
-        app.on_start(move || {
-            let tx = switchboard.spawn_pumps();
-            *stop.lock().expect("stop lock") = Some(tx);
-        });
-    }
-    app.on_flush(move || {
-        // Stopping accepting is the shutdown; the pumps hold nothing, so
-        // being cut off mid-poll costs at worst a duplicate (S3).
-        if let Some(tx) = stop.lock().expect("stop lock").take() {
-            let _ = tx.send(());
-        }
-    });
+    cli::wire_lifecycle(&mut app, switchboard);
     app.run().await
 }
 
-/// feat-reload-1: on SIGHUP (`systemctl reload http-switchboard`), read
-/// the file again and apply it if — and only if — it is a complete, valid
-/// config of the same shape. Registering the handler also means a stray
-/// hangup no longer ends the process, which is the signal's default.
-fn spawn_reload_on_hangup(path: String, switchboard: Arc<Switchboard>) {
-    use tokio::signal::unix::{signal, SignalKind};
-    let mut hangup = match signal(SignalKind::hangup()) {
-        Ok(s) => s,
-        Err(e) => {
-            http_switchboard::obs::log_warn(
-                "-",
-                "reload_unavailable",
-                &format!("cannot listen for SIGHUP ({e}); a config change needs a restart"),
-            );
-            return;
-        }
-    };
-    tokio::spawn(async move {
-        while hangup.recv().await.is_some() {
-            let loaded = load_config_file(&path);
-            let outcome =
-                http_switchboard::reload::apply(&switchboard.config, &switchboard.profiles, loaded);
-            switchboard.registry.record_reload(outcome.label());
-            let line = http_switchboard::reload::describe(&outcome);
-            match outcome {
-                http_switchboard::reload::Outcome::Applied { .. } => {
-                    http_switchboard::obs::log_info("-", "config_reloaded", &line)
-                }
-                _ => http_switchboard::obs::log_warn("-", "config_not_reloaded", &line),
-            }
-        }
-    });
-}
-
-/// Read the switchboard's half of a config file: the `test` subcommand
-/// and a reload (feat-reload-1).
-///
-/// Neither has the kit's start-up `App` to ask for `project_table()`, so
-/// this does the same strip from the spec, which
-/// names both halves itself (`knob_keys` since 1.2.0, `kit_sections` since
-/// 2.0.0) — so this is the kit's list, not knowledge kept here.
-///
-/// fix-3: without the strip this verb answered "not valid TOML" on a file
-/// that is valid TOML and that the service starts from happily, which is
-/// exactly the file the operations runbook tells an operator to point it at.
-fn load_config_file(path: &str) -> Result<config::Config, String> {
-    let text = std::fs::read_to_string(path).map_err(|e| {
-        format!(
-            "{path}: cannot be read ({e}). What now: check the path (--config / \
-             HTTP_SWITCHBOARD_CONFIG) and that the file is readable by the user this service \
-             runs as."
-        )
+/// Start the kit from the environment and arguments; on failure print why
+/// and hand back the exit code.
+fn start_app() -> Result<App, ExitCode> {
+    let mut app = App::from_env_and_args(cli::spec(), Router::new()).map_err(|e| {
+        eprintln!("{e}");
+        ExitCode::FAILURE
     })?;
-    let mut table: toml::Table = toml::from_str(&text).map_err(|e| {
-        format!("{path}: is not valid TOML: {e}. What now: fix the syntax the parser points at.")
-    })?;
-    let spec = spec();
-    for key in spec.knob_keys().iter().chain(spec.kit_sections()) {
-        table.remove(*key);
-    }
-    let own = toml::to_string(&table).map_err(|e| format!("{path}: cannot re-serialise: {e}"))?;
-    config::load(path, &own, &ProcessEnv).map_err(|e| e.to_string())
-}
-
-fn dry_run(args: &[String]) -> ExitCode {
-    let mut config_path = "config.toml".to_string();
-    let mut profile_name = String::new();
-    let mut input_path = String::new();
-    let mut i = 0;
-    while i < args.len() {
-        match args[i].as_str() {
-            "--config" => config_path = args.get(i + 1).cloned().unwrap_or_default(),
-            "--profile" => profile_name = args.get(i + 1).cloned().unwrap_or_default(),
-            "--input" => input_path = args.get(i + 1).cloned().unwrap_or_default(),
-            other => {
-                eprintln!("unknown option '{other}'.\n{}", usage());
-                return ExitCode::FAILURE;
-            }
-        }
-        i += 2;
-    }
-    if profile_name.is_empty() || input_path.is_empty() {
-        eprintln!("{}", usage());
-        return ExitCode::FAILURE;
-    }
-    let config = match load_config_file(&config_path) {
-        Ok(c) => c,
-        Err(message) => {
-            eprintln!("{message}");
-            return ExitCode::FAILURE;
-        }
-    };
-    let Some(profile) = config.profiles.iter().find(|p| p.name == profile_name) else {
-        let names: Vec<&str> = config.profiles.iter().map(|p| p.name.as_str()).collect();
-        eprintln!(
-            "{config_path}: there is no profile named '{profile_name}'. What now: pick one of: {}.",
-            names.join(", ")
-        );
-        return ExitCode::FAILURE;
-    };
-    let payload = match std::fs::read(&input_path) {
-        Ok(bytes) => bytes,
-        Err(e) => {
-            eprintln!(
-                "{input_path}: cannot be read ({e}). What now: point --input at a file \
-                 holding one recorded message."
-            );
-            return ExitCode::FAILURE;
-        }
-    };
-    match http_switchboard::translate::prepare(profile, &payload) {
-        Ok(delivery) => {
-            match &delivery.target {
-                http_switchboard::translate::Target::Url { url, method } => {
-                    println!("would send {method} {url}")
-                }
-                http_switchboard::translate::Target::KyuTopic { topic } => {
-                    println!("would publish to kyu topic {topic}")
-                }
-            }
-            println!("content-type: {}", delivery.content_type);
-            for name in delivery.headers.keys() {
-                // The names, never the values: a header may carry a token,
-                // and this output ends up in terminals and pasted into chats.
-                println!("header: {name}: ***");
-            }
-            println!("---");
-            println!("{}", delivery.body);
-            ExitCode::SUCCESS
-        }
-        Err(e) => {
-            eprintln!("{e}");
-            ExitCode::FAILURE
-        }
-    }
+    // fix-15 (chassis-rs 3.2.0): without this the kit's dashboard pages and
+    // layout would show the binary name ("http-switchboard") as the brand;
+    // "HTTPSwitchboard" is the name the service uses everywhere else
+    // (README).
+    app.brand_title("HTTPSwitchboard");
+    Ok(app)
 }
