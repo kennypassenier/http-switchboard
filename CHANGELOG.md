@@ -7,6 +7,30 @@ endpoints and the CLI verbs — not about the internals.
 
 ## [Unreleased]
 
+### Changed
+
+- **Small files, one job each** (Kenny's engineering rules, 2026-10-30): every
+  source, web and test file is now at most ~250 lines. `src/` went from 19
+  files (10 over 250 lines) to 69, `web/` from 14 (4 over) to 26, `tests/`
+  from 19 (11 over) to 51, with every public path kept through re-exports.
+  Each long test suite is a directory (`tests/<suite>/main.rs` plus topic
+  files); target names and test names are unchanged.
+- **The start-up code is part of the library** as `http_switchboard::cli`
+  (`load_config_file`, `dry_run`, the wiring), so tests can call it without
+  starting a process (Kenny's choice, 30/10/2026).
+- **One word per health state.** `Health::word` replaces three copies of the
+  same table, so `/healthz`, the status page and the events cannot differ.
+- **The hub-down remedy names no container**: "Check that the kyu hub is
+  running." instead of naming CT 109.
+
+### Fixed
+
+- A failed nack (handing a message back to the hub) is logged as
+  `nack_failed` with the message id, instead of being dropped silently.
+- With `forward_error_body`, an unreadable receiver answer now says so
+  instead of forwarding an empty reason.
+- The non-JSON `content_type` error had runs of eighteen spaces in its text.
+
 ## [4.0.0] - 2026-10-22
 
 ### Changed
