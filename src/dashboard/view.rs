@@ -65,13 +65,7 @@ pub fn host_of(url: &str) -> String {
 
 /// The word the page shows for a profile's remembered health.
 fn state_word(health: Option<Health>) -> &'static str {
-    match health {
-        None | Some(Health::Starting) => "starting",
-        Some(Health::Working) => "working",
-        Some(Health::Failing) => "failing",
-        Some(Health::Denied) => "denied",
-        Some(Health::HubDown) => "hub-down",
-    }
+    Health::word_of(health)
 }
 
 /// The source end: an HTTP path or a kyu topic.

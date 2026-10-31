@@ -40,13 +40,7 @@ fn transition_event(profile: &str, from: Health, to: Health, detail: &str) -> Op
         (true, false) if to == Health::Working => "profile.recovered",
         _ => return None,
     };
-    let state = match to {
-        Health::Starting => "starting",
-        Health::Working => "working",
-        Health::Failing => "failing",
-        Health::Denied => "denied",
-        Health::HubDown => "hub-down",
-    };
+    let state = to.word();
     Some(format!(
         r#"{{"event":"{event}","profile":{},"state":"{state}","detail":{}}}"#,
         serde_json::Value::String(profile.to_string()),

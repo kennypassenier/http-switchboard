@@ -90,6 +90,26 @@ pub enum Health {
     HubDown,
 }
 
+impl Health {
+    /// The one word for this state, shared by `/healthz`, the status page
+    /// and the self-report events so they can never spell it differently.
+    pub fn word(self) -> &'static str {
+        match self {
+            Health::Starting => "starting",
+            Health::Working => "working",
+            Health::Failing => "failing",
+            Health::Denied => "denied",
+            Health::HubDown => "hub-down",
+        }
+    }
+
+    /// The word for a remembered health; nothing remembered yet reads as
+    /// "starting", the state that means "nothing tried since start".
+    pub fn word_of(health: Option<Health>) -> &'static str {
+        health.unwrap_or(Health::Starting).word()
+    }
+}
+
 #[derive(Debug)]
 pub struct PumpState {
     /// Set after a 404: the next successful poll asks for the retained

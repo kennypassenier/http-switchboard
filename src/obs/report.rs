@@ -9,13 +9,7 @@ const RELOAD_OUTCOMES: [&str; 3] = ["applied", "needs-restart", "invalid"];
 
 /// The word `/healthz` uses for a profile's remembered health.
 fn state_word(health: Option<Health>) -> &'static str {
-    match health {
-        None | Some(Health::Starting) => "starting",
-        Some(Health::Working) => "working",
-        Some(Health::Failing) => "failing",
-        Some(Health::Denied) => "denied",
-        Some(Health::HubDown) => "hub-down",
-    }
+    Health::word_of(health)
 }
 
 /// Whether a remembered health counts against `/healthz?strict=1`.
