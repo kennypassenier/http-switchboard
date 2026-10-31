@@ -35,7 +35,7 @@ source path or kyu topic, a new subscription, and the `[kyu]` and
 `[reporting]` sections. The refusal names which one; a restart loses
 nothing, because the hub holds the position.
 
-Drilled in `tests/l14_reload.rs` against the real binary and a real
+Drilled in `tests/l14_reload/` against the real binary and a real
 signal, and run on CT 109 on 2026-09-27 by the homelab rollout: rc 0,
 same MainPID, `outcome="applied"` went from 0 to 1.
 

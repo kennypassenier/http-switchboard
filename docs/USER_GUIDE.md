@@ -345,7 +345,7 @@ config — a typo, or an editor caught mid-save — is refused as a whole
 and nothing changes. A reload can change what lives inside a profile;
 a change to the set of profiles, a source, a subscription, `[kyu]` or
 `[reporting]` is refused with the advice to restart. Proven by
-`tests/l14_reload.rs`.
+`tests/l14_reload/`.
 
 ## What this does not do
 
