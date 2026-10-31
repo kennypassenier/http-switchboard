@@ -9,6 +9,7 @@ import { attachJsonFields, jsonField } from '/static/kp/js/json-field.js';
 import { attachCodes, setCode, prettyJson } from '/static/kp/js/code.js';
 import { attachProblems, setProblems } from '/static/kp/js/problems.js';
 import { attachCardStates, setCardState } from '/static/kp/js/card-state.js';
+import { drawDiff } from './translate-diff.js';
 
 const SETTLE_MS = 350; // the box checks 300 ms after the last key; this waits for it
 const SLOW_MS = 150; // a faster answer never flashes the busy card
@@ -39,75 +40,6 @@ attachJsonFields(document);
 attachCodes(document);
 attachProblems(document);
 attachCardStates(document);
-
-// ── the diff (the package ships the style, not the lines) ──────────────────────────────────────────────────────────
-
-/**
- * A line diff of two texts, indentation ignored when matching so a re-nested line still counts as the same line.
- * @param {string[]} a @param {string[]} b
- */
-function lineOps(a, b) {
-    const same = (/** @type {number} */ i, /** @type {number} */ j) => a[i].trim() === b[j].trim();
-    const table = Array.from({ length: a.length + 1 }, () => new Array(b.length + 1).fill(0));
-    for (let i = a.length - 1; i >= 0; i--) {
-        for (let j = b.length - 1; j >= 0; j--) table[i][j] = same(i, j) ? table[i + 1][j + 1] + 1 : Math.max(table[i + 1][j], table[i][j + 1]);
-    }
-    /** @type {{ kind: 'same' | 'removed' | 'added', text: string, a: number, b: number }[]} */
-    const ops = [];
-    let i = 0;
-    let j = 0;
-    while (i < a.length || j < b.length) {
-        if (i < a.length && j < b.length && same(i, j)) {
-            ops.push({ kind: 'same', text: b[j], a: i + 1, b: j + 1 });
-            i++;
-            j++;
-        } else if (j < b.length && (i === a.length || table[i][j + 1] >= table[i + 1][j])) {
-            ops.push({ kind: 'added', text: b[j], a: i + 1, b: j + 1 });
-            j++;
-        } else {
-            ops.push({ kind: 'removed', text: a[i], a: i + 1, b: j + 1 });
-            i++;
-        }
-    }
-    return ops;
-}
-
-/**
- * Draw `.kp-diff` with every line (the approved default context, "All lines": one block).
- * @param {string} before @param {string} after
- */
-function drawDiff(before, after) {
-    const ops = lineOps(before.split('\n'), after.split('\n'));
-    const removed = ops.filter((o) => o.kind !== 'added');
-    const added = ops.filter((o) => o.kind !== 'removed');
-    diff.replaceChildren();
-    const header = document.createElement('div');
-    header.className = 'kp-diff__hunk';
-    header.append(`@@ -${removed[0]?.a ?? 0},${removed.length} +${added[0]?.b ?? 0},${added.length} @@ `);
-    const where = document.createElement('span');
-    where.className = 'kp-diff__hunk-context';
-    where.textContent = 'received → delivered';
-    header.append(where);
-    diff.append(header);
-    for (const op of ops) {
-        const row = document.createElement('span');
-        row.className = 'kp-diff__line';
-        row.dataset.kind = op.kind;
-        const number = document.createElement('span');
-        number.className = 'kp-diff__number';
-        number.textContent = String(op.kind === 'added' ? op.b : op.a);
-        const sign = document.createElement('span');
-        sign.className = 'kp-diff__sign';
-        sign.textContent = op.kind === 'added' ? '+' : op.kind === 'removed' ? '-' : ' ';
-        const text = document.createElement('span');
-        text.textContent = op.text;
-        row.append(number, sign, text);
-        diff.append(row);
-    }
-    const counts = { removed: ops.filter((o) => o.kind === 'removed').length, added: ops.filter((o) => o.kind === 'added').length };
-    diff.setAttribute('aria-label', `Changes from the received message to the delivered body: ${counts.removed} lines removed, ${counts.added} lines added`);
-    diffCount.textContent = `${counts.removed} lines removed · ${counts.added} lines added`;
-}
 
 // ── states ─────────────────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -187,23 +119,18 @@ function schedule(wait) {
     timer = window.setTimeout(() => void run(), wait);
 }
 
-async function run() {
-    const p = profile();
-    if (!p) return;
-    const mine = ++serial;
-    inFlight?.abort();
-    const state = jsonField(area)?.state() ?? 'empty';
+/** Check the box before asking the server; returns false when the page already says why nothing is translated. @param {string} state @param {string} text */
+function boxReady(state, text) {
     if (state === 'empty') {
         setProblems(problems, []);
         empty('Nothing to translate yet', 'Paste a message into the box, or use the example message.');
-        return;
+        return false;
     }
     if (state !== 'valid') {
         setProblems(problems, []);
         empty('The message is not JSON yet', 'Fix the line the box points at; the translation follows by itself.', 'Nothing to compare', 'The message has to be valid JSON before it can be compared.');
-        return;
+        return false;
     }
-    const text = area.value;
     if (bytes(text) > data.maxBytes) {
         showFailure({
             error: 'The message is too large to try',
@@ -211,50 +138,63 @@ async function run() {
             remedy: 'Paste one recorded message instead of a whole log; a template only reads the fields of a single message.',
             kind: 'size',
         });
-        return;
+        return false;
     }
+    return true;
+}
+
+/** POST the message to the preview route; nothing is delivered. @param {string} name @param {string} text @param {AbortSignal} signal */
+async function preview(name, text, signal) {
+    const res = await fetch(data.routes.preview.replace('{name}', encodeURIComponent(name)), {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', accept: 'application/json' },
+        body: text,
+        signal,
+        credentials: 'same-origin',
+    });
+    /** @type {any} */
+    let answer = null;
+    try {
+        answer = await res.json();
+    } catch {
+        // Not JSON (a login redirect, a proxy page): the status decides in settle().
+    }
+    return { res, answer };
+}
+
+/** Show what the server answered. @param {Response} res @param {any} answer @param {string} text */
+function settle(res, answer, text) {
+    if (res.ok && answer?.body !== undefined) showResult(text, answer);
+    else if (answer?.error && answer?.why) showFailure(answer);
+    else if (res.redirected || res.status === 401 || res.status === 403) unreachable('You are signed out', 'Open the login page again, then come back to this page.');
+    else if (res.status === 413) unreachable('The message is too large', `The limit is ${kib(data.maxBytes)}. Paste one recorded message instead of a whole log.`);
+    else unreachable('The service could not translate', `HTTP ${res.status}. Nothing was delivered. Try again; if it persists, read the service's log.`);
+}
+
+/** One translation of what is in the box; a newer one cancels an older one still under way. */
+async function run() {
+    const p = profile();
+    if (!p) return;
+    const mine = ++serial;
+    inFlight?.abort();
+    const text = area.value;
+    if (!boxReady(jsonField(area)?.state() ?? 'empty', text)) return;
     const controller = new AbortController();
     inFlight = controller;
+    // A fast answer never flashes the busy card; a slow one shows it until the answer comes.
     const slow = window.setTimeout(() => {
         if (mine !== serial) return;
         setCardState(resultCard, 'loading', { words: 'Translating…' });
         setCardState(diffCard, 'loading', { words: 'Comparing…' });
     }, SLOW_MS);
-    /** @type {Response} */
-    let res;
-    /** @type {any} */
-    let answer = null;
     try {
-        res = await fetch(data.routes.preview.replace('{name}', encodeURIComponent(p.name)), {
-            method: 'POST',
-            headers: { 'content-type': 'application/json', accept: 'application/json' },
-            body: text,
-            signal: controller.signal,
-            credentials: 'same-origin',
-        });
-        try {
-            answer = await res.json();
-        } catch {
-            // Not JSON: the status below decides.
-        }
+        const { res, answer } = await preview(p.name, text, controller.signal);
+        if (mine === serial) settle(res, answer, text);
     } catch (error) {
-        window.clearTimeout(slow);
         if (mine !== serial || /** @type {Error} */ (error).name === 'AbortError') return;
         unreachable('The service did not answer', 'Nothing could be translated and nothing was delivered. Check that HTTPSwitchboard is running, then try again.');
-        return;
-    }
-    window.clearTimeout(slow);
-    if (mine !== serial) return;
-    if (res.ok && answer?.body !== undefined) {
-        showResult(text, answer);
-    } else if (answer?.error && answer?.why) {
-        showFailure(answer);
-    } else if (res.redirected || res.status === 401 || res.status === 403) {
-        unreachable('You are signed out', 'Open the login page again, then come back to this page.');
-    } else if (res.status === 413) {
-        unreachable('The message is too large', `The limit is ${kib(data.maxBytes)}. Paste one recorded message instead of a whole log.`);
-    } else {
-        unreachable('The service could not translate', `HTTP ${res.status}. Nothing was delivered. Try again; if it persists, read the service's log.`);
+    } finally {
+        window.clearTimeout(slow);
     }
 }
 
@@ -281,9 +221,9 @@ function showResult(text, answer) {
     try {
         before = pretty(JSON.parse(text));
     } catch {
-        // The box said valid; the raw text stands in.
+        // The box said valid, so this only fails on a race with a new keystroke: the raw text stands in.
     }
-    drawDiff(before, (json ? prettyJson(answer.body) : null) ?? answer.body);
+    drawDiff(diff, diffCount, before, (json ? prettyJson(answer.body) : null) ?? answer.body);
 }
 
 // ── wiring ─────────────────────────────────────────────────────────────────────────────────────────────────────────

@@ -46,6 +46,10 @@ pub(super) const WEB_FILES: &[(&str, &[u8])] = &[
     ("reloads.js", include_bytes!("../../web/reloads.js")),
     ("reloads.css", include_bytes!("../../web/reloads.css")),
     ("translate.js", include_bytes!("../../web/translate.js")),
+    (
+        "translate-diff.js",
+        include_bytes!("../../web/translate-diff.js"),
+    ),
     ("translate.css", include_bytes!("../../web/translate.css")),
 ];
 
