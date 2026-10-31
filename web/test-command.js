@@ -2,7 +2,7 @@
 // curl to this service's door; a kyu source has no door to post to, so it gets the `test` subcommand, which renders one
 // sample message on the host without sending it.
 
-import { toast } from '/static/kp/js/overlays.js';
+import { toast } from '/static/kp/dist/kp-themes.min.js';
 import { hasHub, profileNamed } from './hsb-state.js';
 
 /** @param {import('./hsb-state.js').Profile} p */

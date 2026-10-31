@@ -3,9 +3,9 @@
 // profile and look, and on a later read only their numbers, words and points change, so a figure counts to its new
 // value instead of being redrawn.
 
-import { attachTrendCharts, setTrendData } from '/static/kp/js/chart.js';
-import { attachSparklines, attachKpiToggles } from '/static/kp/js/kpi.js';
-import { attachTicks } from '/static/kp/js/tick.js';
+import { attachTrendCharts, setTrendData } from '/static/kp/dist/kp-themes.min.js';
+import { attachSparklines, attachKpiToggles } from '/static/kp/dist/kp-themes.min.js';
+import { attachTicks } from '/static/kp/dist/kp-themes.min.js';
 import { HOUR, METRICS, count, esc, points, spoken, stamp, totals, unitOf, words } from './history-model.js';
 
 /** How many deliveries the list shows, normally and when filtered to the failed ones. */

@@ -9,6 +9,12 @@ endpoints and the CLI verbs — not about the internals.
 
 ### Changed
 
+- **chassis-rs 4.0.0 with kp-themes 12.** Every page imports kp-themes from
+  the one bundle, `/static/kp/dist/kp-themes.min.js`, instead of the module
+  tree (one request instead of dozens; the two are never mixed on a page).
+- **Recognised through Traefik.** `HTTP_SWITCHBOARD_TRUSTED_PROXIES=10.10.10.4`
+  in the unit and `update_cmd`, so the trusted admin (10.10.10.10) also gets
+  in without a login on the hostname, not only on the service's own port.
 - **Small files, one job each** (Kenny's engineering rules, 2026-10-30): every
   source, web and test file is now at most ~250 lines. `src/` went from 19
   files (10 over 250 lines) to 69, `web/` from 14 (4 over) to 26, `tests/`

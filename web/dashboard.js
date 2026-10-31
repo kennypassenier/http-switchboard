@@ -1,5 +1,5 @@
 // The status page's own views (kp-themes 11): profile cards or a map, the path of one profile, its settings and retry
-// budget, and the recheck. The components are the package's, served by the kit at /static/kp/js/; the modules beside
+// budget, and the recheck. The components are the package's, served by the kit as one bundle, /static/kp/dist/kp-themes.min.js; the modules beside
 // this one draw them from the snapshot in hsb-state.js. This file is the entry point: it reads the snapshot, draws every
 // view from it, and wires the buttons and the poll.
 //
@@ -7,14 +7,14 @@
 // Layout: hsb-format.js (pure helpers), hsb-state.js (the snapshot and what the page shows), view-profiles.js,
 // view-trace.js, view-settings.js, recheck.js, test-command.js.
 
-import { attachEntityCards } from '/static/kp/js/entity-card.js';
-import { attachMatrices } from '/static/kp/js/heat.js';
-import { attachTraces } from '/static/kp/js/path-trace.js';
-import { attachFlashButtons } from '/static/kp/js/flash.js';
-import { attachMenuButtons } from '/static/kp/js/menu-button.js';
-import { attachDataTables } from '/static/kp/js/datatable.js';
-import { attachFootprints } from '/static/kp/js/footprint.js';
-import { attachFormgridStages } from '/static/kp/js/forms.js';
+import { attachEntityCards } from '/static/kp/dist/kp-themes.min.js';
+import { attachMatrices } from '/static/kp/dist/kp-themes.min.js';
+import { attachTraces } from '/static/kp/dist/kp-themes.min.js';
+import { attachFlashButtons } from '/static/kp/dist/kp-themes.min.js';
+import { attachMenuButtons } from '/static/kp/dist/kp-themes.min.js';
+import { attachDataTables } from '/static/kp/dist/kp-themes.min.js';
+import { attachFootprints } from '/static/kp/dist/kp-themes.min.js';
+import { attachFormgridStages } from '/static/kp/dist/kp-themes.min.js';
 import { $, all } from './hsb-format.js';
 import { VIEW_KEY, hooks, routes, store } from './hsb-state.js';
 import { AREA_RELOAD_EVENT, attachArea, attachProfileHover, refreshHover, watchEntityNames } from './profiles.js';

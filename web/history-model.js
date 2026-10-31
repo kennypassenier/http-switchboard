@@ -1,7 +1,7 @@
 // The last 24 hours, the pure part: the shape of /history.json, the four figures and their words, the Brussels clock,
 // and what one hour cell says. No DOM here, so the figures, the strips and the page all read the same sentences.
 
-import { uptimePercent } from '/static/kp/js/uptime.js';
+import { uptimePercent } from '/static/kp/dist/kp-themes.min.js';
 
 /** One hour, in milliseconds: the step of every trend and every strip cell. */
 export const HOUR = 3_600_000;

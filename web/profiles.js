@@ -5,10 +5,10 @@
 // Nothing here can leak a secret: it reads only the snapshot's fields (see src/dashboard.rs), and the template is a
 // short label the server made, never the body.
 
-import { attachHoverCards } from '/static/kp/js/hovercard.js';
-import { attachCardStates, setCardState } from '/static/kp/js/card-state.js';
-import { agoMoment, attachAgo, humanDuration, setAgo } from '/static/kp/js/freshness.js';
-import { setStrings } from '/static/kp/js/strings.js';
+import { attachHoverCards } from '/static/kp/dist/kp-themes.min.js';
+import { attachCardStates, setCardState } from '/static/kp/dist/kp-themes.min.js';
+import { agoMoment, attachAgo, humanDuration, setAgo } from '/static/kp/dist/kp-themes.min.js';
+import { setStrings } from '/static/kp/dist/kp-themes.min.js';
 
 /**
  * How long a profile may go without a delivery before its line turns to a warning, in seconds. The configuration has no
@@ -40,7 +40,7 @@ export function markName(el, name) {
     if (!el.matches(FOCUSABLE)) el.tabIndex = 0;
 }
 
-/** @type {import('/static/kp/js/hovercard.js').HoverCardHandle[]} */
+/** @type {import('/static/kp/dist/kp-themes.min.js').HoverCardHandle[]} */
 const cardsOpen = [];
 
 /**

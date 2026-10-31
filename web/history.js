@@ -2,17 +2,17 @@
 // strip of 24 hour cells per profile, and the refresh chooser that sets how often the whole page reads again.
 //
 // Started by dashboard.js (`start`), which hands over its poll: the chooser drives both the profiles snapshot and the
-// history from here on. The components are the package's, served by the kit at /static/kp/js/. The data is
+// history from here on. The components are the package's, served by the kit as one bundle, /static/kp/dist/kp-themes.min.js. The data is
 // /history.json (counts, times and a cause word per hour; no payload, header or URL), first embedded as #hsb-history-data.
 // The history is in memory on the server and starts empty at every service start.
 //
 // Layout: history-model.js (the data's shape and its words), history-figures.js (the key figures and the deliveries
 // list); this file holds the page's context, the card, the strips, the reads and the wiring.
 
-import { attachCardStates, setCardState } from '/static/kp/js/card-state.js';
-import { attachKpiStrips, KPI_TOGGLE_EVENT } from '/static/kp/js/kpi.js';
-import { attachUptimes, setUptime } from '/static/kp/js/uptime.js';
-import { attachRefresh, REFRESH_EVENT } from '/static/kp/js/auto-refresh.js';
+import { attachCardStates, setCardState } from '/static/kp/dist/kp-themes.min.js';
+import { attachKpiStrips, KPI_TOGGLE_EVENT } from '/static/kp/dist/kp-themes.min.js';
+import { attachUptimes, setUptime } from '/static/kp/dist/kp-themes.min.js';
+import { attachRefresh, REFRESH_EVENT } from '/static/kp/dist/kp-themes.min.js';
 import { esc, periodOf, stamp, totals } from './history-model.js';
 import { paintFigures, paintRecent } from './history-figures.js';
 

@@ -7,12 +7,12 @@
 // Layout: health-words.js (a state in words), health-hub.js (the hub banner); this file draws the band and the alerts
 // and does the rechecks.
 
-import { setAttention, attachAttention } from '/static/kp/js/attention.js';
-import { setProblems, attachProblems, PROBLEM_DISMISS_EVENT } from '/static/kp/js/problems.js';
-import { attachConnection, CONNECTION_RETRY_EVENT } from '/static/kp/js/connection.js';
-import { attachArt } from '/static/kp/js/art.js';
-import { setStrings } from '/static/kp/js/strings.js';
-import { toast } from '/static/kp/js/overlays.js';
+import { setAttention, attachAttention } from '/static/kp/dist/kp-themes.min.js';
+import { setProblems, attachProblems, PROBLEM_DISMISS_EVENT } from '/static/kp/dist/kp-themes.min.js';
+import { attachConnection, CONNECTION_RETRY_EVENT } from '/static/kp/dist/kp-themes.min.js';
+import { attachArt } from '/static/kp/dist/kp-themes.min.js';
+import { setStrings } from '/static/kp/dist/kp-themes.min.js';
+import { toast } from '/static/kp/dist/kp-themes.min.js';
 import { list, wordsOf } from './health-words.js';
 import { hubBanner } from './health-hub.js';
 

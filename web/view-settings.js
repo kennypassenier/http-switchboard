@@ -2,7 +2,7 @@
 // every card. The retry budget is the worst-case time of all tries plus the pauses between them, shown against the lease
 // the hub grants (a delivery that outlives the lease is handed to someone else and arrives twice).
 
-import { setMeter } from '/static/kp/js/kpi.js';
+import { setMeter } from '/static/kp/dist/kp-themes.min.js';
 import { all, code, el, said, seconds } from './hsb-format.js';
 import { store } from './hsb-state.js';
 import { markName } from './profiles.js';

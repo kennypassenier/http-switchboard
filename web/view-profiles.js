@@ -1,8 +1,8 @@
 // The profiles view: one entity card per profile, or the map of sources to destinations (the choice is remembered).
 // Both live in one card whose loading, empty and failed faces are the package's card states (web/profiles.js setArea).
 
-import { setEntityGrid } from '/static/kp/js/entity-card.js';
-import { setMatrix } from '/static/kp/js/heat.js';
+import { setEntityGrid } from '/static/kp/dist/kp-themes.min.js';
+import { setMatrix } from '/static/kp/dist/kp-themes.min.js';
 import { all, count, percent, plural } from './hsb-format.js';
 import { HEALTH_TONE, HEALTH_WORD, hasHub, store } from './hsb-state.js';
 import { paintFresh, setArea } from './profiles.js';

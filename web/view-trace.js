@@ -1,7 +1,7 @@
 // The path of one profile: sender, door, translation and destination as a path trace that stops at the first hop that
 // refuses. A picker chooses the profile when there are two or more.
 
-import { setTrace, trace } from '/static/kp/js/path-trace.js';
+import { setTrace, trace } from '/static/kp/dist/kp-themes.min.js';
 import { $, all } from './hsb-format.js';
 import { HEALTH_TONE, HEALTH_WORD, hasHub, store } from './hsb-state.js';
 import { markName } from './profiles.js';

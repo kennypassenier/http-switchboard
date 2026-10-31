@@ -3,9 +3,9 @@
 // secrets); the card reads it from the first frame (loading until it answers) and then on the dashboard's own poll (the module
 // dashboard.js fires `hsb-poll` after each refresh), so there is no second timer here.
 
-import { attachCardStates, setCardState } from '/static/kp/js/card-state.js';
-import { setProblems, attachProblems } from '/static/kp/js/problems.js';
-import { attachNewPills } from '/static/kp/js/newpill.js';
+import { attachCardStates, setCardState } from '/static/kp/dist/kp-themes.min.js';
+import { setProblems, attachProblems } from '/static/kp/dist/kp-themes.min.js';
+import { attachNewPills } from '/static/kp/dist/kp-themes.min.js';
 
 const COMMAND = 'systemctl reload http-switchboard';
 const OUTCOME = {

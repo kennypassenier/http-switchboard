@@ -2,7 +2,7 @@
 // turns our token down, online otherwise. Driven by the same snapshot as the band; a pressed "Retry now" rechecks the
 // profiles first and then waits for the pump to speak again before it changes its verdict.
 
-import { setConnection } from '/static/kp/js/connection.js';
+import { setConnection } from '/static/kp/dist/kp-themes.min.js';
 import { hasHubSource, subscriptionOf } from './health-words.js';
 
 /** How long the banner waits for the pump to speak again after a recheck, in ms. */

@@ -1,14 +1,14 @@
 // "Try a translation" (kp-themes 11): pick a profile, paste a sample message, see the body the profile would deliver and
-// what changed. The components are the package's, served by the kit at /static/kp/js/ and attached by hand; the data is
+// what changed. The components are the package's, served by the kit as one bundle, /static/kp/dist/kp-themes.min.js and attached by hand; the data is
 // the server's: the profiles and their templates are embedded (#hsbt-data), and the translation is POSTed to
 // /translate/{name}, which runs the same code the pump uses and delivers nothing. The answer never carries a header value
 // or the destination's path, so nothing drawn here can leak one (see src/dashboard_translate.rs).
 
-import { attachSegmented, setSegmentedValues } from '/static/kp/js/segmented.js';
-import { attachJsonFields, jsonField } from '/static/kp/js/json-field.js';
-import { attachCodes, setCode, prettyJson } from '/static/kp/js/code.js';
-import { attachProblems, setProblems } from '/static/kp/js/problems.js';
-import { attachCardStates, setCardState } from '/static/kp/js/card-state.js';
+import { attachSegmented, setSegmentedValues } from '/static/kp/dist/kp-themes.min.js';
+import { attachJsonFields, jsonField } from '/static/kp/dist/kp-themes.min.js';
+import { attachCodes, setCode, prettyJson } from '/static/kp/dist/kp-themes.min.js';
+import { attachProblems, setProblems } from '/static/kp/dist/kp-themes.min.js';
+import { attachCardStates, setCardState } from '/static/kp/dist/kp-themes.min.js';
 import { drawDiff } from './translate-diff.js';
 
 const SETTLE_MS = 350; // the box checks 300 ms after the last key; this waits for it

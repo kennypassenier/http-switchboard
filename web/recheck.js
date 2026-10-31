@@ -1,11 +1,11 @@
 // Recheck: the "Recheck profiles" flash button, the per-profile table with its row menus, and the toasts. A recheck puts
 // a profile back to "starting" (nothing tried since), the state that means "the next message decides".
 
-import { setMeter } from '/static/kp/js/kpi.js';
-import { runFlashButton } from '/static/kp/js/flash.js';
-import { toast } from '/static/kp/js/overlays.js';
-import { setMenu } from '/static/kp/js/menu-button.js';
-import { dataTable } from '/static/kp/js/datatable.js';
+import { setMeter } from '/static/kp/dist/kp-themes.min.js';
+import { runFlashButton } from '/static/kp/dist/kp-themes.min.js';
+import { toast } from '/static/kp/dist/kp-themes.min.js';
+import { setMenu } from '/static/kp/dist/kp-themes.min.js';
+import { dataTable } from '/static/kp/dist/kp-themes.min.js';
 import { all, capital, el, plural, seconds } from './hsb-format.js';
 import { HEALTH_TONE, HEALTH_WORD, UNREACHABLE, hasHub, hooks, profileNamed, routes, store } from './hsb-state.js';
 
