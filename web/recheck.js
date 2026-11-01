@@ -37,7 +37,7 @@ function entriesOf(p) {
         {
             group: name,
             items: [
-                { label: 'Recheck this profile', hint: 'Puts it back to starting', value: 'recheck', disabled: busy },
+                { label: `Recheck ${name}`, hint: 'Puts it back to starting', value: 'recheck', disabled: busy },
                 { label: 'Copy test command', hint: copyHint, value: 'copy' },
                 { label: 'Try a translation', hint: 'Renders one sample message here, without sending it', value: 'try' },
             ],
@@ -151,7 +151,7 @@ export async function recheckAll(button) {
     else failed(result.line, () => void recheckAll(button));
 }
 
-/** "Recheck this profile", from a card or a row menu. @param {string} name */
+/** "Recheck <name>", from a card or a row menu. @param {string} name */
 export async function recheckOne(name) {
     store.rechecking.add(name);
     hooks.drawAll();

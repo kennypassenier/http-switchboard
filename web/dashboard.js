@@ -3,7 +3,8 @@
 // this one draw them from the snapshot in hsb-state.js. This file is the entry point: it reads the snapshot, draws every
 // view from it, and wires the buttons and the poll.
 //
-// Freshness is a light poll (every 10 s while the tab is visible, and straight after a recheck); see src/dashboard.rs.
+// Freshness rides on the kit's refresh menu in the page header (its kp-refresh event reads the snapshot again, as often
+// as that menu says), and on a recheck. Without that menu (an older kit) a 10 s poll runs instead; see src/dashboard.rs.
 // Layout: hsb-format.js (pure helpers), hsb-state.js (the snapshot and what the page shows), view-profiles.js,
 // view-trace.js, view-settings.js, recheck.js, test-command.js.
 
@@ -15,8 +16,10 @@ import { attachMenuButtons } from '/static/kp/dist/kp-themes.min.js';
 import { attachDataTables } from '/static/kp/dist/kp-themes.min.js';
 import { attachFootprints } from '/static/kp/dist/kp-themes.min.js';
 import { attachFormgridStages } from '/static/kp/dist/kp-themes.min.js';
+import { attachSegmented, setSegmentedValues } from '/static/kp/dist/kp-themes.min.js';
 import { $, all } from './hsb-format.js';
-import { VIEW_KEY, hooks, routes, store } from './hsb-state.js';
+import { PICK_KEY, VIEW_KEY, hooks, routes, store } from './hsb-state.js';
+import { PICK_EVENT } from './profile-pick.js';
 import { AREA_RELOAD_EVENT, attachArea, attachProfileHover, refreshHover, watchEntityNames } from './profiles.js';
 import { drawProfiles } from './view-profiles.js';
 import { drawTrace } from './view-trace.js';
@@ -24,12 +27,10 @@ import { drawSettings } from './view-settings.js';
 import { done, drawRecheck, recheckAll, recheckOne } from './recheck.js';
 import { copyTest } from './test-command.js';
 
-/** The poll when history.js (and its refresh chooser) cannot load. */
+/** The poll when the page header has no refresh menu to ride on. */
 const POLL_MS = 10_000;
-/** The poll in seconds; history.js takes it over with the refresh chooser (0 = paused). */
-let pollSeconds = POLL_MS / 1000;
-/** @type {number | undefined} */
-let pollTimer;
+/** The kit's refresh menu in the page header: one setting for the whole page. */
+const headerRefresh = document.querySelector('.chassis-status__fresh .kp-refresh');
 
 const area = /** @type {HTMLElement} */ ($('hsb-area'));
 const grid = /** @type {HTMLElement} */ ($('hsb-grid'));
@@ -37,6 +38,7 @@ const map = /** @type {HTMLElement} */ ($('hsb-map'));
 const traceEl = /** @type {HTMLElement} */ ($('hsb-trace'));
 const settingsEl = /** @type {HTMLElement} */ ($('hsb-settings'));
 const allButton = /** @type {HTMLButtonElement} */ ($('hsb-recheck-all'));
+const viewSwitch = /** @type {HTMLElement} */ ($('hsb-view'));
 
 // ── data ───────────────────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -78,11 +80,25 @@ async function reload() {
     await refresh();
 }
 
-/** @param {number} seconds how often to read again; 0 pauses the poll. */
-function setPoll(seconds) {
-    pollSeconds = seconds;
-    window.clearInterval(pollTimer);
-    pollTimer = seconds > 0 ? window.setInterval(() => !document.hidden && void refresh(), seconds * 1000) : undefined;
+/** Read again whenever the header's refresh menu does (its interval, its Refresh now), or every 10 s without it. */
+function startPolling() {
+    if (headerRefresh) {
+        headerRefresh.addEventListener('kp-refresh', () => void refresh());
+        return;
+    }
+    window.setInterval(() => !document.hidden && void refresh(), POLL_MS);
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) void refresh();
+    });
+}
+
+/** Remember a choice in this browser; without storage it holds for this visit only. @param {string} key @param {string} value */
+function remember(key, value) {
+    try {
+        localStorage.setItem(key, value);
+    } catch {
+        // No storage: the choice holds for this visit only.
+    }
 }
 
 // ── wiring ─────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -108,21 +124,19 @@ function attachComponents() {
 }
 
 function wireViews() {
-    for (const b of all('[data-hsb-view]')) {
-        b.addEventListener('click', () => {
-            store.view = b.getAttribute('data-hsb-view') === 'map' ? 'map' : 'cards';
-            try {
-                localStorage.setItem(VIEW_KEY, store.view);
-            } catch {
-                // No storage: the choice holds for this visit only.
-            }
-            drawProfiles(area, grid, map);
-        });
-    }
-    $('hsb-trace-pick')?.addEventListener('click', (event) => {
-        const b = /** @type {HTMLElement} */ (event.target).closest('button[data-hsb-trace]');
-        if (!b) return;
-        store.traceName = /** @type {HTMLElement} */ (b).dataset.hsbTrace ?? store.traceName;
+    attachSegmented(viewSwitch);
+    setSegmentedValues(viewSwitch, [store.view]);
+    viewSwitch.addEventListener('kp-segmented-change', (event) => {
+        store.view = /** @type {CustomEvent} */ (event).detail?.value === 'map' ? 'map' : 'cards';
+        remember(VIEW_KEY, store.view);
+        drawProfiles(area, grid, map);
+    });
+    // The one profile choice (in Path) drives the path here; history.js follows the same event for the last 24 hours.
+    document.addEventListener(PICK_EVENT, (event) => {
+        const name = /** @type {CustomEvent} */ (event).detail?.name;
+        if (typeof name !== 'string' || name === store.traceName) return;
+        store.traceName = name;
+        remember(PICK_KEY, name);
         drawTrace(traceEl);
     });
 }
@@ -163,15 +177,12 @@ wireRetries();
 
 // The first answer is read like every later one: the cards, the table and the strips load until it comes.
 void reload();
-setPoll(pollSeconds);
-document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && pollSeconds > 0) void refresh();
-});
+startPolling();
 
-// The last 24 hours (history.js): its refresh chooser sets the poll for the whole page. If the module cannot load, the
-// ten-second poll above simply stays; the failure is logged so it is not invisible.
+// The last 24 hours (history.js) reads again on every poll of this page (the hsb-poll event). If the module cannot load,
+// the rest of the page carries on; the failure is logged so it is not invisible.
 const historyUrl = new URL('history.js', import.meta.url);
 historyUrl.search = new URL(import.meta.url).search;
 import(historyUrl.href)
-    .then((m) => m.start({ setPoll, refresh }))
-    .catch((error) => console.warn('http-switchboard: the last-24-hours module did not load; the page polls every 10 s instead.', error));
+    .then((m) => m.start())
+    .catch((error) => console.warn('http-switchboard: the last-24-hours module did not load; the rest of the page still refreshes.', error));

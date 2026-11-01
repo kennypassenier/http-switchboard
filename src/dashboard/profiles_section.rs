@@ -30,12 +30,11 @@ impl StatusSection for ProfilesSection {
         let html = markup(&data, &no_script_list(&profiles));
         Section {
             title: "Profiles".to_string(),
-            explain:
-                "One profile is one source, one translation and one destination. \
+            explain: "One profile is one source, one translation and one destination. \
                       A profile is 'starting' until a message has gone through it, and \
                       goes back to 'working' the moment one does. The page refreshes \
-                      itself as often as the refresh chooser says (every 30 seconds to start with)."
-                    .to_string(),
+                      itself as often as the refresh menu in the page header says."
+                .to_string(),
             rows: Vec::new(),
             html: Some(html),
         }
@@ -68,21 +67,19 @@ fn markup(data: &str, plain: &str) -> String {
 <script type="application/json" id="hsb-data">{data}</script>
 <script type="module" src="{WEB_MOUNT}/dashboard.js?v={version}"></script>
 <section class="kp-card hsb-area" id="hsb-area" data-chassis-owned data-kp-state="loading" data-kp-loading-words="Reading the profiles…" aria-label="Profiles">
-  <div class="kp-formgrid">
-    <div class="kp-formgrid__row">
-      <b class="kp-formgrid__label" id="hsb-view-l">View</b>
-      <div class="kp-formgrid__control">
-        <div class="hsb-choices" role="group" aria-labelledby="hsb-view-l" id="hsb-view">
-          <button type="button" class="kp-button kp-button--sm" aria-pressed="true" data-hsb-view="cards">Cards</button>
-          <button type="button" class="kp-button kp-button--sm" aria-pressed="false" data-hsb-view="map">Map</button>
-        </div>
+  <div class="kp-card__header hsb-area__head">
+    <p class="kp-card__body hsb-area__lead">Each card is one profile; the map shows which source feeds which destination.</p>
+    <div class="kp-card__actions">
+      <div class="kp-segmented" data-kp-segmented="single" role="radiogroup" aria-label="Show the profiles as" id="hsb-view">
+        <button type="button" class="kp-segmented__item" data-value="cards" role="radio" aria-checked="true"><span class="kp-segmented__label">Cards</span></button>
+        <button type="button" class="kp-segmented__item" data-value="map" role="radio" aria-checked="false"><span class="kp-segmented__label">Map</span></button>
       </div>
     </div>
   </div>
   <div class="kp-card__stage">
     <div class="kp-card__data">
       <div class="hsb-frame hsb-frame--profiles">
-        <div class="kp-entity-grid" data-kp-entity-grid data-kp-entity-min="22rem" data-kp-entity-meters="1" id="hsb-grid"></div>
+        <div class="kp-entity-grid" data-kp-entity-grid data-kp-entity-min="22rem" data-kp-entity-meters="1" data-kp-entity-inline="1" id="hsb-grid"></div>
         <div class="kp-matrix" data-kp-matrix data-kp-view="lines" data-kp-matrix-owned data-kp-remember="hsb-profiles" aria-label="Which source feeds which destination" id="hsb-map" hidden></div>
       </div>
     </div>

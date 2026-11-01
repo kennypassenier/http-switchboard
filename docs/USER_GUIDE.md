@@ -221,25 +221,26 @@ message.
 
 The door brought a dashboard with it. Behind the admin login (the
 `HTTP_SWITCHBOARD_TOKEN` from `gen-secret`) the status page carries four
-sections of its own (kp-themes 11 views; the page refreshes itself every
-ten seconds):
+sections of its own (kp-themes views; the page reads again as often as the
+refresh menu in the page header says, every 30 seconds to start with):
 
-- **Needs attention** (first of them): the profiles that are not well,
-  worst first, each with *See the fix* (scrolls to its alert); a profile
-  leaves the list when it works again, and "All profiles are working"
-  takes its place. Under it, one alert per profile says what is wrong,
-  why and what to do, with a command to copy where there is one (*hub
-  down*: `systemctl status kyu`; *failing*: `journalctl -u
-  http-switchboard`) and a button that rechecks that profile. Only the
-  "has not tried yet" note can be closed. When a profile that reads from
+- **Needs attention** (first of them): one alert per profile that is not
+  well, worst first, saying what is wrong, why and what to do, with a
+  command to copy where there is one (*hub down*: `systemctl status kyu`;
+  *failing*: `journalctl -u http-switchboard`) and a button that rechecks
+  that profile (*Recheck alertmanager*). A profile leaves the list when it
+  works again, and "Nothing needs attention" takes its place. A profile
+  that has not tried yet since the start is not a problem and is not
+  listed; its card says *starting*. When a profile that reads from
   the kyu hub is hub down or denied, a banner above them says the hub is
   unreachable or refused our token; *Retry now* rechecks the profiles and
   looks again, and the banner says so when the hub is back.
 - **Profiles**: one card per profile (the default) with its state in
   words, delivered, failed and average time, flags for the source and
-  destination kind, a bar with the share delivered, and the buttons
-  *Recheck this profile* and *Copy test command*. The **View** switch
-  shows the same data as a **Map** instead: sources left, destinations
+  destination kind, a bar with the share delivered, the button *Try a
+  translation* and a *More* menu with *Recheck alertmanager* and *Copy
+  test command*. The **Cards / Map** switch in the card's head shows the
+  same data as a **Map** instead: sources left, destinations
   right, one line per profile (dashed while `starting`, toned where it
   stops); the choice is remembered in the browser.
 
@@ -254,13 +255,16 @@ ten seconds):
   no expected quiet time per profile, and an alert profile is quiet exactly
   when nothing is wrong, so one day is the default for every profile
   (`QUIET_AFTER_S` in `web/profiles.js`). Rest the pointer on (or tab to) a
-  **profile name**, on a card, in the path picker, in the settings and in
+  **profile name**, on a card, in the settings and in
   the Recheck table, and a small card shows its status, source,
   destination host only, content type, a short template label (the field
   names, never the template), the three exact counts and the last success.
 - **Path of a profile**: sender, door, translation, destination; it stops
   at the first refusing hop (hub refused our credentials, hub down,
-  receiver failing) and says why.
+  receiver failing) and says why. Its **Profile** choice (two or more
+  profiles; a list from six on) is the page's one choice of profile: it
+  also sets the profile *Last 24 hours* shows, and is remembered in the
+  browser.
 - **Settings and retry budget**: source, destination host and port (never
   the path: it is the webhook credential), content type, timeout, retries,
   max attempts (hub hand-outs before a dead letter), lease, and a bar for
@@ -270,7 +274,7 @@ ten seconds):
 - **Recheck**: the **Recheck profiles** button (spinner and
   "Rechecking…", then a toast "N profiles back to starting"; a failure is
   a toast that stays, with *Try again*) and a table with an *Actions* menu
-  per row: *Recheck this profile* (greyed with its reason when the
+  per row: *Recheck alertmanager* (greyed with its reason when the
   profile is already starting) and *Copy test command* (a curl line for an
   HTTP source; the `test` dry-run command for a kyu source).
 - **Reloads**: every time the profile file was read again
@@ -286,14 +290,17 @@ ten seconds):
   quote the file: values and the lines a parse error echoes are left out.
 
 - **Last 24 hours** (feat-dash-kp11-30..39): received, delivered, failed
-  and the average delivery time of one profile (pick it above the card),
-  each with its trend by the hour; numbers count to their new value. The
-  *Tiles* buttons switch to quiet sparklines where *Failed* is a filter
-  that lists only the failed deliveries. Under it, *Uptime by the hour*:
+  and the average delivery time of the profile chosen in *Path of a
+  profile*, each with its trend by the hour; numbers count to their new
+  value. *View options* in the card's head holds two choices: *Tiles*
+  switches to quiet sparklines where *Failed* is a filter that lists only
+  the failed deliveries, and *Press an hour* sets what pressing an hour of
+  the uptime strip opens. Under it, *Uptime by the hour*:
   one strip of 24 cells per profile (green up, amber some deliveries
   failed, red every delivery failed or the hub refused or was away, grey
   before the service started); point at a cell for the hover card, press
-  it for the hour's quick info (*Hover card only* turns that off). An hour
+  it for the hour's quick info (*Hover card only* in *View options* turns
+  that off). An hour
   without traffic keeps the health the profile had when it began.
   The history is **in memory and starts empty at every restart**; it keeps
   at most 24 hours (`GET /history.json`, admin login; counts, times and a

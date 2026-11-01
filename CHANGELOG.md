@@ -7,6 +7,27 @@ endpoints and the CLI verbs — not about the internals.
 
 ## [Unreleased]
 
+### Changed
+
+- **Needs attention says each problem once** (UX review 2026-11-01): one
+  alert per profile that is not well, with what, why, what now and a
+  *Recheck <name>* button. The attention band's copy, *See the fix* and the
+  closable "has not tried yet" note are gone; a profile that is only
+  `starting` is not listed (its card says so).
+- **Cards / Map** is a segmented control in the Profiles card's head, so the
+  chosen view shows.
+- **One profile choice** in Path of a profile drives Last 24 hours too (a
+  segmented control up to five profiles, a list from six on), remembered in
+  the browser. Last 24 hours and the uptime strips now follow Path.
+- **One refresh setting**: the page reads again with the kit's refresh menu
+  in the page header; the second "Page refresh" chooser in Last 24 hours is
+  gone.
+- **View options**: *Tiles* and *Press an hour* moved from two rows into one
+  popover in the Last 24 hours card's head.
+- **Profile cards** have one button, *Try a translation*, and a *More* menu
+  with *Recheck <name>* and *Copy test command*; the Recheck table uses the
+  same name.
+
 ## [5.0.0] - 2026-10-31
 
 ### Changed

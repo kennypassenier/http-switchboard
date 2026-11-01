@@ -1,6 +1,7 @@
 //! The top of the status page: what needs a person, said before anything
-//! else (kp-themes 11: attention band, problem alerts, the kyu hub's
-//! connection banner).
+//! else: one alert per real problem (what, why, what now and the fix,
+//! worst first) and the kyu hub's connection banner. A profile that is
+//! only `starting` is not a problem and is not listed here.
 //!
 //! This section is registered first, so it stands above the profiles. It
 //! carries no data of its own: `web/health.js` reads the same snapshot the
@@ -24,20 +25,19 @@ impl StatusSection for HealthSection {
 <div class="hsbh-frame">
   <div id="hsbh-connection" data-kp-connection data-kp-connection-source="app" data-kp-connection-grace="1500" data-kp-placement="top"></div>
   <div class="kp-empty hsbh-clear" id="hsbh-clear" data-kp-art="done" data-kp-art-size="sm" hidden>
-    <p class="kp-empty__title">All profiles are working</p>
+    <p class="kp-empty__title">Nothing needs attention</p>
     <p class="kp-empty__body" id="hsbh-clear-body"></p>
   </div>
-  <div class="hsbh-grid" id="hsbh-pair">
-    <div class="kp-attention" id="hsbh-band" data-kp-subgrid role="region" aria-label="Profiles that need attention"></div>
-    <div class="kp-problems" id="hsbh-problems" data-kp-subgrid data-kp-problems data-kp-problems-mode="each" hidden></div>
-  </div>
+  <div class="kp-problems" id="hsbh-problems" data-kp-problems data-kp-problems-mode="each" role="region" aria-label="Profiles that need attention" hidden></div>
 </div>"##
         );
         Section {
             title: "Needs attention".to_string(),
-            explain: "The profiles that are not well, worst first, with what is wrong, why and \
-                      what to do. A profile leaves this list the moment it works again. When \
-                      the kyu hub cannot be reached or refuses our token, a banner says so."
+            explain: "One alert per profile that is not well, worst first: what is wrong, why, \
+                      what to do and the button that rechecks it. A profile leaves this list the \
+                      moment it works again; one that has not tried yet since the start is not \
+                      listed. When the kyu hub cannot be reached or refuses our token, a banner \
+                      says so."
                 .to_string(),
             rows: Vec::new(),
             html: Some(html),

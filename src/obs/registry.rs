@@ -93,7 +93,7 @@ impl Registry {
     }
 
     /// Put one profile back to `Starting` (the entity card's and the row
-    /// menu's "Recheck this profile"). `false` when no such profile is
+    /// menu's "Recheck <name>"). `false` when no such profile is
     /// registered, so the route can answer 404 instead of inventing one.
     pub fn reset_health_of(&self, profile: &str) -> bool {
         match self.profiles.lock().unwrap().get_mut(profile) {

@@ -3,7 +3,7 @@
 
 import { setEntityGrid } from '/static/kp/dist/kp-themes.min.js';
 import { setMatrix } from '/static/kp/dist/kp-themes.min.js';
-import { all, count, percent, plural } from './hsb-format.js';
+import { count, percent, plural } from './hsb-format.js';
 import { HEALTH_TONE, HEALTH_WORD, hasHub, store } from './hsb-state.js';
 import { paintFresh, setArea } from './profiles.js';
 
@@ -42,10 +42,11 @@ function entityOf(p) {
                 text: share === null ? 'Nothing tried yet' : `${percent(share)} delivered`,
             },
         ],
+        // One button in a fixed column on every card, the rest in the card's More menu (data-kp-entity-inline="1").
         actions: [
-            { id: 'recheck', label: 'Recheck this profile' },
-            { id: 'copy-test', label: 'Copy test command' },
             { id: 'try', label: 'Try a translation' },
+            { id: 'recheck', label: `Recheck ${p.name}` },
+            { id: 'copy-test', label: 'Copy test command' },
         ],
     };
 }
@@ -83,7 +84,6 @@ export function drawProfiles(area, grid, map) {
     const { profiles, status, view } = store;
     grid.hidden = view !== 'cards';
     map.hidden = view !== 'map';
-    for (const b of all('[data-hsb-view]')) b.setAttribute('aria-pressed', String(b.getAttribute('data-hsb-view') === view));
     if (status !== 'ready') {
         setArea(area, status);
         return;

@@ -1,10 +1,12 @@
 // The path of one profile: sender, door, translation and destination as a path trace that stops at the first hop that
-// refuses. A picker chooses the profile when there are two or more.
+// refuses. Above it stands the page's one profile choice (two or more profiles): it drives this path and the last 24
+// hours below it (history.js listens for the same PICK_EVENT).
 
 import { setTrace, trace } from '/static/kp/dist/kp-themes.min.js';
-import { $, all } from './hsb-format.js';
+import { $ } from './hsb-format.js';
 import { HEALTH_TONE, HEALTH_WORD, hasHub, store } from './hsb-state.js';
 import { markName } from './profiles.js';
+import { paintPick } from './profile-pick.js';
 
 /** The four hops of one profile, each allowed, unknown (nothing tried yet) or refused. @param {import('./hsb-state.js').Profile} p */
 function hopsOf(p) {
@@ -31,25 +33,14 @@ function hopsOf(p) {
     ];
 }
 
-/** Keep one picker button per profile, in step with the snapshot, and mark the chosen one. */
+/** The page's one profile choice, in step with the snapshot; hidden while there is only one profile. */
 function drawPicker() {
     const pick = $('hsb-trace-pick');
     if (!pick) return;
     const { profiles } = store;
     const row = $('hsb-trace-pick-row');
     if (row) row.hidden = profiles.length < 2;
-    for (const old of all('button', pick)) if (!profiles.some((p) => p.name === old.dataset.hsbTrace)) old.remove();
-    for (const p of profiles) {
-        if (all('button', pick).some((b) => b.dataset.hsbTrace === p.name)) continue;
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.className = 'kp-button kp-button--sm';
-        b.dataset.hsbTrace = p.name;
-        b.textContent = p.name;
-        markName(b, p.name);
-        pick.append(b);
-    }
-    for (const b of all('button', pick)) b.setAttribute('aria-pressed', String(b.dataset.hsbTrace === store.traceName));
+    paintPick(pick, profiles.map((p) => p.name), store.traceName, 'Profile shown in Path and Last 24 hours');
 }
 
 /** The name and state badge above the trace. @param {import('./hsb-state.js').Profile | undefined} p */

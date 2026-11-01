@@ -1,14 +1,15 @@
 //! The status page's history sections (feat-dash-kp11-30..39): the key
 //! figures of the last 24 hours with their trend, one uptime strip of 24
-//! hour cells per profile, and the refresh chooser that drives how often
-//! the whole page reads again.
+//! hour cells per profile, and the View options popover (how the tiles
+//! look, what pressing an hour opens). How often the page reads again is
+//! the kit's refresh menu in the page header.
 //!
 //! The data is [`crate::history::History`], read through [`HISTORY_ROUTE`]
 //! behind the admin login (a route of its own: the profiles snapshot is
 //! polled by the cards and stays small). The first paint comes from a
 //! `<script type="application/json">` in the first section, like the
-//! profiles; `web/history.js` is started by `web/dashboard.js`, which owns
-//! the poll the chooser takes over.
+//! profiles; `web/history.js` is started by `web/dashboard.js` and reads
+//! again on every poll of the page.
 //!
 //! The history is in memory and lost on restart; the page says so ("History
 //! since the last start, at most 24 hours"). It carries counts, times and a
@@ -82,30 +83,37 @@ impl StatusSection for FiguresSection {
         let html = format!(
             r##"<link rel="stylesheet" href="{WEB_MOUNT}/history.css?v={version}">
 <script type="application/json" id="hsb-history-data">{data}</script>
-<div class="kp-formgrid" id="hsb-h-grid">
-  <div class="kp-refresh" id="hsb-h-refresh" data-kp-refresh="30" data-kp-refresh-label="Page refresh" data-kp-remember="hsb-refresh" data-kp-look="segmented"></div>
-  <div class="kp-formgrid__row">
-    <span class="kp-formgrid__label" aria-hidden="true"></span>
-    <div class="kp-formgrid__control" data-kp-formgrid-span="wide"><p class="hsb-h-note">History since the last start, at most 24 hours.</p></div>
-  </div>
-  <div class="kp-formgrid__row" id="hsb-h-pick-row" hidden>
-    <b class="kp-formgrid__label" id="hsb-h-pick-l">Profile</b>
-    <div class="kp-formgrid__control"><div class="hsb-choices" role="group" aria-labelledby="hsb-h-pick-l" id="hsb-h-pick"></div></div>
-  </div>
-  <div class="kp-formgrid__row" id="hsb-h-tiles" hidden>
-    <b class="kp-formgrid__label" id="hsb-h-tiles-l">Tiles</b>
-    <div class="kp-formgrid__control">
-      <div class="hsb-choices" role="group" aria-labelledby="hsb-h-tiles-l">
-        <button type="button" class="kp-button kp-button--sm" aria-pressed="true" data-hsb-tiles="trend">Trend</button>
-        <button type="button" class="kp-button kp-button--sm" aria-pressed="false" data-hsb-tiles="spark">Sparklines</button>
-      </div>
-    </div>
-  </div>
-</div>
 <section class="kp-card hsb-h-card" id="hsb-h-card" data-chassis-owned data-kp-state="loading" aria-labelledby="hsb-h-title" data-kp-loading-words="Reading the last 24 hours">
   <div class="kp-card__header">
     <h3 class="kp-card__title" id="hsb-h-title">Last 24 hours</h3>
-    <div class="kp-card__actions"><span class="kp-timestamp" id="hsb-h-read"></span></div>
+    <div class="kp-card__actions">
+      <span class="kp-timestamp" id="hsb-h-read"></span>
+      <button type="button" class="kp-button kp-button--sm" id="hsb-h-options-open" popovertarget="hsb-h-options" aria-haspopup="dialog" style="anchor-name: --hsb-h-options" hidden>View options ▾</button>
+      <div popover="auto" id="hsb-h-options" class="kp-popover hsb-h-options" style="position-anchor: --hsb-h-options" role="dialog" aria-label="View options">
+        <div class="kp-formgrid">
+          <div class="kp-formgrid__row">
+            <b class="kp-formgrid__label">Tiles</b>
+            <div class="kp-formgrid__control">
+              <div class="kp-segmented" data-kp-segmented="single" role="radiogroup" aria-label="Tiles" id="hsb-h-tiles">
+                <button type="button" class="kp-segmented__item" data-value="trend" role="radio" aria-checked="true"><span class="kp-segmented__label">Trend</span></button>
+                <button type="button" class="kp-segmented__item" data-value="spark" role="radio" aria-checked="false"><span class="kp-segmented__label">Sparklines</span></button>
+              </div>
+              <p class="kp-field__help">Trend draws each figure's hourly chart; Sparklines keeps the tiles small, with Failed as a filter.</p>
+            </div>
+          </div>
+          <div class="kp-formgrid__row">
+            <b class="kp-formgrid__label">Press an hour</b>
+            <div class="kp-formgrid__control">
+              <div class="kp-segmented" data-kp-segmented="single" role="radiogroup" aria-label="Press an hour of the uptime strip" id="hsb-h-press">
+                <button type="button" class="kp-segmented__item" data-value="info" role="radio" aria-checked="true"><span class="kp-segmented__label">Quick info</span></button>
+                <button type="button" class="kp-segmented__item" data-value="hover" role="radio" aria-checked="false"><span class="kp-segmented__label">Hover card only</span></button>
+              </div>
+              <p class="kp-field__help">What pressing an hour of the uptime strip below opens.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
   <p class="kp-card__body" id="hsb-h-body"></p>
   <div class="kp-card__stage">
@@ -126,8 +134,8 @@ impl StatusSection for FiguresSection {
             explain: "Received, delivered, failed and the average delivery time of one \
                       profile over the last 24 hours, each with its trend by the hour. \
                       The history lives in memory: it starts empty when the service \
-                      starts and keeps at most 24 hours. The page refresh chooser sets \
-                      how often the whole page reads again, or pauses it."
+                      starts and keeps at most 24 hours. It shows the profile chosen in \
+                      Path of a profile; View options sets how the tiles look."
                 .to_string(),
             rows: Vec::new(),
             html: Some(html),
@@ -144,24 +152,11 @@ impl StatusSection for UptimeSection {
             explain: "One strip per profile: each cell is an hour of the last 24, green when \
                       it went well, amber when some deliveries failed, red when every \
                       delivery failed or the hub refused or could not be reached, grey \
-                      before the service started. Press a cell for the hour's details."
+                      before the service started. Press an hour for its details (View \
+                      options in Last 24 hours sets what opens)."
                 .to_string(),
             rows: Vec::new(),
-            html: Some(
-                r#"<div class="kp-formgrid">
-  <div class="kp-formgrid__row" id="hsb-h-press" hidden>
-    <b class="kp-formgrid__label" id="hsb-h-press-l">Press a cell</b>
-    <div class="kp-formgrid__control">
-      <div class="hsb-choices" role="group" aria-labelledby="hsb-h-press-l">
-        <button type="button" class="kp-button kp-button--sm" aria-pressed="true" data-hsb-press="info">Quick info</button>
-        <button type="button" class="kp-button kp-button--sm" aria-pressed="false" data-hsb-press="hover">Hover card only</button>
-      </div>
-    </div>
-  </div>
-</div>
-<div class="hsb-h-strips" id="hsb-h-strips"></div>"#
-                    .to_string(),
-            ),
+            html: Some(r#"<div class="hsb-h-strips" id="hsb-h-strips"></div>"#.to_string()),
         }
     }
 }

@@ -80,7 +80,7 @@ pub(crate) use escape::script_safe;
 /// `dashboard_routes`, so it is behind the admin login, not a sender's
 /// token.
 pub const RECHECK_ROUTE: &str = "/profiles/recheck";
-/// "Recheck this profile": `{name}` is the profile's name, URL-encoded.
+/// "Recheck <name>": `{name}` is the profile's name, URL-encoded.
 pub const RECHECK_ONE_ROUTE: &str = "/profiles/{name}/recheck";
 /// The JSON the cards, map, trace and settings are drawn from.
 pub const SNAPSHOT_ROUTE: &str = "/profiles.json";
@@ -95,11 +95,13 @@ pub fn install(app: &mut chassis::App, profiles: Arc<Profiles>) {
     // First, so what needs a person stands above everything else.
     app.status_section(crate::dashboard_health::HealthSection);
     app.status_section(ProfilesSection(Arc::clone(&profiles)));
+    // The per-profile sections stand together under the one profile
+    // choice in Path: the path, then the last 24 hours (key figures and
+    // uptime strips) of the same profile.
     app.status_section(TraceSection);
+    crate::dashboard_history::install(app, Arc::clone(&profiles.registry), profiles.order.clone());
     app.status_section(SettingsSection);
     app.status_section(RecheckSection(Arc::clone(&profiles)));
-    // The last 24 hours: key figures, uptime strips, refresh chooser.
-    crate::dashboard_history::install(app, Arc::clone(&profiles.registry), profiles.order.clone());
     app.dashboard_routes(profiles.routes());
     crate::dashboard_reloads::install(app, Arc::clone(profiles.store()));
     crate::dashboard_translate::install(app, Arc::clone(&profiles));

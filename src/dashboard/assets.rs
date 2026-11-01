@@ -23,6 +23,10 @@ pub(super) const WEB_FILES: &[(&str, &[u8])] = &[
         "test-command.js",
         include_bytes!("../../web/test-command.js"),
     ),
+    (
+        "profile-pick.js",
+        include_bytes!("../../web/profile-pick.js"),
+    ),
     ("dashboard.css", include_bytes!("../../web/dashboard.css")),
     ("history.js", include_bytes!("../../web/history.js")),
     (

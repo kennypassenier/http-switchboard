@@ -6,6 +6,8 @@ import { $ } from './hsb-format.js';
 
 /** The choice between the cards and the map, remembered per browser (synced by the kit's preferences). */
 export const VIEW_KEY = 'hsb-profiles-view';
+/** The profile the per-profile sections (Path, Last 24 hours) show, remembered per browser. */
+export const PICK_KEY = 'hsb-profile';
 export const UNREACHABLE = 'Could not reach HTTPSwitchboard. Check that the service is running, then try again.';
 
 export const HEALTH_WORD = { working: 'working', starting: 'starting', failing: 'failing', denied: 'denied', 'hub-down': 'hub down' };
@@ -33,13 +35,25 @@ function rememberedView() {
 /** @type {Profile[]} */
 const first = embedded.profiles ?? [];
 
+/** The remembered profile while it still exists, else the first. */
+function rememberedPick() {
+    try {
+        const name = localStorage.getItem(PICK_KEY);
+        if (name && first.some((p) => p.name === name)) return name;
+    } catch {
+        // No storage: the first profile stands.
+    }
+    return first[0]?.name ?? '';
+}
+
 export const store = {
     /** @type {Profile[]} */
     profiles: first,
     /** The first read is in flight from the first frame: the page holds no answer until it comes. @type {'ready' | 'loading' | 'error'} */
     status: /** @type {'ready' | 'loading' | 'error'} */ ('loading'),
     view: rememberedView(),
-    traceName: first[0]?.name ?? '',
+    /** The profile Path and Last 24 hours show (one choice for both). */
+    traceName: rememberedPick(),
     /** Profiles with a recheck in flight. @type {Set<string>} */
     rechecking: new Set(),
 };

@@ -1,14 +1,14 @@
-// The top of the status page (kp-themes 11): the attention band, the problem alerts and the kyu hub's connection banner.
+// The top of the status page: one alert per real problem (what, why, what now and the fix, worst first) and the kyu
+// hub's connection banner. A profile that is only `starting` is not a problem: its card says so, not this list.
 //
 // It draws from the snapshot dashboard.js already polls: dashboard.js announces every refresh as `hsb:profiles` on the
 // document, and `hsb:refresh` asks it for one more. There is no second poll. Words describe a profile from its own
 // shape (kyu or HTTP source, URL or kyu destination); nothing here sees a header, a payload or a webhook path.
 //
-// Layout: health-words.js (a state in words), health-hub.js (the hub banner); this file draws the band and the alerts
-// and does the rechecks.
+// Layout: health-words.js (a state in words), health-hub.js (the hub banner); this file draws the alerts and does the
+// rechecks.
 
-import { setAttention, attachAttention } from '/static/kp/dist/kp-themes.min.js';
-import { setProblems, attachProblems, PROBLEM_DISMISS_EVENT } from '/static/kp/dist/kp-themes.min.js';
+import { setProblems, attachProblems } from '/static/kp/dist/kp-themes.min.js';
 import { attachConnection, CONNECTION_RETRY_EVENT } from '/static/kp/dist/kp-themes.min.js';
 import { attachArt } from '/static/kp/dist/kp-themes.min.js';
 import { setStrings } from '/static/kp/dist/kp-themes.min.js';
@@ -35,8 +35,6 @@ setStrings({
 
 const byId = (/** @type {string} */ id) => /** @type {HTMLElement} */ (document.getElementById(id));
 const frame = /** @type {HTMLElement} */ (document.querySelector('.hsbh-frame'));
-const band = byId('hsbh-band');
-const pair = byId('hsbh-pair');
 const clear = byId('hsbh-clear');
 const clearBody = byId('hsbh-clear-body');
 const problems = byId('hsbh-problems');
@@ -47,8 +45,6 @@ const routes = embedded.routes ?? { recheckAll: '/profiles/recheck', recheckOne:
 
 /** @type {import('./health-words.js').Profile[]} */
 let profiles = embedded.profiles ?? [];
-/** Profiles whose "has not tried yet" note the reader closed; it comes back if the profile turns unhealthy and starting again. @type {Set<string>} */
-const closed = new Set();
 /** @type {Set<string>} */
 const rechecking = new Set();
 let lastSig = '';
@@ -63,31 +59,28 @@ function button(label, data) {
     return b;
 }
 
-// ── the band and the alerts ────────────────────────────────────────────────────────────────────────────────────────
+// ── the alerts ─────────────────────────────────────────────────────────────────────────────────────────────────────
+
+/** The quiet line when nothing is wrong: who delivered, and who has not tried yet since the start. @param {import('./health-words.js').Profile[]} all */
+function clearLine(all) {
+    const working = all.filter((p) => p.state === 'working').map((p) => p.name);
+    const waiting = all.filter((p) => p.state === 'starting').map((p) => p.name);
+    const did = working.length === 0 ? '' : `${list(working)} delivered ${working.length === 1 ? 'its' : 'their'} last message.`;
+    const not = waiting.length === 0 ? '' : `${list(waiting)} ${waiting.length === 1 ? 'has' : 'have'} not tried yet since the start; nothing is wrong.`;
+    return [did, not].filter(Boolean).join(' ');
+}
 
 function paintHealth() {
-    for (const name of [...closed]) if (profiles.find((p) => p.name === name)?.state !== 'starting') closed.delete(name);
     const unwell = profiles.flatMap((p) => {
         const w = wordsOf(p);
         return w ? [{ p, w }] : [];
     });
-    const shown = unwell.filter(({ p }) => !closed.has(p.name));
-    const sig = JSON.stringify(shown.map(({ p, w }) => [p.name, p.state, w.title, w.text, w.why]));
+    const sig = JSON.stringify(unwell.map(({ p, w }) => [p.name, p.state, w.title, w.why]));
     if (sig !== lastSig) {
         lastSig = sig;
-        setAttention(
-            band,
-            unwell.map(({ p, w }) => ({
-                key: p.name,
-                severity: w.severity,
-                title: w.title,
-                text: w.text,
-                action: button('See the fix', { 'data-hsbh-fix': p.name }),
-            })),
-        );
         setProblems(
             problems,
-            shown.map(({ p, w }) => ({
+            unwell.map(({ p, w }) => ({
                 key: p.name,
                 severity: w.severity,
                 what: w.title,
@@ -95,17 +88,13 @@ function paintHealth() {
                 remedy: w.remedy,
                 command: w.command,
                 action: button(w.fix, { 'data-hsbh-recheck': p.name }),
-                dismissible: p.state === 'starting',
             })),
         );
-        problems.hidden = shown.length === 0;
-        pair.style.setProperty('--hsbh-rows', String(Math.max(unwell.length, 1)));
+        problems.hidden = unwell.length === 0;
     }
     const allWell = profiles.length > 0 && unwell.length === 0;
     clear.hidden = !allWell;
-    if (allWell) {
-        clearBody.textContent = profiles.length === 1 ? `${profiles[0]?.name} delivered its last message.` : profiles.length === 2 ? `${list(profiles.map((p) => p.name))} delivered their last message.` : `All ${profiles.length} profiles delivered their last message.`;
-    }
+    if (allWell) clearBody.textContent = clearLine(profiles);
 }
 
 // ── actions ────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -143,39 +132,17 @@ async function recheck(name) {
     }
 }
 
-/** "See the fix": the profile's alert, in view and focused; a closed note has no alert, so the profiles are shown. @param {string} name */
-function showFix(name) {
-    const alert = [...problems.querySelectorAll('[data-kp-key]')].find((el) => el.getAttribute('data-kp-key') === name);
-    const target = /** @type {HTMLElement | null} */ (alert ?? document.getElementById('hsb-grid'));
-    if (!target) return;
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    target.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' });
-    const focus = /** @type {HTMLElement | null} */ (alert?.querySelector('[data-hsbh-recheck]') ?? null);
-    focus?.focus({ preventScroll: true });
-}
-
 const hub = hubBanner(banner, () => profiles, () => post(routes.recheckAll));
 
 // ── wiring ─────────────────────────────────────────────────────────────────────────────────────────────────────────
 
-attachAttention(frame);
 attachProblems(frame);
 attachConnection(frame);
 attachArt(frame);
 
 frame.addEventListener('click', (event) => {
-    const target = /** @type {HTMLElement} */ (event.target);
-    const fix = target.closest('[data-hsbh-fix]');
-    if (fix) return showFix(fix.getAttribute('data-hsbh-fix') ?? '');
-    const again = target.closest('[data-hsbh-recheck]');
+    const again = /** @type {HTMLElement} */ (event.target).closest('[data-hsbh-recheck]');
     if (again) void recheck(again.getAttribute('data-hsbh-recheck') ?? '');
-});
-problems.addEventListener(PROBLEM_DISMISS_EVENT, (event) => {
-    const key = /** @type {CustomEvent} */ (event).detail?.key;
-    if (typeof key !== 'string') return;
-    closed.add(key);
-    lastSig = '';
-    paintHealth();
 });
 banner.addEventListener(CONNECTION_RETRY_EVENT, (event) => {
     void hub.retry(Boolean(/** @type {CustomEvent} */ (event).detail?.auto));

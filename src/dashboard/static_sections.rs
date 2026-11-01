@@ -10,15 +10,16 @@ impl StatusSection for TraceSection {
         Section {
             title: "Path of a profile".to_string(),
             explain: "Follows one message from its sender to the destination and stops at \
-                      the first hop that refuses it, saying which one and why."
+                      the first hop that refuses it, saying which one and why. The profile \
+                      chosen here is also the one Last 24 hours shows."
                 .to_string(),
             rows: Vec::new(),
             html: Some(
                 r#"<div class="hsb-frame hsb-trace">
   <div class="kp-formgrid">
     <div class="kp-formgrid__row" id="hsb-trace-pick-row" hidden>
-      <b class="kp-formgrid__label" id="hsb-trace-pick-l">Profile</b>
-      <div class="kp-formgrid__control"><div class="hsb-choices" role="group" aria-labelledby="hsb-trace-pick-l" id="hsb-trace-pick"></div></div>
+      <b class="kp-formgrid__label">Profile</b>
+      <div class="kp-formgrid__control"><div class="hsb-pick" id="hsb-trace-pick"></div></div>
     </div>
     <div class="kp-formgrid__row">
       <b class="kp-formgrid__label" id="hsb-trace-name"></b>

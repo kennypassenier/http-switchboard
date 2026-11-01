@@ -32,7 +32,7 @@ pub async fn recheck(State(profiles): State<Arc<Profiles>>) -> impl IntoResponse
     json(StatusCode::OK, format!(r#"{{"rechecked":{reset}}}"#))
 }
 
-/// "Recheck this profile": the same reset for one profile.
+/// "Recheck <name>": the same reset for one profile.
 pub async fn recheck_one(
     State(profiles): State<Arc<Profiles>>,
     Path(name): Path<String>,

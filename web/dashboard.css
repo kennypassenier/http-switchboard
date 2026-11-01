@@ -2,26 +2,9 @@
    hsb- rules only lay the sections out. Colours, spacing and radii come from the theme's tokens, never from here. */
 
 .kp-page {
-    /* The page's one label column: every picker's label is at least this wide (the form grid's own knob), so a label and its
-       first button stand at one x in every card. The choice tracks are equal and shared by every picker. */
+    /* The page's one label column: every form grid's label is at least this wide (the form grid's own knob), so a label
+       and its control stand at one x in every card. */
     --kp-formgrid-label-min: 7rem;
-    --hsb-track: 8rem;
-}
-
-/* A choice: a word's buttons on equal tracks, the same in every picker, in the form grid's control column. */
-.hsb-choices {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(7rem, var(--hsb-track)));
-    gap: var(--kp-space-xs, 0.25rem) var(--kp-space-sm, 0.5rem);
-    justify-content: start;
-}
-
-.hsb-choices > button {
-    inline-size: 100%;
-    min-inline-size: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
 .hsb-frame {
