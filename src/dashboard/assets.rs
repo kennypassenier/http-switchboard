@@ -54,6 +54,26 @@ pub(super) const WEB_FILES: &[(&str, &[u8])] = &[
         "translate-diff.js",
         include_bytes!("../../web/translate-diff.js"),
     ),
+    (
+        "translate-dom.js",
+        include_bytes!("../../web/translate-dom.js"),
+    ),
+    (
+        "translate-fields.js",
+        include_bytes!("../../web/translate-fields.js"),
+    ),
+    (
+        "translate-run.js",
+        include_bytes!("../../web/translate-run.js"),
+    ),
+    (
+        "translate-states.js",
+        include_bytes!("../../web/translate-states.js"),
+    ),
+    (
+        "translate-toml.js",
+        include_bytes!("../../web/translate-toml.js"),
+    ),
     ("translate.css", include_bytes!("../../web/translate.css")),
 ];
 

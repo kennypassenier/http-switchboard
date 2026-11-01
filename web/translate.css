@@ -13,7 +13,7 @@
     align-items: stretch;
 }
 
-/* The profile row shares the two columns below it: the chooser over the input, the note over the result. */
+/* The profile row shares the columns below it: the chooser over the sample, the note over the template. */
 .hsbt-try__profile {
     grid-column: 1 / -1;
     display: grid;
@@ -21,67 +21,92 @@
     align-items: center;
 }
 
-.hsbt-try__profile > .kp-segmented {
-    grid-column: 1 / span 5;
-    justify-self: start;
+.hsbt-try__profile > .hsbt-pick {
+    grid-column: 1 / span 6;
+    min-inline-size: 0;
 }
 
 .hsbt-try__profile > .hsbt-meta {
-    grid-column: 6 / -1;
+    grid-column: 7 / -1;
 }
 
-.hsbt-try__input {
-    grid-column: span 5;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    /* The template block takes what is left of the column, so its bottom edge stands on the result card's. */
-    grid-template-rows: auto minmax(0, 1fr);
-    gap: var(--kp-space-md, 1rem);
+/* Without script the chooser is a list of links to ?profile=<name>; the script replaces it. */
+.hsbt-pick__fallback {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--kp-space-sm, 0.5rem) var(--kp-space-md, 1rem);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+/* Past five profiles the chooser is a select (profile-pick.js): it fills its column up to a readable width. */
+.hsbt-pick select {
+    inline-size: 100%;
+    max-inline-size: 24rem;
+}
+
+/* The two editors: same column width, same textarea height, hint under each. */
+.hsbt-try__input,
+.hsbt-try__draft {
+    grid-column: span 6;
+    display: flex;
+    flex-direction: column;
+    gap: var(--kp-space-sm, 0.5rem);
     min-inline-size: 0;
 }
 
-.hsbt-try__input :is(.kp-code, .kp-jsonfield) {
+.hsbt-try__input :is(.kp-jsonfield, .kp-field__input),
+.hsbt-try__draft .kp-field__input {
     min-inline-size: 0;
 }
 
-/* The box's tools stand on the tracks of the template's: Format and Minify at the start, Wrap and Copy at the end edge, where the
-   template's and the result's own Wrap and Copy stand. */
-.hsbt-try .kp-jsonfield__tools {
+.hsbt-draft {
+    flex: 1 1 auto;
+    min-block-size: 20rem;
+    font-family: var(--kp-font-mono, ui-monospace, monospace);
+    font-size: var(--kp-text-sm, 0.8125rem);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    overflow: auto;
+    resize: vertical;
+}
+
+/* The draft's actions: the state sentence takes what is left, the two buttons stand on equal tracks at the end edge. */
+.hsbt-draft__bar {
     display: grid;
-    grid-template-columns: auto auto minmax(0, 1fr) auto auto;
-    column-gap: var(--kp-space-xs, 0.25rem);
-}
-
-.hsbt-try .kp-jsonfield__tools > [data-kp-json-tool='wrap'] {
-    grid-column: 4;
-}
-
-.hsbt-try .kp-jsonfield__tools > [data-kp-json-tool='copy'] {
-    grid-column: 5;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: var(--kp-space-sm, 0.5rem);
 }
 
 .hsbt-try__result {
-    grid-column: span 7;
-    min-inline-size: 0;
-}
-
-.hsbt-try__diff {
     grid-column: 1 / -1;
     min-inline-size: 0;
 }
 
-/* Side by side: the card beside the column starts its title one border and one padding lower; the label stands on that line. */
-@container hsbt (min-width: 52rem) {
-    .hsbt-try__input {
-        padding-block-start: var(--hsbt-label-drop, 0.87rem);
-    }
+/* The field table takes the whole row: under 40rem of its own width the package turns its rows into cards, and four
+   columns of paths and values need the room to stay a table on a desktop. */
+.hsbt-try__fields {
+    grid-column: 1 / -1;
+    min-inline-size: 0;
 }
 
 @container hsbt (max-width: 52rem) {
     .hsbt-try .hsbt-try__input,
+    .hsbt-try .hsbt-try__draft,
     .hsbt-try .hsbt-try__result,
-    .hsbt-try__profile > .kp-segmented,
+    .hsbt-try .hsbt-try__fields,
+    .hsbt-try__profile > .hsbt-pick,
     .hsbt-try__profile > .hsbt-meta {
+        grid-column: 1 / -1;
+    }
+
+    .hsbt-draft__bar {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+
+    .hsbt-draft__bar > .hsbt-meta {
         grid-column: 1 / -1;
     }
 }
@@ -103,10 +128,6 @@
     block-size: 100%;
 }
 
-.hsbt-card--diff {
-    --kp-card-stage-min: 18rem;
-}
-
 .hsbt-card__data {
     display: grid;
     gap: var(--kp-space-md, 1rem);
@@ -118,30 +139,47 @@
     overflow: auto;
 }
 
-.hsbt-try .hsbt-try__result {
+.hsbt-try .hsbt-try__result,
+.hsbt-try .hsbt-try__fields {
     block-size: auto;
 }
 
-/* The head of the diff card: the title and the count on one baseline, the count at the end edge. */
-.hsbt-card--diff .kp-card__header {
+/* The line diff is folded under the table until it is asked for. */
+.hsbt-diffbox__summary {
+    cursor: pointer;
+    color: var(--muted-foreground);
+    font-size: var(--kp-text-sm, 0.8125rem);
+}
+
+.hsbt-diffbox[open] > .hsbt-diffbox__summary {
+    margin-block-end: var(--kp-space-sm, 0.5rem);
+}
+
+.hsbt-diffbox[hidden],
+.hsbt-fields[hidden] {
+    display: none;
+}
+
+/* The head of the fields card: the title and the count on one baseline, the count at the end edge. */
+.hsbt-try__fields .kp-card__header {
     display: grid;
     grid-template-columns: minmax(0, auto) minmax(0, 1fr);
     align-items: baseline;
     column-gap: var(--kp-space-lg, 1.5rem);
 }
 
-.hsbt-card--diff .hsbt-counts {
+.hsbt-try__fields .hsbt-counts {
     justify-self: end;
     text-align: end;
 }
 
 @container hsbt (max-width: 40rem) {
-    .hsbt-card--diff .kp-card__header {
+    .hsbt-try__fields .kp-card__header {
         grid-template-columns: minmax(0, 1fr);
         row-gap: var(--kp-space-xs, 0.25rem);
     }
 
-    .hsbt-card--diff .hsbt-counts {
+    .hsbt-try__fields .hsbt-counts {
         justify-self: start;
         text-align: start;
     }

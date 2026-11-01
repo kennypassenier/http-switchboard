@@ -12,6 +12,8 @@ use super::words::{KEYWORDS, LIST_FILTERS};
 pub(super) struct Reference {
     pub(super) path: Vec<String>,
     pub(super) line: usize,
+    /// Byte offset in the template of the region the reference is in.
+    pub(super) at: usize,
     /// Used as a list: counted, joined, mapped, iterated.
     pub(super) list: bool,
     /// The text inside `default(...)`, as written.
@@ -54,6 +56,8 @@ impl Cursor {
 struct Scan {
     found: Vec<Reference>,
     locals: Vec<String>,
+    /// Where the region being scanned starts in the template.
+    at: usize,
 }
 
 /// Every reference to the message in `template`.
@@ -61,10 +65,12 @@ pub(super) fn references(template: &str) -> Vec<Reference> {
     let mut scan = Scan {
         found: Vec::new(),
         locals: Vec::new(),
+        at: 0,
     };
-    for (first_line, text) in regions(template) {
-        let chars: Vec<char> = text.chars().collect();
-        scan.region(&chars, first_line);
+    for region in regions(template) {
+        let chars: Vec<char> = region.text.chars().collect();
+        scan.at = region.start;
+        scan.region(&chars, region.line);
     }
     scan.found
 }
@@ -160,6 +166,7 @@ impl Scan {
             self.found.push(Reference {
                 path,
                 line: cur.line,
+                at: self.at,
                 list: false,
                 default: None,
                 attributes: Vec::new(),

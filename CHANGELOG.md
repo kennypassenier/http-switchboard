@@ -27,6 +27,17 @@ endpoints and the CLI verbs — not about the internals.
 - **Profile cards** have one button, *Try a translation*, and a *More* menu
   with *Recheck <name>* and *Copy test command*; the Recheck table uses the
   same name.
+- **Try a translation shows where each field goes**: a table of every field
+  the template reads, the result key it lands under, its value and whether
+  it was read, defaulted or missing. The line diff is folded under *Show
+  line diff*.
+- **Template scratch copy** on Try a translation: edit a copy of the
+  profile's template beside the sample and watch the result follow; *Copy
+  as TOML* takes it to the config. Nothing is saved; `POST /translate/{name}`
+  accepts the draft (`application/vnd.hsb.try+json`, at most 64 KiB) and
+  renders it with the pump's own code.
+- The profile choice on Try a translation turns into a list from six
+  profiles on.
 
 ## [5.0.0] - 2026-10-31
 

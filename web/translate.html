@@ -3,28 +3,36 @@
 {% block head %}<link rel="stylesheet" href="{{ mount }}/translate.css?v={{ version }}">{% endblock %}
 {% block content %}
 <h1>Try a translation</h1>
-<p class="explain">Pick a profile, paste a sample message, and see the body that would be delivered, next to what changed. Nothing is delivered: the message is translated by the same code the service uses and the result stays on this page.</p>
+<p class="explain">Pick a profile, paste a sample message, and see the body that would be delivered and where each field of the message lands. You can also edit a scratch copy of the template and watch the result follow. Nothing is delivered or saved: the translation is made by the same code the service uses and stays on this page.</p>
 <script type="application/json" id="hsbt-data">{{ data|safe }}</script>
 <script type="module" src="{{ mount }}/translate.js?v={{ version }}"></script>
 <div class="hsbt-wrap">
 <div class="hsbt-try" id="hsbt-try">
   <div class="hsbt-try__profile">
-    <div class="kp-segmented" data-kp-segmented="single" role="radiogroup" aria-label="Profile to try" id="hsbt-profile">
-      {% for name in profiles %}
-      <button type="button" class="kp-segmented__item" data-value="{{ name }}" role="radio" aria-checked="{{ 'true' if loop.first else 'false' }}"><span class="kp-segmented__label">{{ name }}</span></button>
-      {% endfor %}
+    <div class="hsbt-pick" id="hsbt-profile">
+      <ul class="hsbt-pick__fallback">
+        {% for name in profiles %}
+        <li><a href="?profile={{ name }}">{{ name }}</a></li>
+        {% endfor %}
+      </ul>
     </div>
     <p class="hsbt-meta" id="hsbt-takes"></p>
   </div>
-  <div class="hsbt-try__input">
-    <div class="kp-field">
-      <label class="kp-field__label" for="hsbt-message">Sample message</label>
-      <textarea class="kp-field__input kp-field__input--multiline" id="hsbt-message" rows="14" data-kp-json="strict" data-kp-json-wrap="false" spellcheck="false" aria-describedby="hsbt-message-hint"></textarea>
-      <p class="kp-field__hint" id="hsbt-message-hint">Paste the message as the sender posts it. Nothing is sent anywhere. The most this page takes is <span id="hsbt-limit"></span>.</p>
+  <div class="kp-field hsbt-try__input">
+    <label class="kp-field__label" for="hsbt-message">Sample message</label>
+    <textarea class="kp-field__input kp-field__input--multiline" id="hsbt-message" rows="14" data-kp-json="strict" data-kp-json-wrap="false" spellcheck="false" aria-describedby="hsbt-message-hint"></textarea>
+    <p class="kp-field__hint" id="hsbt-message-hint">Paste the message as the sender posts it. Nothing is sent anywhere. The most this page takes is <span id="hsbt-limit"></span>.</p>
+  </div>
+  <div class="kp-field hsbt-try__draft">
+    <label class="kp-field__label" for="hsbt-draft">Template (scratch copy)</label>
+    <textarea class="kp-field__input kp-field__input--multiline hsbt-draft" id="hsbt-draft" rows="14" spellcheck="false" autocomplete="off" autocapitalize="off" aria-describedby="hsbt-draft-hint"></textarea>
+    <p class="kp-field__hint" id="hsbt-draft-hint">Edit freely: the translation follows as you type. Nothing is saved; use Copy as TOML to take your version to the config file.</p>
+    <div class="hsbt-draft__bar">
+      <p class="hsbt-meta" id="hsbt-draft-state" role="status"></p>
+      <button type="button" class="kp-button kp-button--sm" id="hsbt-reset">Reset to the profile’s template</button>
+      <button type="button" class="kp-button kp-button--sm" id="hsbt-copy">Copy as TOML</button>
     </div>
-    <figure class="kp-code" data-kp-code id="hsbt-template" data-kp-code-title="Template" data-kp-code-language="minijinja" data-kp-code-state="loading">
-      <pre class="kp-code__body"><code></code></pre>
-    </figure>
+    <p class="hsbt-meta" id="hsbt-copy-state" role="status"></p>
   </div>
   <section class="kp-card hsbt-card hsbt-try__result" id="hsbt-result" data-kp-state="loading" aria-labelledby="hsbt-result-t">
     <div class="kp-card__header"><h3 class="kp-card__title" id="hsbt-result-t">Translated body</h3></div>
@@ -38,15 +46,25 @@
       </div>
     </div>
   </section>
-  <section class="kp-card hsbt-card hsbt-card--diff hsbt-try__diff" id="hsbt-diffcard" data-kp-state="loading" aria-labelledby="hsbt-diff-t">
+  <section class="kp-card hsbt-card hsbt-try__fields" id="hsbt-fieldscard" data-kp-state="loading" aria-labelledby="hsbt-fields-t">
     <div class="kp-card__header">
-      <h3 class="kp-card__title" id="hsbt-diff-t">Before and after</h3>
-      <p class="hsbt-counts" id="hsbt-diffcount"></p>
+      <h3 class="kp-card__title" id="hsbt-fields-t">Where each field goes</h3>
+      <p class="hsbt-counts" id="hsbt-fieldcount"></p>
     </div>
-    <p class="kp-card__body">The message as it arrived against the body that is delivered. Indentation is ignored when lines are matched.</p>
+    <p class="kp-card__body">Each field of the message that the template reads, the key of the result it sits under and its value in this message.</p>
     <div class="kp-card__stage">
       <div class="kp-card__data hsbt-card__data">
-        <pre class="kp-diff hsbt-diff" id="hsbt-diff" tabindex="0"></pre>
+        <div class="kp-table-wrap hsbt-fields" id="hsbt-fields-wrap" data-kp-region-label="Fields the template reads" hidden>
+          <table class="kp-table" data-kp-cards>
+            <thead><tr><th scope="col">Field in the message</th><th scope="col">Key in the result</th><th scope="col">Value</th><th scope="col">Used as</th></tr></thead>
+            <tbody id="hsbt-fields"></tbody>
+          </table>
+        </div>
+        <details class="kp-accordion__item kp-accordion__item--bare hsbt-diffbox" id="hsbt-diffbox" hidden>
+          <summary class="hsbt-diffbox__summary">Show line diff</summary>
+          <p class="hsbt-meta">The message as it arrived against the body that is delivered, line by line. Indentation is ignored when lines are matched. <span class="hsbt-counts" id="hsbt-diffcount"></span></p>
+          <pre class="kp-diff hsbt-diff" id="hsbt-diff" tabindex="0"></pre>
+        </details>
       </div>
     </div>
   </section>

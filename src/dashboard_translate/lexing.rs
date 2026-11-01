@@ -2,8 +2,19 @@
 //! regions are, and how to read a quoted string or a bracketed call.
 //! They know nothing of the message; `scanner` decides what a name means.
 
-/// The regions of a template that are code, as (first line, text).
-pub(super) fn regions(template: &str) -> Vec<(usize, &str)> {
+/// One code region of a template: the text between a `{{ }}` or `{% %}`
+/// pair.
+pub(super) struct Region<'a> {
+    /// The line the region starts on.
+    pub(super) line: usize,
+    /// Byte offset of the region's text in the template (just after the
+    /// opening pair), which is how the key walker finds where it sits.
+    pub(super) start: usize,
+    pub(super) text: &'a str,
+}
+
+/// The regions of a template that are code.
+pub(super) fn regions(template: &str) -> Vec<Region<'_>> {
     let mut found = Vec::new();
     let bytes = template.as_bytes();
     let mut at = 0;
@@ -24,7 +35,11 @@ pub(super) fn regions(template: &str) -> Vec<(usize, &str)> {
             .map_or(template.len(), |n| start + n);
         if close != "#}" {
             let line = 1 + template[..start].bytes().filter(|b| *b == b'\n').count();
-            found.push((line, &template[start..end]));
+            found.push(Region {
+                line,
+                start,
+                text: &template[start..end],
+            });
         }
         at = end + close.len();
     }

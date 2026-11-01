@@ -326,9 +326,19 @@ The **Try a translation** page (navigation, or *Try a translation* in a
 profile's menu) shows what a profile makes of a message without sending
 anything. Pick a profile, paste a sample message into the box (it checks
 the JSON as you type, names the line that is wrong, and has line numbers
-and Format/Minify), and the body that would be delivered appears next to
-the profile's template, with a before/after comparison of the message and
-the body. The box starts with an example built from the fields the
+and Format/Minify), and the body that would be delivered appears under
+it. **Where each field goes** lists every field of the message the
+template reads, the key of the result it lands under (for example
+`alerts.0.labels.alertname` → `title`), its value in this message and
+whether it was read, filled in by a default or missing, with exact counts;
+the line-by-line comparison is folded under *Show line diff*. Beside the
+message, **Template (scratch copy)** is an editable copy of the profile's
+template: the result and the table follow as you type, *Reset to the
+profile's template* puts the original back, and *Copy as TOML* copies a
+`body = …` line to paste into the config file. Nothing typed there is
+saved or sent; a draft over 64 KiB, or one that does not parse, is refused
+with what, why and what to do. The profile choice is a segmented control,
+or a list from six profiles on. The box starts with an example built from the fields the
 template reads. A default the template filled in (`| default(...)` on a
 field the message lacks) is a quiet note; a template error says what,
 why (the line, and which field the message lacks) and what to do, with a

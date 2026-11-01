@@ -25,6 +25,11 @@
 //!   cause is a field the message does not have, which field;
 //! * **notes** for the defaults the template filled in (`| default(...)`
 //!   on a path the message lacks), so a silent fallback is visible;
+//! * a **field table**: each field of the message the template reads, the
+//!   key of the result it lands under and its value in this message;
+//! * a **scratch template**: the page may post a draft template with the
+//!   message; it is rendered by the same code for that one request and
+//!   never stored (see `scratch`);
 //! * an **example message** built from the fields a template reads, for the
 //!   box's starting text and the alert's fix button. It is a guess from the
 //!   template's text and says so on the page.
@@ -36,10 +41,13 @@
 
 mod example;
 mod explain;
+mod fields;
+mod keys;
 mod lexing;
 mod preview;
 mod routes;
 mod scanner;
+mod scratch;
 #[cfg(test)]
 mod tests;
 mod words;
@@ -57,3 +65,7 @@ pub const PREVIEW_ROUTE: &str = "/translate/{name}";
 /// generous for that and small enough that a paste of a whole log is
 /// refused with a sentence instead of rendered.
 pub const MAX_MESSAGE_BYTES: usize = 256 * 1024;
+/// The most a draft template may weigh. The config has no cap of its own;
+/// a template is one document with a few fields, so this is generous and
+/// still refuses a paste of something else with a sentence.
+pub const MAX_TEMPLATE_BYTES: usize = 64 * 1024;

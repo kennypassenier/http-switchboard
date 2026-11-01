@@ -3,6 +3,7 @@
 
 use super::example::example_message;
 use super::explain::{defaults_filled, explain_missing};
+use super::fields::field_table;
 use super::preview::line_of;
 use super::scanner::references;
 use serde_json::json;
@@ -55,4 +56,58 @@ fn a_default_that_was_used_is_a_note() {
 fn the_engine_line_is_read_from_its_sentence() {
     assert_eq!(line_of("undefined value (in <string>:12)"), Some(12));
     assert_eq!(line_of("nothing here"), None);
+}
+
+#[test]
+fn a_field_lands_under_the_key_the_template_writes_it_at() {
+    let template = "{\"title\": {{ a.b }},\n \"inner\": {\"n\": {{ c | length }}, \"s\": {{ d | default(\"x\") }}},\n \"list\": [{{ e }}, {{ f }}]}";
+    let message = json!({ "a": { "b": "hi" }, "c": [1, 2], "e": 1, "f": 2 });
+    let rows = field_table(template, &message);
+    let seen: Vec<(&str, &str, &str)> = rows
+        .iter()
+        .map(|r| (r.field.as_str(), r.key.as_str(), r.state))
+        .collect();
+    assert_eq!(
+        seen,
+        [
+            ("a.b", "title", "read"),
+            ("c", "inner.n", "read"),
+            ("d", "inner.s", "default"),
+            ("e", "list.0", "read"),
+            ("f", "list.1", "read"),
+        ]
+    );
+    assert_eq!(rows[0].value, "\"hi\"");
+    assert_eq!(rows[1].value, "list of 2");
+}
+
+#[test]
+fn a_missing_field_is_a_row_not_an_error() {
+    let rows = field_table("{\"k\": {{ nope.here }}}", &json!({}));
+    assert_eq!(rows[0].state, "missing");
+    assert_eq!(rows[0].key, "k");
+}
+
+#[test]
+fn a_draft_template_is_checked_like_the_config_checks_it() {
+    use super::scratch::with_template;
+    let profile = crate::config::Profile {
+        name: "p".into(),
+        subscription: "p".into(),
+        source: crate::config::Source::Http { path: "/p".into() },
+        sink: crate::config::Sink::Kyu { topic: "t".into() },
+        content_type: "application/json".into(),
+        body: "{}".into(),
+        headers: Default::default(),
+        timeout_ms: 1,
+        retries: 0,
+        lease_ms: 1,
+        max_attempts: 1,
+        forward_error_body: false,
+    };
+    assert!(with_template(&profile, "{\"a\": {{ x }}}").is_ok());
+    let quoted = with_template(&profile, "{\"a\": \"{{ x }}\"}").unwrap_err();
+    assert_eq!(quoted.kind, "template");
+    assert!(quoted.remedy.starts_with("Write"), "{}", quoted.remedy);
+    assert_eq!(with_template(&profile, "  ").unwrap_err().kind, "template");
 }

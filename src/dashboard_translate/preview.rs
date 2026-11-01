@@ -5,6 +5,7 @@ use serde::Serialize;
 use serde_json::Value;
 
 use super::explain::{defaults_filled, explain_missing, Note};
+use super::fields::{field_table, FieldRow};
 use super::MAX_MESSAGE_BYTES;
 use crate::config::Profile;
 use crate::translate::{self, RenderError};
@@ -17,6 +18,8 @@ pub struct Preview {
     pub content_type: String,
     pub bytes: usize,
     pub notes: Vec<Note>,
+    /// The fields the template reads and where each lands in the result.
+    pub fields: Vec<FieldRow>,
 }
 
 /// What a refused preview carries: the kit's `{ error, remedy }` plus the
@@ -32,13 +35,17 @@ pub struct Failure {
     pub fixable: bool,
     /// The template line the engine named.
     pub line: Option<usize>,
+    /// The fields the template reads, when the message could be read, so
+    /// the table can say which one is missing.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub fields: Vec<FieldRow>,
 }
 
 /// Render `profile`'s template against `payload` and say what came out.
 /// Pure: no sink, no network.
-pub fn preview(profile: &Profile, payload: &[u8]) -> Result<Preview, Failure> {
+pub fn preview(profile: &Profile, payload: &[u8]) -> Result<Preview, Box<Failure>> {
     if payload.len() > MAX_MESSAGE_BYTES {
-        return Err(Failure {
+        return Err(Box::new(Failure {
             error: "The message is too large to try".to_string(),
             why: format!(
                 "It is {} KiB and the limit is {} KiB.",
@@ -51,7 +58,8 @@ pub fn preview(profile: &Profile, payload: &[u8]) -> Result<Preview, Failure> {
             kind: "size",
             fixable: false,
             line: None,
-        });
+            fields: Vec::new(),
+        }));
     }
     match translate::prepare(profile, payload) {
         Ok(delivery) => {
@@ -61,10 +69,17 @@ pub fn preview(profile: &Profile, payload: &[u8]) -> Result<Preview, Failure> {
                 bytes: delivery.body.len(),
                 content_type: delivery.content_type,
                 notes: defaults_filled(&profile.body, &message),
+                fields: field_table(&profile.body, &message),
                 body: delivery.body,
             })
         }
-        Err(error) => Err(failure_of(profile, payload, &error)),
+        Err(error) => {
+            let mut failure = Box::new(failure_of(profile, payload, &error));
+            if let Ok(message) = serde_json::from_slice::<Value>(payload) {
+                failure.fields = field_table(&profile.body, &message);
+            }
+            Err(failure)
+        }
     }
 }
 
@@ -101,6 +116,7 @@ fn failure_of(profile: &Profile, payload: &[u8], error: &RenderError) -> Failure
             kind: "message",
             fixable: true,
             line: None,
+            fields: Vec::new(),
         },
         RenderError::Render { detail, .. } => render_failure(profile, payload, detail, remedy),
         // The detail of these may carry the destination's path, which is
@@ -114,6 +130,7 @@ fn failure_of(profile: &Profile, payload: &[u8], error: &RenderError) -> Failure
             kind: "template",
             fixable: true,
             line: None,
+            fields: Vec::new(),
         },
         RenderError::InvalidJson { detail, .. } => Failure {
             error: "The translated body is not valid JSON".to_string(),
@@ -125,6 +142,7 @@ fn failure_of(profile: &Profile, payload: &[u8], error: &RenderError) -> Failure
             kind: "template",
             fixable: false,
             line: None,
+            fields: Vec::new(),
         },
     }
 }
@@ -137,6 +155,15 @@ fn render_failure(profile: &Profile, payload: &[u8], detail: &str, remedy: Strin
     let why = line
         .and_then(|n| explain_missing(&profile.body, n, &message))
         .unwrap_or_else(|| detail.replace("<string>", "the template"));
+    // The engine's remedy is about a field the message lacks; a syntax error
+    // (most often a draft being typed) needs the line fixed instead.
+    let remedy = if detail.contains("syntax error") {
+        "Fix the template on the line named: a tag or a brace is not closed or is out of \
+         place. The profile's own template is not changed by anything typed here."
+            .to_string()
+    } else {
+        remedy
+    };
     Failure {
         error: "The template could not be rendered".to_string(),
         why,
@@ -144,5 +171,6 @@ fn render_failure(profile: &Profile, payload: &[u8], detail: &str, remedy: Strin
         kind: "template",
         fixable: true,
         line,
+        fields: Vec::new(),
     }
 }
