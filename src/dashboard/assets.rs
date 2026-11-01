@@ -5,6 +5,35 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
 pub(super) const WEB_FILES: &[(&str, &[u8])] = &[
+    // The install icons (Kenny approved them 2026-11-01): the kit serves a
+    // file of the web app at pwa/<name> in place of its generated letter icon
+    // and lists it in the manifest. icon.svg has no manifest slot in the kit
+    // yet; it is served with the rest of the web app.
+    (
+        "pwa/icon-180.png",
+        include_bytes!("../../web/pwa/icon-180.png"),
+    ),
+    (
+        "pwa/icon-192.png",
+        include_bytes!("../../web/pwa/icon-192.png"),
+    ),
+    (
+        "pwa/icon-512.png",
+        include_bytes!("../../web/pwa/icon-512.png"),
+    ),
+    (
+        "pwa/icon-maskable-192.png",
+        include_bytes!("../../web/pwa/icon-maskable-192.png"),
+    ),
+    (
+        "pwa/icon-maskable-512.png",
+        include_bytes!("../../web/pwa/icon-maskable-512.png"),
+    ),
+    (
+        "pwa/icon-monochrome-512.png",
+        include_bytes!("../../web/pwa/icon-monochrome-512.png"),
+    ),
+    ("pwa/icon.svg", include_bytes!("../../web/pwa/icon.svg")),
     ("index.html", include_bytes!("../../web/index.html")),
     ("dashboard.js", include_bytes!("../../web/dashboard.js")),
     ("hsb-format.js", include_bytes!("../../web/hsb-format.js")),
