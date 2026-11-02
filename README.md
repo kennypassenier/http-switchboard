@@ -7,7 +7,7 @@ shape it happens to speak; HTTPSwitchboard translates it and delivers it
 where *our* configuration says — the sender never knows the receiver, and
 the receiver never knows the sender.
 
-> **Status, 2026-09-09: released, running, one criterion short.**
+> **Status, 2026-11-02: released and running; the flagship criterion is met.**
 > 2.0.0 moved the service onto [chassis](https://github.com/kennypassenier/chassis-rs),
 > the shared foundation that owns the command line, the configuration
 > layers, `/healthz`, `/metrics` and the signed self-update;
@@ -15,10 +15,11 @@ the receiver never knows the sender.
 > the whole chain ran on real machines: a message published on the
 > production hub was translated by this service on a throwaway container
 > and arrived in Home Assistant, and the restore-from-zero procedure was
-> drilled. What is still missing is **Alertmanager itself**, which is not
-> deployed, so the flagship criterion — a *genuine* alert travelling the
-> chain — is not claimed. `docs/TEST_PLAN.md` says which claims rest on
-> what.
+> drilled. On 2026-09-19 a real Alertmanager alert travelled the whole
+> chain, and Kenny decided on 2026-09-26 that it counts as the flagship
+> criterion; the one link not exercised is the Prometheus rule that fires
+> an alert, which belongs to the homelab project. `docs/TEST_PLAN.md` says
+> which claims rest on what.
 
 The first customer is Prometheus Alertmanager, whose webhook format is
 fixed and does not fit Home Assistant's receiver:
@@ -159,10 +160,8 @@ build and stops before any commit, tag or upload. The release machine
 needs docker logged in to `ghcr.io` with `write:packages`, `cargo-deny`,
 `gh` and `minisign`.
 
-This needs chassis-rs **3.0.0 or later**. The pin is still older: until
-`chassis upgrade 3.0.0` and `chassis sync --write` have run here, the
-installed kit's `chassis release` still expects the release workflow this
-repository no longer has.
+This needs chassis-rs **3.0.0 or later**; `Cargo.toml` pins it at
+**4.0.0**.
 
 ## Licence
 

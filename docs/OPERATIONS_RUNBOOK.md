@@ -25,7 +25,9 @@ The service re-reads its config file on `SIGHUP`. The journal shows one
 line: `config reloaded: changed <profiles>`, or `config NOT reloaded:`
 with the reason and what to do. A reload is all or nothing — a typo or a
 file saved halfway changes nothing, and the service keeps delivering
-with what it had. `/metrics` counts every attempt in
+with what it had. The same goes for a value outside its
+bounds: `retries` above 10, or a `timeout_ms`, `lease_ms` or `max_attempts`
+of 0, is refused as invalid. `/metrics` counts every attempt in
 `switchboard_config_reloads_total{outcome="applied|needs-restart|invalid"}`.
 
 What a reload can change: a profile's template, destination, headers,

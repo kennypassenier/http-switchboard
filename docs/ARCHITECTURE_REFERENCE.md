@@ -38,7 +38,7 @@ Two halves, on purpose (AR1):
 | `translate` | The render: minijinja with JSON autoescape and strict undefined, the post-render JSON check, and the destination — copied from the config, never rendered, except for path segments in K7 which are percent-encoded per value. |
 | `adapters` | `HttpSink` (one client for both URL and hub destinations), `KyuHub` (the three verbs plus the policy write), `TokioClock`, and `deliver_with_retry`. |
 | `pump` | The state machine for a kyu source: poll, translate, deliver, settle. Returns a `Step` rather than logging, so the caller decides what to record and tests can assert on it. |
-| `inbound` | The axum router: one route per path serving the profiles behind it, the token check, the body cap, the in-flight bound, and `/healthz` + `/metrics`. |
+| `inbound` | The axum router: one route per path serving the profiles behind it, the in-flight bound and the translation of each message. The token check and the body cap belong to the kit, which also serves `/healthz` and `/metrics`. |
 | `obs` | The registry behind both endpoints, and the log-line builders. Counters and names only — never payloads. |
 | `reload` | feat-reload-1: the `ProfileStore` every delivery reads its profile from (one `Arc` per message, swapped as a whole), and `apply`, which accepts a re-read config only when it is valid and has the shape the service started with. `main` calls it on `SIGHUP`. |
 | `app` | Assembly: one pump task per kyu profile, the listener, graceful shutdown, and the shared transition handling both sides use. |
@@ -46,19 +46,32 @@ Two halves, on purpose (AR1):
 ## The orderings that matter
 
 **A message from the hub.** Poll → render → deliver (with in-claim
-retries) → acknowledge. Never acknowledge first. On failure, hand the
-message straight back rather than sitting on the claim: the hub's own
-backoff waits better than we do, and waiting burns one of its five
-attempts per failure.
+retries) → acknowledge. Never acknowledge first. On a temporary failure,
+hand the message straight back rather than sitting on the claim: the hub's
+own backoff waits better than we do, and waiting burns one of its five
+attempts per failure. A message that can never work (it cannot be rendered,
+or the destination refuses it with 400, 413 or 422) is not handed back: it
+is dead-lettered at once, and the profile's state is left as it was.
 
-**A message from a webhook.** Read → check the token → take a permit →
-render → deliver → *then* answer. The sender is the only party that
-still has the message, so it must not be told "accepted" until it is.
+**A message from a webhook.** The kit's token check runs before the handler
+is reached → take a permit → render (a body that is not JSON is a 400 here)
+→ deliver → *then* answer. The sender is the only party that still has the
+message, so it must not be told "accepted" until it is.
 
 **A profile's state.** `Starting → Working ⇄ Failing / Denied / HubDown`.
 One fact, modelled once in `obs::Registry`, read by `/healthz`, written
 by both drivers through `app::note_transition`, and published as at most
-one event per transition.
+one event per transition. Giving up on a message never moves the state;
+only a temporary failure moves `Working` to `Failing`, and a poll the hub
+answers (an empty one included) moves `Starting`, `HubDown` or `Denied` to
+`Working` (`pump::turn::hub_answered`).
+
+**Counters** (`obs::registry::ProfileStats`). `received` counts a message
+once: a kyu message the hub offers again adds an attempt, not a message.
+`attempts` counts every offer. `given_up` counts messages that cannot be
+used. `failed` counts temporary failures, per offer. The duration total
+is the time of the successful deliveries only, so the average is that total
+over `delivered`.
 
 **A reload (feat-reload-1).** Signal → read the file → validate exactly
 as a start does → compare the shape with the start → swap the whole

@@ -136,7 +136,10 @@ a real hub, `k2_e2e_a_refused_delivery_comes_back_and_a_delivered_one_does_not`.
 Inside one claim the delivery is retried with growing pauses (1 s, 2 s,
 4 s). The config refuses a profile whose timeout × attempts does not fit
 inside the lease, because a delivery finishing after the lease expires
-produces a duplicate by construction.
+produces a duplicate by construction. `retries` is at most 10, and
+`timeout_ms`, `lease_ms` and `max_attempts` are at least 1; a config outside
+those bounds is refused at load (and a reload with one is refused as invalid)
+with the field, the rule and a remedy.
 *Proven by* `w3_two_failures_then_success_is_one_delivery_and_three_attempts`
 and `k10_a_retry_budget_that_does_not_fit_the_lease_is_refused`.
 
@@ -164,8 +167,11 @@ mean of the successful deliveries only, the same as the 24-hour history.
 The sender is answered only after the delivery succeeded. If it failed,
 the sender gets a 502 saying so (a body that is not valid JSON gets a 400
 instead, with what is wrong, why and what to do, and without repeating the
-body; that is the sender's mistake, so the profile's state does not change)
-— because this service stores nothing,
+body). A message that can never work — the template cannot render it, or the
+destination refuses it with 400, 413 or 422 — also gets a 502; it is counted
+as given up and, like the 400, leaves the profile's state unchanged: that is
+the message's mistake, not a failing destination. This is
+because this service stores nothing,
 answering "accepted" and failing afterwards would lose the message while
 the sender believed it arrived.
 *Proven by* `w1_the_sender_is_told_the_truth_when_the_destination_refuses`.
@@ -185,13 +191,22 @@ and `k10_forwarding_is_refused_where_there_is_nobody_to_answer`.
 
 | Endpoint | Answer |
 |---|---|
-| `GET /healthz` | 200 while the process is alive, with each profile's state and how long ago it last succeeded. |
-| `GET /healthz?strict=1` | 503 when any profile is failing, denied or cut off. This is the one a monitor should watch. |
+| `GET /healthz` | Each profile's state and how long ago it last succeeded; 503 when a profile is failing, denied or cut off. |
+| `GET /healthz?strict=1` | The same answer as the plain path (a leftover of the 1.x split). |
 | `GET /metrics` | Prometheus counters per profile: received, attempts, delivered, failed, given up, and the duration of successful deliveries. |
 
-The split is deliberate: the container's own healthcheck uses plain
-`/healthz`, so the orchestrator does not restart this service because
-Home Assistant is down.
+The measured answers (the same table as in the README, which a test checks against a running service):
+
+| Probe | Every profile working | One profile failing |
+|---|---|---|
+| `GET /healthz` | 200 | 503 |
+| `GET /healthz?strict=1` | 200 | 503 |
+| `--healthcheck` | exit 0 | exit 0 |
+
+A monitor watches `/healthz`. The container's own healthcheck runs
+`/usr/local/bin/http-switchboard --healthcheck`, which is liveness and exits 0
+while a profile is failing, so the orchestrator does not restart this
+service because Home Assistant is down.
 *Proven by* `w5_a_failing_profile_is_visible_without_restarting_the_container`.
 
 Every message produces exactly one JSON log line (profile, outcome,
@@ -237,21 +252,25 @@ message.
 ## The status page (3.0.0)
 
 The door brought a dashboard with it. Behind the admin login (the
-`HTTP_SWITCHBOARD_TOKEN` from `gen-secret`) the status page carries four
-sections of its own (kp-themes views; the page reads again as often as the
+`HTTP_SWITCHBOARD_TOKEN` from `gen-secret`) the status page carries
+these sections of its own: Needs attention, Profiles, Path of a profile, Last 24 hours, Uptime by the hour, Settings and retry budget, Recheck and Reloads (kp-themes views; the page reads again as often as the
 refresh menu in the page header says, every 30 seconds to start with):
 
-- **Needs attention** (first of them): one alert per profile that is not
-  well, worst first, saying what is wrong, why and what to do, with a
-  command to copy where there is one (*hub down*: `systemctl status kyu`;
-  *failing*: `journalctl -u http-switchboard`) and a button that rechecks
-  that profile (*Recheck alertmanager*). A profile leaves the list when it
-  works again, and "Nothing needs attention" takes its place. A profile
-  that has not tried yet since the start is not a problem and is not
-  listed; its card says *starting*. When a profile that reads from
-  the kyu hub is hub down or denied, a banner above them says the hub is
-  unreachable or refused our token; *Retry now* rechecks the profiles and
-  looks again, and the banner says so when the hub is back.
+- **Needs attention** (first of them): one alert per profile whose own
+  delivery is failing, saying what is wrong, why and what to do, with the
+  command to copy (`journalctl -u http-switchboard`) and a button that
+  rechecks that profile (*Recheck alertmanager*). A profile that gave up
+  messages since its last recheck gets one more notice, with the number, the
+  reason and the time of the last one, the same command and the same button;
+  the browser remembers what a recheck has already cleared. An alert leaves
+  the list when the profile works again, and "Nothing needs attention" takes
+  its place. A profile that has not tried yet since the start is not a
+  problem and is not listed; its card says *starting*. When a profile that
+  reads from **or publishes to** the kyu hub is hub down or denied, it gets no
+  alert of its own: one banner above the list says the hub is unreachable or
+  refused our token and names the profiles waiting for it; *Retry now*
+  rechecks the profiles and looks again, and the banner says so when the hub
+  is back.
 - **Profiles**: one card per profile (the default) with its state in
   words, delivered, failed and average time, flags for the source and
   destination kind, a bar with the share delivered, the button *Try a
@@ -275,7 +294,9 @@ refresh menu in the page header says, every 30 seconds to start with):
   **profile name**, on a card, in the settings and in
   the Recheck table, and a small card shows its status, source,
   destination host only, content type, a short template label (the field
-  names, never the template), the three exact counts and the last success.
+  names, never the template), the exact counts (received, attempts, delivered, failed and given up; the
+  attempts and given-up lines only once they are above zero) and the last
+  success.
 - **Path of a profile**: sender, door, translation, destination; it stops
   at the first refusing hop (hub refused our credentials, hub down,
   receiver failing) and says why. Its **Profile** choice (two or more
@@ -291,9 +312,10 @@ refresh menu in the page header says, every 30 seconds to start with):
 - **Recheck**: the **Recheck profiles** button (spinner and
   "Rechecking…", then a toast "N profiles back to starting"; a failure is
   a toast that stays, with *Try again*) and a table with an *Actions* menu
-  per row: *Recheck alertmanager* (greyed with its reason when the
-  profile is already starting) and *Copy test command* (a curl line for an
-  HTTP source; the `test` dry-run command for a kyu source).
+  per row with three items: *Recheck alertmanager* (greyed with its reason
+  when the profile is already starting), *Copy test command* (a curl line for
+  an HTTP source; the `test` dry-run command for a kyu source) and *Try a
+  translation*.
 - **Reloads**: every time the profile file was read again
   (`systemctl reload http-switchboard`), newest first, as a timeline with
   its date (dd/mm/yyyy HH:MM) and the outcome in one column: *Applied*
@@ -322,13 +344,8 @@ refresh menu in the page header says, every 30 seconds to start with):
   The history is **in memory and starts empty at every restart**; it keeps
   at most 24 hours (`GET /history.json`, admin login; counts, times and a
   cause word, never a payload, header, URL or error text).
-- **Page refresh**: a chooser (Paused, 15 s, 30 s, 1 min, 5 min, any
-  number of seconds; 30 s to start, remembered per browser) sets how often
-  the profiles and the history are read again, with *Refresh now* and the
-  R key. A failed refresh keeps what is drawn and retries. It replaces the
-  earlier fixed ten-second poll.
 
-That button exists for one situation. A profile's state only changes
+The **Recheck profiles** button exists for one situation. A profile's state only changes
 when a message goes through it, so a profile whose source is an HTTP
 path stays `failing` for as long as nobody posts to it — long after the
 receiver that caused it came back, and `/healthz?strict=1` keeps
@@ -339,8 +356,9 @@ and `v1_recheck_clears_a_failure_a_profile_can_no_longer_clear_itself`.
 
 ### Try a translation
 
-The **Try a translation** page (navigation, or *Try a translation* in a
-profile's menu) shows what a profile makes of a message without sending
+The **Try a translation** page (navigation label **Translate**; also the
+*Try a translation* button on a profile's card and the same item in a row's
+*Actions* menu in the Recheck table) shows what a profile makes of a message without sending
 anything. Pick a profile, paste a sample message into the box (it checks
 the JSON as you type, names the line that is wrong, and has line numbers
 and Format/Minify), and the body that would be delivered appears under
@@ -365,6 +383,23 @@ refused with a sentence. Nothing is delivered: the page posts to
 `translate::prepare` the pump uses; the answer never carries a header
 value or the destination path. The shell equivalent is
 `http-switchboard test`.
+
+With a scratch template the page posts an envelope of content type
+`application/vnd.hsb.try+json` (`{"message": …, "template": …}`); any other
+content type is a bare message. A refusal comes back with a status that says
+which kind it is:
+
+| Status | Meaning |
+|---|---|
+| 413 | A message or draft over its size cap. |
+| 400 | A request the route cannot read. |
+| 429 | Busy: four previews are already being worked out. The page offers *Try again*. |
+| 504 | The preview did not finish within 5 s (usually a loop in the template). |
+| 503 | The work itself stopped unexpectedly. |
+| 422 | Every other refusal of the translation. |
+
+If nothing comes back at all, the page gives up after 15 s and offers
+*Retry*. (The statuses are `refusal()` in `src/dashboard_translate/routes.rs`.)
 
 Everything else on those pages comes from the kit and is described in
 `docs/KIT.md`, which `chassis sync` regenerates for the pinned kit

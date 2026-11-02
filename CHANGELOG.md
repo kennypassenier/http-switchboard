@@ -31,15 +31,19 @@ endpoints and the CLI verbs — not about the internals.
   (`last_given_up_unix`, `last_given_up_reason`), instead of turning the
   profile to failing.
 - **Needs attention says each problem once** (UX review 2026-11-01): one
-  alert per profile that is not well, with what, why, what now and a
-  *Recheck <name>* button. The attention band's copy, *See the fix* and the
+  alert per profile whose own delivery fails and one notice per profile
+  that gave up messages since its last recheck, each with what, why, what
+  now and a *Recheck <name>* button; a hub that does not answer is one
+  banner naming the profiles that wait for it, not an alert per profile.
+  The attention band's copy, *See the fix* and the
   closable "has not tried yet" note are gone; a profile that is only
   `starting` is not listed (its card says so).
 - **Cards / Map** is a segmented control in the Profiles card's head, so the
   chosen view shows.
 - **One profile choice** in Path of a profile drives Last 24 hours too (a
-  segmented control up to five profiles, a list from six on), remembered in
-  the browser. Last 24 hours and the uptime strips now follow Path.
+  segmented control up to five profiles, a list from six on; Try a
+  translation's profile choice follows the same rule), remembered in the
+  browser. Last 24 hours and the uptime strips now follow Path.
 - **One refresh setting**: the page reads again with the kit's refresh menu
   in the page header; the second "Page refresh" chooser in Last 24 hours is
   gone.
@@ -57,11 +61,15 @@ endpoints and the CLI verbs — not about the internals.
   as TOML* takes it to the config. Nothing is saved; `POST /translate/{name}`
   accepts the draft (`application/vnd.hsb.try+json`, at most 64 KiB) and
   renders it with the pump's own code.
-- The profile choice on Try a translation turns into a list from six
-  profiles on.
 
 ### Fixed
 
+- **A message or a given-up message ends a stale hub-down/denied state** (review 2026-11-02): any poll that returns a message or a non-JSON message proves the hub answers, so the profile leaves starting/hub-down/denied like on an empty poll.
+- **Hub answers are read with a cap** (review 2026-11-02): a kyu envelope over 1 MiB is given up on (dead letter, reason "larger than this service reads") without being read into memory.
+- **A hub envelope without `attempt` is logged once** (review 2026-11-02): `received` may count a re-offered message twice, and the warning says so.
+- **Policy-before-poll comment made honest** (review 2026-11-02): the write is best effort, retried every 30 s and logged once; the poll goes ahead meanwhile.
+- **Dead check removed from the hourly history judgement** (review 2026-11-02).
+- **Dashboard review, second pass** (browser): the given-up memory is reconciled on every snapshot (a restart or a re-added profile no longer hides new give-ups); one recheck path for the alerts and the table; hub-only settings rows take no space and come last; Retry now cannot start a second settle loop and the reconnecting sentence is neutral again; the card flag says "since the start"; private module exports trimmed.
 - **Reloads section** (UX pass 2026-11-02): the inner card no longer sticks out
   below its section, the title shows once (the counts line stays) and the
   description names the command without backticks.
