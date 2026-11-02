@@ -26,6 +26,7 @@
 
 pub(crate) mod give_up;
 mod policy;
+pub mod streak;
 mod turn;
 mod types;
 

@@ -14,6 +14,9 @@ pub struct ProfileView {
     pub name: String,
     /// `starting`, `working`, `failing`, `denied` or `hub-down`.
     pub state: &'static str,
+    /// The pump has stopped claiming messages because the destination
+    /// refuses every one; they wait on the hub until a recheck.
+    pub paused: bool,
     /// Messages seen, each once (a message the hub offers again is not
     /// counted again).
     pub received: u64,
@@ -123,6 +126,7 @@ pub(super) fn view_of(profile: &Profile, stats: Option<&ProfileStats>) -> Profil
     ProfileView {
         name: profile.name.clone(),
         state: state_word(stats.and_then(|s| s.health)),
+        paused: stats.is_some_and(|s| s.paused),
         received: stats.map_or(0, |s| s.received),
         attempts: stats.map_or(0, |s| s.attempts),
         delivered,

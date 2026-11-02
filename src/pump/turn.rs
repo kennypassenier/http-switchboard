@@ -3,10 +3,11 @@
 //! Split into one function per outcome of the poll so each rule (replay on
 //! a missing topic, dead-letter what can never render, ack only after
 //! delivery, nack at once on a failed delivery, give up at once on a
-//! permanent refusal) reads on its own.
+//! permanent refusal, pause after a run of refusals) reads on its own.
 
 use super::give_up;
 use super::policy;
+use super::streak;
 use super::types::{Health, Hub, HubMessage, Poll, PumpState, Step};
 use crate::adapters::{deliver_with_retry, Clock, Sink};
 use crate::config::{Profile, Source};
@@ -77,6 +78,9 @@ pub async fn pump_once(
     let Source::Kyu { topic } = &profile.source else {
         return Step::Idle;
     };
+    if state.paused {
+        return Step::Paused; // nothing is claimed; messages wait on the hub
+    }
     let lane = Lane {
         hub,
         profile,
@@ -124,12 +128,9 @@ async fn settle_poll(
         Poll::NotJson { id } => {
             hub_answered(state);
             state.replay_next = false;
-            // The hub does not say how often it offered this one, but a
-            // dead letter ends it, so it is seen once.
+            // A dead letter ends it, so it is seen once.
             state.first_sight = true;
             lane.nack(&id, true).await;
-            // Health stays as it was (bar the recovery above): one
-            // unusable message says nothing about the next one.
             Step::DeadLettered {
                 id,
                 reason: "the message on the hub is not JSON, so no template can read it"
@@ -191,8 +192,7 @@ async fn handle_message(
             // Rendering is pure: it will fail identically next time.
             // Dead-letter it so it is visible on the dashboard instead of
             // cycling until its attempts run out.
-            // The profile's health is left alone: this message is the
-            // problem, not the destination.
+            // This message is the problem, not the destination.
             lane.nack(&message.id, true).await;
             return Step::DeadLettered {
                 id: message.id,
@@ -216,6 +216,7 @@ async fn settle_delivery(
         Ok(()) => {
             let ack_failed = lane.ack(&id).await;
             state.health = Health::Working;
+            state.refusals.delivered();
             Step::Delivered {
                 id,
                 attempts: outcome.attempts,
@@ -227,6 +228,7 @@ async fn settle_delivery(
             // re-offering only burns the hub's attempts. Give up at once;
             // the receiver's status is in the log, health stays as it was.
             lane.nack(&id, true).await;
+            streak::note_refusal(state);
             let status = e.permanent_status().unwrap_or_default();
             Step::DeadLettered {
                 id,

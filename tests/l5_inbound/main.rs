@@ -83,4 +83,5 @@ async fn post(url: &str, body: &str, token: Option<&str>) -> (u16, String) {
 mod answers;
 mod bad_json;
 mod fanout;
+mod refusal_streak;
 mod routing;

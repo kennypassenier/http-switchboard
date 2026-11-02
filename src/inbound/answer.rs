@@ -18,6 +18,9 @@ pub(super) enum Verdict {
     GaveUp {
         failure: String,
         summary: String,
+        /// The destination refused it for good (counts toward the
+        /// refusal streak); false when the message itself is the problem.
+        refused: bool,
     },
 }
 

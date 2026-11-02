@@ -6,11 +6,13 @@ use std::time::Instant;
 
 use tokio::sync::broadcast;
 
+use super::pause::{announce_pause, resume, resume_after_recheck, PAUSED_POLL_MS};
 use super::transition::note_transition;
 use super::{HUB_DOWN_PAUSE_MS, IDLE_PAUSE_MS};
 use crate::adapters::{Clock, Sink};
 use crate::config::Profile;
 use crate::obs::{self, Registry};
+use crate::pump::streak::REFUSAL_DETAIL;
 use crate::pump::{pump_once, Health, Hub, PumpState, Step};
 use crate::reload::ProfileStore;
 
@@ -36,9 +38,10 @@ pub(super) async fn run(
         if stop.try_recv().is_ok() {
             return;
         }
-        adopt_reload(&ctx.profiles, &mut profile, &mut state);
+        adopt_reload(&ctx.profiles, &ctx.registry, &mut profile, &mut state);
         adopt_registry_health(&ctx.registry, &profile.name, &mut state);
         let before = state.health;
+        let was_paused = state.paused;
         let started = Instant::now();
         let step = pump_once(
             &profile,
@@ -59,6 +62,7 @@ pub(super) async fn run(
             state.health,
             state.first_sight,
         );
+        announce_pause(&ctx.registry, &profile.name, &state, was_paused);
         note_transition(
             ctx.registry.as_ref(),
             ctx.sink.as_ref(),
@@ -66,7 +70,7 @@ pub(super) async fn run(
             &profile.name,
             before,
             state.health,
-            transition_detail(state.health),
+            transition_detail(&state),
         )
         .await;
         pause_after(ctx.clock.as_ref(), &step).await;
@@ -76,7 +80,12 @@ pub(super) async fn run(
 /// feat-reload-1: pick up a reloaded profile between messages, never
 /// during one. A new lease or attempt cap is a hub-side policy, so it is
 /// written again.
-fn adopt_reload(profiles: &ProfileStore, profile: &mut Arc<Profile>, state: &mut PumpState) {
+fn adopt_reload(
+    profiles: &ProfileStore,
+    registry: &Registry,
+    profile: &mut Arc<Profile>,
+    state: &mut PumpState,
+) {
     let Some(now) = profiles.get(&profile.name) else {
         return;
     };
@@ -90,6 +99,9 @@ fn adopt_reload(profiles: &ProfileStore, profile: &mut Arc<Profile>, state: &mut
         state.policy_pushed = false;
         state.policy_last_try = None;
     }
+    // A reload may have fixed the destination: try claiming again.
+    registry.set_paused(&now.name, false);
+    resume(&now.name, state, "config reload");
     *profile = now;
 }
 
@@ -98,6 +110,7 @@ fn adopt_reload(profiles: &ProfileStore, profile: &mut Arc<Profile>, state: &mut
 /// fails again after a recheck is a transition again (and is noted again)
 /// instead of looking unchanged to a pump that still remembers `Failing`.
 fn adopt_registry_health(registry: &Registry, name: &str, state: &mut PumpState) {
+    resume_after_recheck(registry, name, state);
     if let Some(current) = registry.health_of(name) {
         state.health = current;
     }
@@ -143,7 +156,7 @@ fn record_step(
             reason,
             summary,
         ),
-        Step::Idle | Step::TopicMissing => {}
+        Step::Idle | Step::TopicMissing | Step::Paused => {}
         // The remedy in these carries the specifics — which
         // token to mint, or that the hub itself is away.
         Step::Denied { detail } | Step::HubDown { detail } => {
@@ -212,8 +225,11 @@ fn record_delivered(
 /// message. HA down for twenty minutes with a backlog would otherwise
 /// produce a burst of warnings in a house whose dispatcher exists to
 /// prevent exactly that.
-fn transition_detail(health: Health) -> &'static str {
-    match health {
+fn transition_detail(state: &PumpState) -> &'static str {
+    if state.paused {
+        return REFUSAL_DETAIL;
+    }
+    match state.health {
         Health::Denied => "the hub refused our credentials",
         Health::HubDown => "the hub could not be reached",
         Health::Failing => "deliveries are failing; messages wait on the hub",
@@ -227,6 +243,7 @@ async fn pause_after(clock: &dyn Clock, step: &Step) {
     match step {
         Step::Idle | Step::TopicMissing => clock.sleep(IDLE_PAUSE_MS).await,
         Step::Denied { .. } | Step::HubDown { .. } => clock.sleep(HUB_DOWN_PAUSE_MS).await,
+        Step::Paused => clock.sleep(PAUSED_POLL_MS).await,
         _ => {}
     }
 }

@@ -70,3 +70,4 @@ mod e2e_policy;
 mod scripted_giveup;
 mod scripted_order;
 mod scripted_states;
+mod scripted_streak;

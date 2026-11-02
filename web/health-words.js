@@ -7,7 +7,7 @@ import { unseenGivenUp } from './give-up-seen.js';
 
 /** @typedef {{ name: string, state: 'working' | 'starting' | 'failing' | 'denied' | 'hub-down', received: number, failed: number,
  *   source: { kind: string, label: string, sub: string, path: string | null }, sink: { kind: string, label: string, path: string | null },
- *   attempts?: number, given_up?: number, last_given_up_unix?: number | null, last_given_up_reason?: string | null }} Profile */
+ *   attempts?: number, paused?: boolean, given_up?: number, last_given_up_unix?: number | null, last_given_up_reason?: string | null }} Profile */
 /** @typedef {{ severity: 'critical' | 'warning', title: string, why: string, remedy: string, command?: string, fix: string }} Words */
 
 const hasHubSource = (/** @type {Profile} */ p) => p.source.kind === 'kyu';
@@ -21,6 +21,7 @@ export const hubCaused = (/** @type {Profile} */ p) => touchesHub(p) && (p.state
  *  @param {Profile} p @returns {Words | null} */
 export function wordsOf(p) {
     if (p.state !== 'failing') return null;
+    if (p.paused) return pausedWords(p);
     const kyu = hasHubSource(p);
     const toKyu = p.sink.kind === 'kyu';
     const where = toKyu ? 'the kyu hub' : p.sink.label;
@@ -30,6 +31,24 @@ export function wordsOf(p) {
         title: toKyu ? `${p.name}: publishing to the kyu hub is failing` : `${p.name}: deliveries to ${where} are failing`,
         why: `${where === 'the kyu hub' ? 'The hub' : where} did not accept the last delivery. ${kyu ? 'The messages wait on the hub and are tried again. ' : ''}${tally}`,
         remedy: toKyu ? 'Check the kyu hub, then read the switchboard’s log.' : 'Check that Home Assistant is up, then read the switchboard’s log.',
+        command: 'journalctl -u http-switchboard',
+        fix: `Recheck ${p.name}`,
+    };
+}
+
+/** What a paused pump says, on the card and in Needs attention: one sentence, the same in both places.
+ *  @param {Profile} p */
+export const pausedSentence = (p) =>
+    `Paused: the destination refuses every message. Messages wait on the hub. Fix the destination, then Recheck ${p.name}.`;
+
+/** The alert of a profile whose pump stopped claiming messages because the destination refuses every one.
+ *  @param {Profile} p @returns {Words} */
+function pausedWords(p) {
+    return {
+        severity: 'critical',
+        title: `${p.name}: paused, the destination refuses every message`,
+        why: 'Paused: the destination refuses every message. Messages wait on the hub.',
+        remedy: `Fix the destination, then Recheck ${p.name}.`,
         command: 'journalctl -u http-switchboard',
         fix: `Recheck ${p.name}`,
     };

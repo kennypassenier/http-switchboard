@@ -9,6 +9,11 @@ endpoints and the CLI verbs — not about the internals.
 
 ### Changed
 
+- **A destination that refuses everything fails the profile** (Kenny,
+  2026-11-02): three permanent refusals (400, 413, 422) in a row make a
+  profile failing ("the destination refuses every message") and pause a kyu
+  pump so the rest waits on the hub until a recheck or reload; the inbound
+  door only goes failing; `/profiles.json` gains `paused`.
 - **Give up at once on a permanent refusal** (review 2026-11-02): a
   destination answering 400, 413 or 422 dead-letters the kyu message at
   once, with the reason in the log, instead of being re-offered up to

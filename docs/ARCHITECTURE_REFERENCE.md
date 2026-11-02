@@ -66,6 +66,18 @@ only a temporary failure moves `Working` to `Failing`, and a poll the hub
 answers (an empty one included) moves `Starting`, `HubDown` or `Denied` to
 `Working` (`pump::turn::hub_answered`).
 
+**The refusal streak (`pump::streak`).** Giving up one message leaves the
+state alone, but `REFUSAL_STREAK_LIMIT` (3) permanent destination refusals
+in a row move `Working` to `Failing` with the detail "the destination
+refuses every message". A kyu pump also sets `PumpState::paused`: the next
+turns return `Step::Paused` without polling, so messages wait on the hub;
+the task sleeps `PAUSED_POLL_MS` between looks (`app::pause`). A recheck
+(the registry health reset to `Starting`, which also clears the registry's
+`paused` flag) or a reload calls `PumpState::resume`. The inbound door keeps
+its run in `ProfileStats::door_refusals`, only goes `Failing`, and never
+pauses. Not-JSON, too-large and render failures and temporary failures do
+not touch the streak; a delivery resets it.
+
 **Counters** (`obs::registry::ProfileStats`). `received` counts a message
 once: a kyu message the hub offers again adds an attempt, not a message.
 `attempts` counts every offer. `given_up` counts messages that cannot be

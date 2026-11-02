@@ -5,6 +5,7 @@ import { setEntityGrid } from '/static/kp/dist/kp-themes.min.js';
 import { setMatrix } from '/static/kp/dist/kp-themes.min.js';
 import { count, percent, plural } from './hsb-format.js';
 import { HEALTH_TONE, HEALTH_WORD, hasHub, store } from './hsb-state.js';
+import { pausedSentence } from './health-words.js';
 import { paintFresh, setArea } from './profiles.js';
 
 /** Below this share delivered the card's meter turns to a warning. */
@@ -14,7 +15,8 @@ const WARN_BELOW_SHARE = 0.99;
 function flagsOf(p) {
     /** @type {{ label: string, tone?: 'success' | 'warning' | 'destructive' | 'info' }[]} */
     const flags = [{ label: p.source.kind === 'kyu' ? 'from the hub' : 'HTTP POST' }, { label: p.sink.kind === 'url' ? 'HTTP webhook' : 'to the hub' }];
-    if (p.state === 'failing') flags.push({ label: hasHub(p) ? 'messages waiting on the hub' : 'destination refusing', tone: 'destructive' });
+    if (p.paused) flags.push({ label: pausedSentence(p), tone: 'destructive' });
+    else if (p.state === 'failing') flags.push({ label: hasHub(p) ? 'messages waiting on the hub' : 'destination refusing', tone: 'destructive' });
     if (p.state === 'denied') flags.push({ label: 'credentials refused', tone: 'destructive' });
     if ((p.given_up ?? 0) > 0) flags.push({ label: `${count(p.given_up ?? 0)} given up since the start`, tone: 'warning' });
     if (p.state === 'hub-down') flags.push({ label: 'hub unreachable', tone: 'warning' });

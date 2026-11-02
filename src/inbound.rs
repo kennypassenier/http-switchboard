@@ -28,6 +28,7 @@ use axum::routing::post;
 use axum::Router;
 
 mod answer;
+mod refusals;
 mod standalone;
 use answer::{answer, Verdict};
 pub use standalone::router;
@@ -139,6 +140,7 @@ async fn deliver_one(state: &Inbound, profile: &Profile, body: &Bytes) -> Verdic
             Verdict::GaveUp {
                 failure: e.to_string(),
                 summary: give_up::render_summary(&e).to_string(),
+                refused: false,
             },
             0,
         ),
@@ -156,6 +158,7 @@ async fn deliver_one(state: &Inbound, profile: &Profile, body: &Bytes) -> Verdic
                     Some(status) => Verdict::GaveUp {
                         failure: format!("profile '{}': {e}", profile.name),
                         summary: give_up::refused_summary(status),
+                        refused: true,
                     },
                     None => Verdict::Failed(format!("profile '{}': {e}", profile.name)),
                 },
@@ -181,8 +184,13 @@ async fn record(
     attempts: u32,
 ) {
     let ok = match verdict {
-        Verdict::GaveUp { summary, .. } => {
+        Verdict::GaveUp {
+            summary, refused, ..
+        } => {
             record_given_up(state, profile, summary, "given-up", (duration_ms, attempts));
+            if *refused {
+                refusals::refused(state, profile).await;
+            }
             return;
         }
         Verdict::BadJson(_) => {
@@ -202,6 +210,9 @@ async fn record(
     state
         .registry
         .record_offer(&profile.name, ok, duration_ms, true);
+    if ok {
+        state.registry.note_door_delivered(&profile.name);
+    }
     let (now, why) = if ok {
         (Health::Working, "back to normal")
     } else {

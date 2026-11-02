@@ -14,6 +14,7 @@ mod events;
 mod glue;
 mod registry;
 mod report;
+mod streak;
 #[cfg(test)]
 mod tests;
 

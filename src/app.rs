@@ -11,6 +11,7 @@ use std::future::Future;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
+mod pause;
 mod pump_task;
 mod transition;
 

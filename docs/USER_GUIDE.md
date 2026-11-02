@@ -162,6 +162,21 @@ mean of the successful deliveries only, the same as the 24-hour history.
 *Proven by* `a_re_offered_message_is_one_message_and_two_attempts` and
 `first_sight_follows_the_hubs_attempt_number`.
 
+### A destination that refuses everything
+
+A kyu profile whose destination refuses three messages in a row for good
+(400, 413 or 422) turns *failing* with "the destination refuses every
+message" and **pauses**: it claims nothing more from the hub, so the
+remaining messages wait there instead of draining into dead letters. The
+third refused message is still dead-lettered. The dashboard says "Paused:
+the destination refuses every message. Messages wait on the hub. Fix the
+destination, then Recheck <name>." and `/profiles.json` carries
+`"paused": true`. *Recheck <name>* or a config reload resumes; a delivery
+that succeeds before the third refusal starts the count again. Only
+destination refusals count: a message that is not JSON, too large or does
+not render says nothing about the route, and a temporary failure is handed
+back and is neutral too. Proven by `tests/l4_pump/scripted_streak.rs`.
+
 ### From an incoming webhook (W1, W12)
 
 The sender is answered only after the delivery succeeded. If it failed,
@@ -170,7 +185,11 @@ instead, with what is wrong, why and what to do, and without repeating the
 body). A message that can never work — the template cannot render it, or the
 destination refuses it with 400, 413 or 422 — also gets a 502; it is counted
 as given up and, like the 400, leaves the profile's state unchanged: that is
-the message's mistake, not a failing destination. This is
+the message's mistake, not a failing destination. Three destination
+refusals in a row are different: that says the route is wrong, so the
+profile turns *failing* ("the destination refuses every message") and every
+request is still answered; a delivery that succeeds starts the count again.
+This is
 because this service stores nothing,
 answering "accepted" and failing afterwards would lose the message while
 the sender believed it arrived.

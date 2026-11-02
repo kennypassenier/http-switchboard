@@ -138,6 +138,21 @@ pub struct PumpState {
     /// `attempt` was 1. A message handed back and offered again is a
     /// further attempt, not a further message.
     pub first_sight: bool,
+    /// Consecutive permanent refusals by the destination. Reaching the
+    /// limit makes the profile failing and pauses the pump.
+    pub refusals: super::streak::RefusalStreak,
+    /// The pump has stopped claiming messages (the refusal streak reached
+    /// its limit); they wait on the hub until a recheck or a reload.
+    pub paused: bool,
+}
+
+impl PumpState {
+    /// Start again after a recheck or a config reload: forget the streak
+    /// and claim messages once more. True when the pump had been paused.
+    pub fn resume(&mut self) -> bool {
+        self.refusals = super::streak::RefusalStreak::default();
+        std::mem::take(&mut self.paused)
+    }
 }
 
 impl Default for PumpState {
@@ -150,6 +165,8 @@ impl Default for PumpState {
             policy_last_try: None,
             policy_last_error: None,
             first_sight: true,
+            refusals: Default::default(),
+            paused: false,
         }
     }
 }
@@ -192,6 +209,9 @@ pub enum Step {
     },
     Idle,
     TopicMissing,
+    /// The pump is paused (the destination refused every recent message):
+    /// nothing was claimed from the hub.
+    Paused,
     /// The hub refused our credentials. The detail carries the remedy that
     /// names kyu's Apps page — AR8.4 asked for it and nothing printed it.
     Denied {

@@ -6,6 +6,7 @@ use std::collections::BTreeMap;
 use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use crate::pump::streak::RefusalStreak;
 use crate::pump::Health;
 
 #[derive(Debug, Default, Clone)]
@@ -29,6 +30,12 @@ pub struct ProfileStats {
     pub last_given_up_reason: Option<String>,
     pub last_success_unix: Option<u64>,
     pub health: Option<Health>,
+    /// A kyu pump has stopped claiming messages because the destination
+    /// refused the last few for good. Cleared by a recheck or a reload.
+    pub paused: bool,
+    /// The inbound door's run of permanent refusals (it has no queue to
+    /// pause, so it only goes failing).
+    pub door_refusals: RefusalStreak,
 }
 
 /// Everything the endpoints answer from. Counters only — no payloads, no
@@ -145,6 +152,7 @@ impl Registry {
         let mut profiles = self.profiles.lock().unwrap();
         for (name, stats) in profiles.iter_mut() {
             stats.health = Some(Health::Starting);
+            super::streak::clear(stats);
             self.history.note_health(name, Health::Starting);
         }
         profiles.len()
@@ -157,6 +165,7 @@ impl Registry {
         match self.profiles.lock().unwrap().get_mut(profile) {
             Some(stats) => {
                 stats.health = Some(Health::Starting);
+                super::streak::clear(stats);
                 self.history.note_health(profile, Health::Starting);
                 true
             }
