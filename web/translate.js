@@ -12,6 +12,7 @@ import { attachJsonFields, jsonField, attachCodes, setCode, attachProblems, atta
 import { paintPick, PICK_EVENT } from './profile-pick.js';
 import { data, profiles, els, kib, pretty } from './translate-dom.js';
 import { createRunner } from './translate-run.js';
+import { copyText } from './copy-text.js';
 import { tomlBody } from './translate-toml.js';
 
 const SETTLE_MS = 350; // the box checks 300 ms after the last key; this waits for it
@@ -28,6 +29,11 @@ attachCardStates(document);
 let current = profiles[0]?.name ?? '';
 const wanted = new URLSearchParams(location.search).get('profile');
 if (wanted && profiles.some((p) => p.name === wanted)) current = wanted;
+else if (wanted) {
+    // An address that names a profile this service does not have: say so rather than silently showing another.
+    els.unknown.textContent = `There is no profile named “${wanted}”; showing ${current || 'the first profile'} instead.`;
+    els.unknown.hidden = false;
+}
 /** What was in the boxes for each profile, so coming back to one finds it as it was. @type {Map<string, { message: string, draft: string }>} */
 const kept = new Map();
 
@@ -74,35 +80,24 @@ function resetDraft() {
 
 let copiedTimer = 0;
 
-/** @param {string} text */
-async function writeClipboard(text) {
-    if (navigator.clipboard?.writeText) return navigator.clipboard.writeText(text);
-    // A page served over plain http has no clipboard API: select the text of a temporary field and copy that.
-    const holder = document.createElement('textarea');
-    holder.value = text;
-    holder.setAttribute('readonly', '');
-    holder.style.position = 'fixed';
-    holder.style.insetBlockStart = '0';
-    document.body.append(holder);
-    holder.select();
-    const done = document.execCommand('copy');
-    holder.remove();
-    if (!done) throw new Error('copy refused');
-}
-
 async function copyToml() {
     window.clearTimeout(copiedTimer);
     try {
-        await writeClipboard(tomlBody(els.draft.value));
+        const copied = await copyText(tomlBody(els.draft.value));
+        if (!copied) throw new Error('the browser refused both copy paths');
         els.copyState.textContent = 'Copied. Paste it over the body of the profile in the config file.';
-    } catch {
-        els.copyState.textContent = 'The browser did not allow copying. Select the template and copy it by hand.';
+    } catch (error) {
+        console.warn('http-switchboard: Copy as TOML failed', error);
+        els.draft.focus();
+        els.draft.select(); // Leave the template selected, so Ctrl+C finishes what the browser refused.
+        els.copyState.textContent = 'The browser did not allow copying. The template is selected: press Ctrl+C to copy it.';
     }
     copiedTimer = window.setTimeout(() => (els.copyState.textContent = ''), COPIED_MS);
 }
 
 // ── wiring ─────────────────────────────────────────────────────────────────────────────────────────────────────────
 
+// Typing drops the translation in flight at once (schedule cancels it), so an old answer never lands on a newer message.
 els.message.addEventListener('input', () => runner.schedule(SETTLE_MS));
 els.message.addEventListener('kp-json-state', () => runner.schedule(SETTLE_MS));
 els.draft.addEventListener('input', () => {
@@ -116,6 +111,8 @@ els.body.addEventListener('kp-code-retry', () => void runner.run());
 els.pick.addEventListener(PICK_EVENT, (event) => {
     const name = /** @type {CustomEvent} */ (event).detail?.name;
     if (!name || name === current) return;
+    runner.cancel();
+    els.unknown.hidden = true;
     kept.set(current, { message: els.message.value, draft: els.draft.value });
     current = name;
     paintProfile();

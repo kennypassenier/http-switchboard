@@ -17,8 +17,9 @@ import { attachDataTables } from '/static/kp/dist/kp-themes.min.js';
 import { attachFootprints } from '/static/kp/dist/kp-themes.min.js';
 import { attachFormgridStages } from '/static/kp/dist/kp-themes.min.js';
 import { attachSegmented, setSegmentedValues } from '/static/kp/dist/kp-themes.min.js';
+import { attachCardStates, setCardState } from '/static/kp/dist/kp-themes.min.js';
 import { $, all } from './hsb-format.js';
-import { PICK_KEY, VIEW_KEY, hooks, routes, store } from './hsb-state.js';
+import { PICK_KEY, VIEW_KEY, clock, hooks, routes, store } from './hsb-state.js';
 import { PICK_EVENT } from './profile-pick.js';
 import { AREA_RELOAD_EVENT, attachArea, attachProfileHover, refreshHover, watchEntityNames } from './profiles.js';
 import { drawProfiles } from './view-profiles.js';
@@ -52,25 +53,66 @@ function drawAll() {
     refreshHover();
 }
 
-let inFlight = false;
-/** Read the snapshot again; a failed read turns the page to its failed faces. @returns {Promise<boolean | undefined>} */
-async function refresh() {
-    if (inFlight) return;
-    inFlight = true;
+/** Whether a value has the shape of one profile of the snapshot: a name, a state, a source and a sink. @param {any} p */
+const isProfile = (p) => Boolean(p) && typeof p === 'object' && typeof p.name === 'string' && typeof p.state === 'string' && Boolean(p.source) && typeof p.source === 'object' && Boolean(p.sink) && typeof p.sink === 'object';
+
+/** One read of the snapshot into the store; a wrong shape is an error like a failed read. @returns {Promise<boolean>} */
+async function readOnce() {
     try {
         const res = await fetch(routes.snapshot, { headers: { accept: 'application/json' } });
         if (!res.ok || !(res.headers.get('content-type') ?? '').includes('json')) throw new Error(`HTTP ${res.status}`);
-        store.profiles = (await res.json()).profiles ?? [];
+        const answer = await res.json();
+        const profiles = answer?.profiles ?? [];
+        if (!Array.isArray(profiles) || !profiles.every(isProfile)) throw new TypeError('the snapshot is not a list of profiles');
+        if (typeof answer.now_unix === 'number') clock.skewMs = answer.now_unix * 1000 - Date.now();
+        store.profiles = profiles;
         store.status = 'ready';
-    } catch {
+    } catch (error) {
+        console.error('http-switchboard: the profile snapshot could not be read', error);
         store.status = 'error'; // Every view shows its failed face with a Try again; the next poll tries once more.
-    } finally {
-        inFlight = false;
     }
-    drawAll();
-    // Other cards of the page (the reload history) ride on this poll rather than run a timer of their own.
-    document.dispatchEvent(new CustomEvent('hsb-poll'));
     return store.status === 'ready';
+}
+
+/** Draw, and tell the other cards a read is done (the reload history rides on this poll rather than run a timer of its own). */
+function announceRead() {
+    try {
+        drawAll();
+    } catch (error) {
+        console.error('http-switchboard: a view failed to draw the snapshot', error); // One broken view must not stop the poll.
+    } finally {
+        document.dispatchEvent(new CustomEvent('hsb-poll'));
+    }
+}
+
+/** @type {Promise<boolean> | null} */
+let reading = null;
+let readAgain = false;
+
+/**
+ * Read the snapshot again. Asked while a read is in flight (a recheck's refresh), it reads once more after that one, so
+ * the answer that paints is never older than the ask; every caller gets the promise of the last read.
+ * @returns {Promise<boolean>}
+ */
+function refresh() {
+    if (reading) {
+        readAgain = true;
+        return reading;
+    }
+    reading = (async () => {
+        try {
+            let ready;
+            do {
+                readAgain = false;
+                ready = await readOnce();
+            } while (readAgain); // an older answer is not painted when a newer ask is waiting
+            announceRead();
+            return ready;
+        } finally {
+            reading = null;
+        }
+    })();
+    return reading;
 }
 
 /** Load again: loading for a moment, then the data. */
@@ -179,10 +221,21 @@ wireRetries();
 void reload();
 startPolling();
 
-// The last 24 hours (history.js) reads again on every poll of this page (the hsb-poll event). If the module cannot load,
-// the rest of the page carries on; the failure is logged so it is not invisible.
+// The last 24 hours (history.js) reads again on every poll of this page (the hsb-poll event). If the module cannot load or
+// cannot start, the rest of the page carries on; the failure is logged and the card says so instead of spinning forever.
+/** @param {unknown} error */
+function historyFailed(error) {
+    console.warn('http-switchboard: the last-24-hours module did not start; the rest of the page still refreshes.', error);
+    const card = document.getElementById('hsb-h-card');
+    if (!card) return;
+    attachCardStates(card);
+    setCardState(card, 'error', { title: 'Could not show the last 24 hours', text: 'This part of the page could not start. Reload the page; the counters keep running and nothing is lost.' });
+}
+
 const historyUrl = new URL('history.js', import.meta.url);
 historyUrl.search = new URL(import.meta.url).search;
 import(historyUrl.href)
-    .then((m) => m.start())
-    .catch((error) => console.warn('http-switchboard: the last-24-hours module did not load; the rest of the page still refreshes.', error));
+    .then((m) => {
+        if (!m.start()) historyFailed(new Error('start() returned false'));
+    })
+    .catch(historyFailed);

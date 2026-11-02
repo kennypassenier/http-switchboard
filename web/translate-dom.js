@@ -12,6 +12,7 @@ export const els = {
     draft: /** @type {HTMLTextAreaElement} */ ($('hsbt-draft')),
     pick: $('hsbt-profile'),
     takes: $('hsbt-takes'),
+    unknown: $('hsbt-unknown'),
     resultCard: $('hsbt-result'),
     fieldsCard: $('hsbt-fieldscard'),
     problems: $('hsbt-problems'),

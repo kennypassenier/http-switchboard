@@ -15,8 +15,8 @@ import { setStrings } from '/static/kp/dist/kp-themes.min.js';
 import { toast } from '/static/kp/dist/kp-themes.min.js';
 import { list, wordsOf } from './health-words.js';
 import { hubBanner } from './health-hub.js';
+import { post } from './hsb-post.js';
 
-const UNREACHABLE = 'Could not reach HTTPSwitchboard. Check that the service is running, then try again.';
 /** How long the success toast stays, in milliseconds. */
 const DONE_TOAST_MS = 6000;
 
@@ -98,25 +98,6 @@ function paintHealth() {
 }
 
 // ── actions ────────────────────────────────────────────────────────────────────────────────────────────────────────
-
-/** @param {string} url @returns {Promise<{ ok: true } | { ok: false, line: string }>} */
-async function post(url) {
-    try {
-        const res = await fetch(url, { method: 'POST', headers: { accept: 'application/json' } });
-        if (res.ok) return { ok: true };
-        /** @type {any} */
-        let body = null;
-        try {
-            body = await res.json();
-        } catch {
-            // Not JSON: the status decides.
-        }
-        const line = body?.error ? [body.error, body.remedy].filter(Boolean).join('. ') + (body.remedy ? '.' : '') : `HTTP ${res.status}. ${UNREACHABLE}`;
-        return { ok: false, line };
-    } catch {
-        return { ok: false, line: UNREACHABLE };
-    }
-}
 
 /** @param {string} name */
 async function recheck(name) {

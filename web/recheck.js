@@ -7,7 +7,8 @@ import { toast } from '/static/kp/dist/kp-themes.min.js';
 import { setMenu } from '/static/kp/dist/kp-themes.min.js';
 import { dataTable } from '/static/kp/dist/kp-themes.min.js';
 import { all, capital, el, plural, seconds } from './hsb-format.js';
-import { HEALTH_TONE, HEALTH_WORD, UNREACHABLE, hasHub, hooks, profileNamed, routes, store } from './hsb-state.js';
+import { post } from './hsb-post.js';
+import { HEALTH_TONE, HEALTH_WORD, hasHub, hooks, profileNamed, routes, store } from './hsb-state.js';
 
 /** How long the success toast stays, in milliseconds. */
 const DONE_TOAST_MS = 6000;
@@ -101,32 +102,6 @@ export function drawRecheck() {
         if (cell && p) drawBudget(cell, p);
         const wrapper = row.querySelector('[data-kp-menu-button]');
         if (wrapper) setMenu(wrapper, entriesOf(p));
-    }
-}
-
-/** The kit's refusal shape `{ error, remedy }` as one sentence. @param {any} body */
-const refusalLine = (body) => [body.error, body.remedy].filter(Boolean).join('. ') + (body.remedy ? '.' : '');
-
-/**
- * POST to a recheck route and read the answer. A refusal comes back in the kit's `{ error, remedy }` shape.
- * @param {string} url
- * @returns {Promise<{ ok: true, body: any } | { ok: false, line: string }>}
- */
-async function post(url) {
-    try {
-        const res = await fetch(url, { method: 'POST', headers: { accept: 'application/json' } });
-        /** @type {any} */
-        let body = null;
-        try {
-            body = await res.json();
-        } catch {
-            // Not JSON (a proxy's error page, an empty answer): the status below decides what the person reads.
-        }
-        if (res.ok && body) return { ok: true, body };
-        if (body?.error) return { ok: false, line: refusalLine(body) };
-        return { ok: false, line: res.ok ? UNREACHABLE : `HTTP ${res.status}. ${UNREACHABLE}` };
-    } catch {
-        return { ok: false, line: UNREACHABLE }; // The request never got an answer: the service is not reachable.
     }
 }
 

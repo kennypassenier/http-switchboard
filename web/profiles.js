@@ -9,6 +9,7 @@ import { attachHoverCards } from '/static/kp/dist/kp-themes.min.js';
 import { attachCardStates, setCardState } from '/static/kp/dist/kp-themes.min.js';
 import { agoMoment, attachAgo, humanDuration, setAgo } from '/static/kp/dist/kp-themes.min.js';
 import { setStrings } from '/static/kp/dist/kp-themes.min.js';
+import { localMs } from './hsb-state.js';
 
 /**
  * How long a profile may go without a delivery before its line turns to a warning, in seconds. The configuration has no
@@ -60,7 +61,7 @@ function rowsOf(p) {
         ['Received', count(p.received)],
         ['Delivered', count(p.delivered)],
         ['Failed', count(p.failed)],
-        ['Last success', p.last_success_unix === null ? 'none yet' : agoMoment(p.last_success_unix * 1000)],
+        ['Last success', p.last_success_unix === null ? 'none yet' : agoMoment(localMs(p.last_success_unix))],
     ];
     const dl = document.createElement('dl');
     dl.className = 'kp-kv hsb-card-kv';
@@ -177,5 +178,5 @@ export function paintFresh(card, p) {
         card.append(line);
     }
     const time = /** @type {HTMLElement} */ (line.querySelector('time'));
-    setAgo(time, p.last_success_unix === null ? null : p.last_success_unix * 1000);
+    setAgo(time, p.last_success_unix === null ? null : localMs(p.last_success_unix));
 }

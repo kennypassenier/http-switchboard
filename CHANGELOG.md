@@ -41,6 +41,25 @@ endpoints and the CLI verbs — not about the internals.
 
 ### Fixed
 
+- **Status page, browser side** (review 2026-11-02): a recheck's refresh is no
+  longer lost behind a poll in flight; a wrong-shaped `/profiles.json` is an
+  error, not a crash, and one failing view no longer stops the poll; Last 24
+  hours shows an error instead of spinning when its module cannot start;
+  overlapping history reads cannot paint an older answer; shape errors are
+  logged and worded accurately; settings card ids no longer collide after a
+  reload; "N ago" lines use the server's clock and reload times the Brussels
+  clock; a failed background read keeps the reload list; removed profiles lose
+  their uptime strip; Path's fallback profile is remembered and followed by
+  Last 24 hours; Retry now waits for a ready snapshot; long profile names no
+  longer force sideways scroll at 390 px; the reload card is split into a
+  model and a view, and the recheck POST lives in one module.
+- **Try a translation, browser side**: the line diff is computed only when
+  "Show line diff" is opened and says "Too large to compare line by line" past
+  4 million cells (it froze the tab on a 200 KiB message); the request times
+  out after 15 s with *Retry*; typing or picking a profile cancels the request
+  in flight; 429, 503, 504 and other refusals show the server's what, why and
+  what now (429 offers *Try again*); an unknown `?profile=` says so; *Copy as
+  TOML* falls back to selecting the template.
 - Try a translation renders on a blocking thread under a 5 s deadline and at
   most four previews at once (429 beyond that); a stuck or crashed preview
   answers in words instead of a 500.

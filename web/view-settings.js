@@ -25,7 +25,7 @@ function makeHead(name) {
     const label = el('span', '', name);
     markName(label, name);
     title.append(label);
-    title.id = `hsb-p-${cards.size}`;
+    title.id = `hsb-p-${name}`; // a profile name is [a-z0-9._-]: unique, and still unique after a reload removes and adds profiles
     const inline = el('span', 'kp-meter kp-meter--inline kp-meter--over-spill');
     const badge = el('span', 'kp-badge');
     head.append(title, inline, badge);

@@ -138,3 +138,8 @@
     display: grid;
     gap: var(--kp-space-lg, 1.5rem);
 }
+
+/* A long profile name in the card's title breaks instead of widening the page. */
+#hsb-h-title {
+    overflow-wrap: anywhere;
+}

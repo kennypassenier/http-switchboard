@@ -49,9 +49,10 @@ impl Profiles {
     }
 
     /// The JSON that is both the first embedded snapshot and the poll's
-    /// answer.
+    /// answer. `now_unix` is the server's clock, so the page can say "N ago"
+    /// against the server's time rather than the browser's.
     pub(super) fn snapshot_json(&self) -> String {
-        serde_json::json!({ "profiles": self.snapshot() }).to_string()
+        serde_json::json!({ "profiles": self.snapshot(), "now_unix": now_unix() }).to_string()
     }
 
     /// The routes behind the admin login.
@@ -62,4 +63,12 @@ impl Profiles {
             .route(RECHECK_ONE_ROUTE, post(recheck_one))
             .with_state(Arc::clone(self))
     }
+}
+
+/// Seconds since the epoch on this host's clock; a clock before 1970 reads 0.
+fn now_unix() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or_default()
 }

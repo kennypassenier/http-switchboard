@@ -184,3 +184,8 @@
         text-align: start;
     }
 }
+
+/* The note under the chooser when ?profile= names a profile this service does not have: a row of its own. */
+.hsbt-try__profile > #hsbt-unknown:not([hidden]) {
+    grid-column: 1 / -1;
+}

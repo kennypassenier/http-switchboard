@@ -1,98 +1,62 @@
 // The "Reloads" card of the status page [feat-dash-kp11-42]: the history of the profile file being read again, newest
 // first, as the approved kp-themes timeline. The data is GET /reloads.json (src/reload_log.rs: the last 50, in memory, no
 // secrets); the card reads it from the first frame (loading until it answers) and then on the dashboard's own poll (the module
-// dashboard.js fires `hsb-poll` after each refresh), so there is no second timer here.
+// dashboard.js fires `hsb-poll` after each refresh), so there is no second timer here. The words and shapes are in
+// reloads-model.js; this file draws them.
 
 import { attachCardStates, setCardState } from '/static/kp/dist/kp-themes.min.js';
 import { setProblems, attachProblems } from '/static/kp/dist/kp-themes.min.js';
 import { attachNewPills } from '/static/kp/dist/kp-themes.min.js';
-
-const COMMAND = 'systemctl reload http-switchboard';
-const OUTCOME = {
-    applied: { badge: 'kp-badge kp-badge--success', word: 'Applied' },
-    'needs-restart': { badge: 'kp-badge kp-badge--warning', word: 'Needs a restart' },
-    invalid: { badge: 'kp-badge kp-badge--destructive', word: 'Invalid' },
-};
-
-/** @typedef {{ seq: number, at_unix: number, outcome: keyof typeof OUTCOME, changed: string[], reason: string | null }} Reload */
-/** @typedef {{ boot: string, dropped: number, reloads: Reload[] }} View */
+import { countsLine, outcomeOf, problemsOf, viewOf, when, words } from './reloads-model.js';
 
 const $ = (/** @type {string} */ id) => document.getElementById(id);
 const card = /** @type {HTMLElement | null} */ ($('hsb-reloads'));
 const list = /** @type {HTMLElement | null} */ ($('hsb-reloads-list'));
 const alert = $('hsb-reloads-alert');
 const counts = $('hsb-reloads-counts');
+const LOADING = { words: 'Reading the reload history…' };
+
+/** A span with text. @param {string} cls @param {string} text */
+function span(cls, text) {
+    const el = document.createElement('span');
+    if (cls) el.className = cls;
+    el.textContent = text;
+    return el;
+}
+
+/** One timeline row. @param {import('./reloads-model.js').Reload} r */
+function row(r) {
+    const { headline, detail } = words(r);
+    const li = document.createElement('li');
+    li.className = 'kp-timeline__item';
+    li.dataset.hsbReload = String(r.seq);
+    li.dataset.hsbOutcome = r.outcome;
+    const marker = span('kp-timeline__marker', '');
+    marker.setAttribute('aria-hidden', 'true');
+    const body = span('hsb-reload', '');
+    const time = document.createElement('time');
+    time.className = 'kp-timeline__when';
+    time.dateTime = new Date(r.at_unix * 1000).toISOString();
+    time.textContent = when(r.at_unix);
+    const outcome = span('hsb-reload__outcome', '');
+    const o = outcomeOf(r.outcome);
+    outcome.append(span(o.badge, o.word));
+    const what = span('hsb-reload__what', '');
+    what.append(span('', headline), span('', detail));
+    body.append(time, outcome, what);
+    li.append(marker, body);
+    return li;
+}
 
 if (card && list && alert) {
     const embedded = JSON.parse($('hsb-reloads-data')?.textContent ?? '{}');
     const route = embedded.route ?? '/reloads.json';
-    const pad = (/** @type {number} */ n) => String(n).padStart(2, '0');
-    const count = (/** @type {number} */ n) => n.toLocaleString('en-GB');
-
-    /** @param {number} unix */
-    const when = (unix) => {
-        const d = new Date(unix * 1000);
-        return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    };
-    const sentence = (/** @type {string} */ text) => {
-        const t = text.trim();
-        return t ? (/[.!?]$/.test(t) ? t : `${t}.`) : '';
-    };
-    const capital = (/** @type {string} */ text) => text.charAt(0).toUpperCase() + text.slice(1);
-
-    /** The two lines a row says. @param {Reload} r @returns {{ headline: string, detail: string }} */
-    function words(r) {
-        if (r.outcome === 'applied') {
-            return r.changed.length
-                ? { headline: `Changed: ${r.changed.join(', ')}`, detail: 'The next message already uses the new version.' }
-                : { headline: 'No profile changed', detail: 'The file was read again and holds the same profiles as before.' };
-        }
-        const why = sentence(capital(r.reason ?? ''));
-        if (r.outcome === 'needs-restart') {
-            return { headline: 'Nothing changed', detail: `${why} The service keeps running as it started; restart it to apply the change.`.trim() };
-        }
-        return { headline: 'Refused: the profile file is not valid', detail: `${why} Nothing changed.`.trim() };
-    }
-
-    /** @param {Reload} r */
-    function row(r) {
-        const { headline, detail } = words(r);
-        const li = document.createElement('li');
-        li.className = 'kp-timeline__item';
-        li.dataset.hsbReload = String(r.seq);
-        li.dataset.hsbOutcome = r.outcome;
-        const marker = document.createElement('span');
-        marker.className = 'kp-timeline__marker';
-        marker.setAttribute('aria-hidden', 'true');
-        const body = document.createElement('span');
-        body.className = 'hsb-reload';
-        const time = document.createElement('time');
-        time.className = 'kp-timeline__when';
-        time.dateTime = new Date(r.at_unix * 1000).toISOString();
-        time.textContent = when(r.at_unix);
-        const outcome = document.createElement('span');
-        outcome.className = 'hsb-reload__outcome';
-        const badge = document.createElement('span');
-        badge.className = (OUTCOME[r.outcome] ?? OUTCOME.invalid).badge;
-        badge.textContent = (OUTCOME[r.outcome] ?? OUTCOME.invalid).word;
-        outcome.append(badge);
-        const what = document.createElement('span');
-        what.className = 'hsb-reload__what';
-        const head = document.createElement('span');
-        head.textContent = headline;
-        const more = document.createElement('span');
-        more.textContent = detail;
-        what.append(head, more);
-        body.append(time, outcome, what);
-        li.append(marker, body);
-        return li;
-    }
-
-    /** @type {View | null} */
+    /** @type {import('./reloads-model.js').View | null} */
     let view = null;
     /** @type {Map<number, HTMLElement>} */
     let rows = new Map();
     let shown = '';
+    let inFlight = false;
 
     const setState = (/** @type {string} */ key, /** @type {() => void} */ apply) => {
         if (shown === key) return;
@@ -100,35 +64,9 @@ if (card && list && alert) {
         apply();
     };
 
-    function paintAlert() {
-        const latest = view?.reloads[0];
-        if (!latest || latest.outcome !== 'invalid') return setProblems(alert, []);
-        const { detail } = words(latest);
-        setProblems(alert, [
-            {
-                key: `reload-invalid-${latest.seq}`,
-                severity: 'warning',
-                what: `The latest reload (${when(latest.at_unix)}) was refused`,
-                why: `${detail.replace(/ Nothing changed\.$/, '')} The service keeps running on the last good version, so nothing is lost.`,
-                remedy: 'Correct the profile file, then reload again.',
-                command: COMMAND,
-            },
-        ]);
-    }
-
-    function paintCounts() {
-        if (!counts || !view) return;
-        const n = (/** @type {string} */ o) => view.reloads.filter((r) => r.outcome === o).length;
-        const total = view.reloads.length;
-        let line = `${count(total)} ${total === 1 ? 'reload' : 'reloads'} · ${count(n('applied'))} applied · ${count(n('needs-restart'))} ${n('needs-restart') === 1 ? 'needs' : 'need'} a restart · ${count(n('invalid'))} invalid`;
-        if (view.dropped > 0) line += ` · ${count(view.dropped)} older not kept`;
-        counts.textContent = line;
-    }
-
-    /** Bring the rows in step with the data: new ones on top, nothing redrawn. @param {View} next */
+    /** Bring the rows in step with the data: new ones on top, nothing redrawn. @param {import('./reloads-model.js').View} next */
     function paintRows(next) {
-        const fresh = view?.boot !== next.boot;
-        if (fresh) {
+        if (view?.boot !== next.boot) {
             for (const el of rows.values()) el.remove();
             rows = new Map();
         }
@@ -139,20 +77,19 @@ if (card && list && alert) {
                 rows.delete(seq);
             }
         }
-        const added = next.reloads.filter((r) => !rows.has(r.seq)).reverse();
-        for (const r of added) {
+        for (const r of next.reloads.filter((x) => !rows.has(x.seq)).reverse()) {
             const el = row(r);
             rows.set(r.seq, el);
-            list.prepend(el);
+            list?.prepend(el);
         }
     }
 
-    /** @param {View} next */
+    /** @param {import('./reloads-model.js').View} next */
     function show(next) {
         paintRows(next);
         view = next;
-        paintAlert();
-        paintCounts();
+        if (alert) setProblems(alert, problemsOf(view));
+        if (counts) counts.textContent = countsLine(view);
         if (next.reloads.length === 0) {
             setState('empty', () =>
                 setCardState(card, 'empty', {
@@ -165,21 +102,32 @@ if (card && list && alert) {
         }
     }
 
-    let inFlight = false;
-    async function refresh() {
+    /** The error face; a background read that fails while rows are drawn keeps them. @param {string} text @param {boolean} quiet */
+    function fail(text, quiet) {
+        if (quiet && view) return;
+        setState('error', () => setCardState(card, 'error', { title: 'The reload history could not be read', text }));
+    }
+
+    /** @param {boolean} quiet a background read (the page's poll) rather than the first read or Try again */
+    async function refresh(quiet) {
         if (inFlight) return;
         inFlight = true;
         try {
-            const res = await fetch(route, { headers: { accept: 'application/json' } });
-            if (!res.ok || !(res.headers.get('content-type') ?? '').includes('json')) throw new Error(`HTTP ${res.status}`);
-            show(await res.json());
-        } catch {
-            setState('error', () =>
-                setCardState(card, 'error', {
-                    title: 'The reload history could not be read',
-                    text: 'The service did not answer. Nothing was changed.',
-                }),
-            );
+            let raw;
+            try {
+                const res = await fetch(route, { headers: { accept: 'application/json' } });
+                if (!res.ok || !(res.headers.get('content-type') ?? '').includes('json')) throw new Error(`HTTP ${res.status}`);
+                raw = await res.json();
+            } catch (error) {
+                console.error('http-switchboard: the reload history could not be read', error);
+                return fail('The service did not answer. Nothing was changed.', quiet);
+            }
+            try {
+                show(viewOf(raw));
+            } catch (error) {
+                console.error('http-switchboard: the reload history could not be shown', error);
+                fail('The service answered, but the answer could not be read. Nothing was changed.', quiet);
+            }
         } finally {
             inFlight = false;
         }
@@ -188,15 +136,15 @@ if (card && list && alert) {
     attachCardStates(document);
     attachProblems(document);
     // The first answer is read like every later one: the card loads until it comes.
-    setCardState(card, 'loading', { words: 'Reading the reload history…' });
+    setCardState(card, 'loading', LOADING);
     shown = 'loading';
-    void refresh();
+    void refresh(false);
     attachNewPills(card);
 
     card.addEventListener('kp-card-retry', () => {
         shown = 'loading';
-        setCardState(card, 'loading', { words: 'Reading the reload history…' });
-        void refresh();
+        setCardState(card, 'loading', LOADING);
+        void refresh(false);
     });
-    document.addEventListener('hsb-poll', () => void refresh());
+    document.addEventListener('hsb-poll', () => void refresh(true));
 }

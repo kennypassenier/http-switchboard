@@ -3,12 +3,12 @@
 // one place. The snapshot carries no header value, no payload and no webhook path, so nothing drawn from it can leak one.
 
 import { $ } from './hsb-format.js';
+import { PICK_EVENT } from './profile-pick.js';
 
 /** The choice between the cards and the map, remembered per browser (synced by the kit's preferences). */
 export const VIEW_KEY = 'hsb-profiles-view';
 /** The profile the per-profile sections (Path, Last 24 hours) show, remembered per browser. */
 export const PICK_KEY = 'hsb-profile';
-export const UNREACHABLE = 'Could not reach HTTPSwitchboard. Check that the service is running, then try again.';
 
 export const HEALTH_WORD = { working: 'working', starting: 'starting', failing: 'failing', denied: 'denied', 'hub-down': 'hub down' };
 export const HEALTH_TONE = { working: 'success', starting: 'info', failing: 'destructive', denied: 'destructive', 'hub-down': 'warning' };
@@ -70,3 +70,26 @@ export const hasHub = (p) => p.source.kind === 'kyu';
 
 /** @param {string} name */
 export const profileNamed = (name) => store.profiles.find((p) => p.name === name);
+
+/**
+ * Choose the profile Path and Last 24 hours show: the one setter, so the store, the browser's memory and the listeners
+ * (history.js follows PICK_EVENT) always move together. @param {string} name
+ */
+export function setPick(name) {
+    store.traceName = name;
+    try {
+        localStorage.setItem(PICK_KEY, name);
+    } catch (error) {
+        console.warn('http-switchboard: the profile choice could not be remembered; it holds for this visit only', error);
+    }
+    document.dispatchEvent(new CustomEvent(PICK_EVENT, { detail: { name } }));
+}
+
+/**
+ * The server's clock against this browser's, set from the server's `now_unix` on every snapshot (dashboard.js) and
+ * history read (history.js). Every "N ago" line compares server timestamps with Date.now(), so they are moved by this skew.
+ */
+export const clock = { skewMs: 0 };
+
+/** A server timestamp (unix seconds) as a moment on this browser's clock. @param {number} unix */
+export const localMs = (unix) => unix * 1000 - clock.skewMs;

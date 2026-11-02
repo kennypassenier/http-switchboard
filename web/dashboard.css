@@ -156,3 +156,13 @@
 .hsb-bcell > .hsb-budget__words {
     grid-column: 2;
 }
+
+/* A long profile name breaks where it must instead of forcing a sideways scroll; the chooser may shrink below its content
+   (a long segmented control scrolls inside itself) so the page never grows wider than a 390 px screen. */
+#hsb-trace-name {
+    overflow-wrap: anywhere;
+}
+
+.hsb-pick {
+    min-inline-size: 0;
+}

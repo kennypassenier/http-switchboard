@@ -4,7 +4,7 @@
 
 import { setTrace, trace } from '/static/kp/dist/kp-themes.min.js';
 import { $ } from './hsb-format.js';
-import { HEALTH_TONE, HEALTH_WORD, hasHub, store } from './hsb-state.js';
+import { HEALTH_TONE, HEALTH_WORD, hasHub, setPick, store } from './hsb-state.js';
 import { markName } from './profiles.js';
 import { paintPick } from './profile-pick.js';
 
@@ -62,7 +62,8 @@ export function drawTrace(traceEl) {
     drawPicker();
     const { profiles, status } = store;
     const p = profiles.find((x) => x.name === store.traceName) ?? profiles[0];
-    if (p) store.traceName = p.name;
+    // The chosen profile is gone (a reload removed it): fall back through the one setter, so the memory and Last 24 hours follow.
+    if (p && p.name !== store.traceName) setPick(p.name);
     drawHead(p);
     if (status === 'ready' && p) {
         setTrace(traceEl, hopsOf(p));

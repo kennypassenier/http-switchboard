@@ -15,16 +15,20 @@ const REPOLL_LIMIT_MS = 4000;
 /** @param {number} ms */
 const sleep = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
 
-/** Ask dashboard.js for a fresh snapshot and wait for it (or give up after REPOLL_LIMIT_MS). */
+/** Ask dashboard.js for a fresh snapshot and wait for it (a ready one; or give up after REPOLL_LIMIT_MS). */
 function repoll() {
     return new Promise((resolve) => {
-        const done = () => {
-            document.removeEventListener('hsb:profiles', done);
+        const finish = () => {
+            document.removeEventListener('hsb:profiles', onProfiles);
             window.clearTimeout(timer);
             resolve(undefined);
         };
-        const timer = window.setTimeout(done, REPOLL_LIMIT_MS);
-        document.addEventListener('hsb:profiles', done);
+        // A loading-state announcement is not an answer: wait for a ready one (a failed read ends at the limit).
+        const onProfiles = (/** @type {Event} */ event) => {
+            if (/** @type {CustomEvent} */ (event).detail?.status === 'ready') finish();
+        };
+        const timer = window.setTimeout(finish, REPOLL_LIMIT_MS);
+        document.addEventListener('hsb:profiles', onProfiles);
         document.dispatchEvent(new CustomEvent('hsb:refresh'));
     });
 }

@@ -117,3 +117,13 @@ export function periodOf(h) {
         details: h.state === 'none' ? causeLines(h) : [`Received ${count(h.received)}, delivered ${count(h.delivered)}, failed ${count(h.failed)}.`, ...causeLines(h)],
     };
 }
+
+/** The history with every field defaulted, so a partial answer still draws; anything but an object is refused. @param {any} raw @returns {History} */
+export function historyOf(raw) {
+    if (!raw || typeof raw !== 'object' || !Array.isArray(raw.profiles)) throw new TypeError('the history has no profiles list');
+    return {
+        now_unix: Number(raw.now_unix ?? Date.now() / 1000),
+        since_unix: Number(raw.since_unix ?? 0),
+        profiles: raw.profiles.map((/** @type {any} */ p) => ({ ...p, hours: Array.isArray(p.hours) ? p.hours : [], recent: Array.isArray(p.recent) ? p.recent : [], last_failure_unix: p.last_failure_unix ?? null })),
+    };
+}

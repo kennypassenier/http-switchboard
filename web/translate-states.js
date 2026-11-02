@@ -3,13 +3,14 @@
 // height), so nothing jumps when the state changes.
 
 import { setCode, prettyJson, setProblems, setCardState } from '/static/kp/dist/kp-themes.min.js';
-import { drawDiff } from './translate-diff.js';
+import { clearDiff, queueDiff } from './translate-diff.js';
 import { drawFields } from './translate-fields.js';
 import { els, bytes, pretty } from './translate-dom.js';
 
 /** Clear what the fields card draws. */
 function clearFields() {
     drawFields([]);
+    clearDiff();
     els.diff.replaceChildren();
     els.diffCount.textContent = '';
     els.diffBox.hidden = true;
@@ -60,14 +61,16 @@ export function showResult(text, answer) {
     setCardState(els.fieldsCard, 'ready');
     setProblems(
         els.problems,
-        answer.notes.map((n) => ({ key: n.key, severity: 'info', what: n.what, why: n.why, dismissible: true })),
+        (answer.notes ?? []).map((n) => ({ key: n.key, severity: 'info', what: n.what, why: n.why, dismissible: true })),
     );
-    const json = /json/i.test(answer.content_type);
+    // A field the server left out is defaulted here, so a partial answer still draws what it has.
+    const contentType = answer.content_type ?? '';
+    const json = /json/i.test(contentType);
     setCode(els.body, {
-        text: answer.body,
+        text: answer.body ?? '',
         title: 'Translated body',
-        language: json ? 'JSON' : answer.content_type.split(';')[0],
-        size: `${bytes(answer.body)} B`,
+        language: json ? 'JSON' : contentType.split(';')[0] || 'text',
+        size: `${bytes(answer.body ?? '')} B`,
         lines: true,
         wrap: true,
         maxLines: 12,
@@ -80,6 +83,6 @@ export function showResult(text, answer) {
     } catch {
         // The box said valid, so this only fails on a race with a new keystroke: the raw text stands in.
     }
-    drawDiff(els.diff, els.diffCount, before, (json ? prettyJson(answer.body) : null) ?? answer.body);
+    queueDiff(els.diffBox, els.diff, els.diffCount, before, (json ? prettyJson(answer.body ?? '') : null) ?? answer.body ?? '');
     els.diffBox.hidden = false;
 }

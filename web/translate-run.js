@@ -8,6 +8,8 @@ import { data, els, bytes, kib } from './translate-dom.js';
 import { empty, unreachable, showFailure, showResult } from './translate-states.js';
 
 const SLOW_MS = 150; // a faster answer never flashes the busy card
+/** How long the page waits for the preview route before it says the service did not answer. */
+const TIMEOUT_MS = 15_000;
 /** The content type that tells the route the body is `{ message, template }`, not a bare message. */
 const ENVELOPE_TYPE = 'application/vnd.hsb.try+json';
 
@@ -84,11 +86,12 @@ async function preview(name, message, template, signal) {
 
 /**
  * Show what the server answered.
- * @param {Response} res @param {any} answer @param {string} text @param {(failure: any) => HTMLButtonElement | undefined} actionFor
+ * @param {Response} res @param {any} answer @param {string} text @param {(failure: any, status: number) => HTMLButtonElement | undefined} actionFor
  */
 function settle(res, answer, text, actionFor) {
     if (res.ok && answer?.body !== undefined) showResult(text, answer);
-    else if (answer?.error && answer?.why) showFailure(answer, actionFor(answer));
+    // Any non-2xx answer that carries the what/why/what-now body (413, 429, 503, 504, ...) is shown in the server's words.
+    else if (answer?.error && answer?.why) showFailure(answer, actionFor(answer, res.status));
     else if (res.redirected || res.status === 401 || res.status === 403) unreachable('You are signed out', 'Open the login page again, then come back to this page.');
     else if (res.status === 413) unreachable('The message is too large', `The limit is ${kib(data.maxBytes)}. Paste one recorded message instead of a whole log.`);
     else unreachable('The service could not translate', `HTTP ${res.status}. Nothing was delivered. Try again; if it persists, read the service's log.`);
@@ -99,13 +102,45 @@ function settle(res, answer, text, actionFor) {
  * @param {{ read: () => ({ name: string, draft: string | null } | null), useExample: () => void, resetDraft: () => void }} source
  */
 export function createRunner(source) {
-    /** The action that can mend a refusal: reset a draft that broke the template, or fill in the example message. @param {any} failure */
-    const actionFor = (failure) => {
+    /** The action that can mend a refusal: try again after "too many at once" (429), reset a draft that broke the template, or fill in the example message. */
+    const actionFor = (/** @type {any} */ failure, /** @type {number} */ status) => {
         const current = source.read();
+        if (status === 429) return actionButton(() => void run(), 'Try again', 'Send the same message again');
         if (failure.kind === 'template' && current?.draft !== null) return actionButton(source.resetDraft, "Reset to the profile's template", 'Drop the edits and use the template the profile has');
         if (failure.fixable) return actionButton(source.useExample, 'Use the example message', 'Put the example message in the box');
         return undefined;
     };
+
+    /** POST with the slow-card and timeout timers; null when a newer run took over or the failure is already shown. @param {{ name: string, draft: string | null }} current @param {string} text @param {number} mine */
+    async function send(current, text, mine) {
+        const controller = new AbortController();
+        inFlight = controller;
+        let timedOut = false;
+        const limit = window.setTimeout(() => {
+            timedOut = true;
+            controller.abort();
+        }, TIMEOUT_MS);
+        const slow = window.setTimeout(() => {
+            if (mine !== serial) return;
+            setCardState(els.resultCard, 'loading', { words: 'Translating…' });
+            setCardState(els.fieldsCard, 'loading', { words: 'Reading the fields…' });
+        }, SLOW_MS);
+        try {
+            return await preview(current.name, text, current.draft, controller.signal);
+        } catch (error) {
+            if (mine !== serial) return null;
+            if (timedOut) {
+                unreachable('The service did not answer', `Nothing came back within ${TIMEOUT_MS / 1000} s, so nothing could be translated and nothing was delivered. Try again.`);
+            } else if (/** @type {Error} */ (error).name !== 'AbortError') {
+                console.error('http-switchboard: the translate request failed', error);
+                unreachable('The service did not answer', 'Nothing could be translated and nothing was delivered. Check that HTTPSwitchboard is running, then try again.');
+            }
+            return null;
+        } finally {
+            window.clearTimeout(slow);
+            window.clearTimeout(limit);
+        }
+    }
 
     async function run() {
         const current = source.read();
@@ -119,28 +154,27 @@ export function createRunner(source) {
             showFailure(refusal, undefined);
             return;
         }
-        const controller = new AbortController();
-        inFlight = controller;
-        const slow = window.setTimeout(() => {
-            if (mine !== serial) return;
-            setCardState(els.resultCard, 'loading', { words: 'Translating…' });
-            setCardState(els.fieldsCard, 'loading', { words: 'Reading the fields…' });
-        }, SLOW_MS);
+        const reply = await send(current, text, mine);
+        if (!reply || mine !== serial) return;
         try {
-            const { res, answer } = await preview(current.name, text, current.draft, controller.signal);
-            if (mine === serial) settle(res, answer, text, actionFor);
+            settle(reply.res, reply.answer, text, actionFor);
         } catch (error) {
-            if (mine !== serial || /** @type {Error} */ (error).name === 'AbortError') return;
-            unreachable('The service did not answer', 'Nothing could be translated and nothing was delivered. Check that HTTPSwitchboard is running, then try again.');
-        } finally {
-            window.clearTimeout(slow);
+            console.error('http-switchboard: the translate answer could not be shown', error);
+            unreachable('The answer could not be shown', 'The service answered, but the page could not read the answer. Nothing was delivered. Try again; if it persists, read the browser console.');
         }
+    }
+
+    /** Drop the translation in flight and the one scheduled: what was typed or picked since is what counts. */
+    function cancel() {
+        window.clearTimeout(timer);
+        serial++;
+        inFlight?.abort();
     }
 
     /** @param {number} wait */
     const schedule = (wait) => {
-        window.clearTimeout(timer);
+        cancel();
         timer = window.setTimeout(() => void run(), wait);
     };
-    return { run, schedule };
+    return { run, schedule, cancel };
 }
