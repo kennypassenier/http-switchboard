@@ -71,17 +71,20 @@ async fn a_permanent_refusal_is_given_up_without_failing_the_profile() {
     let receiver = TestServer::start(vec![422]).await;
     let (base, registry) = serve_with_registry(&one_profile(&receiver.base_url)).await;
 
-    let (status, _) = post(&format!("{base}/hook"), r#"{"x": 1}"#, None).await;
+    let (status, body) = post(&format!("{base}/hook"), r#"{"x": 1}"#, None).await;
 
     assert_eq!(status, 502);
+    assert!(
+        body.contains("422"),
+        "the sender is told the status: {body}"
+    );
     assert_eq!(registry.health_of("hook"), None, "health must not move");
     let stats = &registry.snapshot()["hook"];
     assert_eq!((stats.failed, stats.given_up), (0, 1));
     let reason = stats.last_given_up_reason.as_deref().unwrap();
-    assert!(reason.contains("422"), "{reason}");
-    assert!(
-        !reason.contains("/in"),
-        "the destination path leaked: {reason}"
+    assert_eq!(
+        reason,
+        "the destination refused this message with status 422, which retrying will not change"
     );
 }
 

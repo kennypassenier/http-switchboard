@@ -18,7 +18,7 @@ import { HEALTH_WORD, localMs } from './hsb-state.js';
  * default is a day: long enough that a quiet night or weekend never cries wolf, short enough that a day of silence on a
  * profile that normally delivers is noticed. A profile never has to be tuned to be honest; this is the one knob.
  */
-export const QUIET_AFTER_S = 86_400;
+const QUIET_AFTER_S = 86_400;
 
 const count = (/** @type {number} */ n) => n.toLocaleString('en-GB');
 
@@ -46,7 +46,7 @@ export function markName(el, name) {
 const cardsOpen = [];
 
 /** "3, the last on 02/11/2026 02:20: <reason>". @param {Profile} p */
-export function givenUpLine(p) {
+function givenUpLine(p) {
     const last = p.last_given_up_unix ? `, the last on ${stamp(p.last_given_up_unix * 1000)}` : '';
     return `${count(p.given_up ?? 0)}${last}${p.last_given_up_reason ? `: ${p.last_given_up_reason}` : ''}`;
 }

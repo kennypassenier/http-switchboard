@@ -27,6 +27,11 @@ pub enum Poll {
     NotJson {
         id: String,
     },
+    /// The message is on the hub but bigger than this service reads. Only
+    /// its id was recovered; it is given up on, never read in full.
+    TooLarge {
+        id: String,
+    },
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -120,7 +125,9 @@ pub struct PumpState {
     pub policy_pushed: bool,
     /// A reload changed the lease or attempt cap after a push had already
     /// succeeded: the subscription exists, so the new policy is written
-    /// BEFORE the next poll and no message is claimed under the old lease.
+    /// BEFORE the next poll. Best effort: a failed write is retried every
+    /// 30 s and logged once, and the poll goes ahead meanwhile, so a message
+    /// can still be claimed under the old lease until a write succeeds.
     pub policy_before_poll: bool,
     /// When the policy write was last tried, and the error text it last
     /// failed with: together they keep a refusing hub from being asked and

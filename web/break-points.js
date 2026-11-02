@@ -6,7 +6,7 @@
 const AFTER_SEPARATOR = /(?<=[:/])|(?<=\D\.)|(?<=\d\.)(?=\D)/;
 
 /** Put the break marks into one element's text; safe to call again. @param {Element} el */
-export function breakAfterSeparators(el) {
+function breakAfterSeparators(el) {
     if (el.querySelector(':scope > wbr')) return;
     for (const node of [...el.childNodes]) {
         if (node.nodeType !== Node.TEXT_NODE || !node.textContent) continue;

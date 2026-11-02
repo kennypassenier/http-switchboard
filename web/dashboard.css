@@ -199,3 +199,8 @@
         padding-inline: var(--kp-space-sm, 0.5rem);
     }
 }
+
+/* A row that does not apply to a profile (a hub-only setting on an HTTP card) takes no track and no space. */
+.hsb-profile .kp-kv__row[hidden] {
+    display: none;
+}

@@ -121,6 +121,7 @@ export async function recheckAll(button) {
         n = Number(r.body.rechecked ?? 0);
         for (const p of store.profiles) markGivenUpSeen(p.name, p.given_up ?? 0);
         await hooks.refresh();
+        for (const p of store.profiles) markGivenUpSeen(p.name, p.given_up ?? 0); // the fresh read's own counts
         return 'Done';
     });
     if (!result) return;
@@ -135,8 +136,10 @@ export async function recheckOne(name) {
     const r = await post(routes.recheckOne.replace('{name}', encodeURIComponent(name)));
     store.rechecking.delete(name);
     if (r.ok) {
+        // Mark what is known now (so the alert does not flash while the read runs), then what the fresh read says.
         markGivenUpSeen(name, profileNamed(name)?.given_up ?? 0);
         await hooks.refresh();
+        markGivenUpSeen(name, profileNamed(name)?.given_up ?? 0);
         done(`${name} back to starting`);
     } else {
         hooks.drawAll();

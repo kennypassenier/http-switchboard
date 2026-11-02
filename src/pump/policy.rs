@@ -4,7 +4,10 @@
 //! exists once it has polled, so a write before that is refused), and
 //! before the next poll after a reload changed the policy (the subscription
 //! exists by then, and a poll first would claim a message under the old
-//! lease).
+//! lease). The before-poll write is best effort: if it fails the poll still
+//! goes ahead, the write is retried every 30 s and the failure is logged
+//! once, so until a write succeeds a message may be claimed under the old
+//! lease.
 
 use std::time::{Duration, Instant};
 
@@ -62,6 +65,7 @@ fn note_failure(profile: &Profile, error: &HubError, state: &mut PumpState) {
 }
 
 /// Before a poll: a reload asked for the new policy to be in place first.
+/// Best effort: a failed write does not hold the poll back.
 pub(super) async fn push_before_poll(
     hub: &dyn Hub,
     profile: &Profile,
@@ -84,7 +88,7 @@ pub(super) async fn push_after_poll(
 ) {
     let polled = matches!(
         poll,
-        Ok(Poll::Empty | Poll::Message(_) | Poll::NotJson { .. })
+        Ok(Poll::Empty | Poll::Message(_) | Poll::NotJson { .. } | Poll::TooLarge { .. })
     );
     if !state.policy_pushed && polled {
         try_push(hub, profile, topic, state).await;

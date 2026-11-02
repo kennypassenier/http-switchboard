@@ -70,6 +70,7 @@ pub(super) const WEB_FILES: &[(&str, &[u8])] = &[
         include_bytes!("../../web/break-points.js"),
     ),
     ("copy-text.js", include_bytes!("../../web/copy-text.js")),
+    ("hub-verdict.js", include_bytes!("../../web/hub-verdict.js")),
     ("dashboard.css", include_bytes!("../../web/dashboard.css")),
     ("history.js", include_bytes!("../../web/history.js")),
     (

@@ -7,6 +7,8 @@ use crate::translate::RenderError;
 
 pub(crate) const NOT_JSON: &str = "the message was not JSON, so no template could read it";
 
+pub(crate) const TOO_LARGE: &str = "the message on the hub is larger than this service reads";
+
 /// Why a message could not be turned into a request.
 pub(crate) fn render_summary(error: &RenderError) -> &'static str {
     match error {

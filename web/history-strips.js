@@ -39,7 +39,7 @@ export function paintStrips(ctx) {
         setUptime(el, {
             label: p.name,
             periods: p.hours.map(periodOf),
-            state: ctx.state === 'ready' ? 'ready' : ctx.state,
+            state: ctx.state,
             count: STRIP_CELLS,
             from: '24 hours ago',
             to: 'Now',

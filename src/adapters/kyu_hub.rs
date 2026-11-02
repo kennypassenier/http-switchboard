@@ -2,8 +2,11 @@
 
 use std::time::Duration;
 
+pub(super) mod envelope;
+
+use self::envelope::parse_envelope;
 use super::BoxFuture;
-use crate::pump::{Hub, HubError, HubMessage, Poll};
+use crate::pump::{Hub, HubError, Poll};
 use crate::secret::Secret;
 use crate::translate::percent_encode;
 
@@ -90,51 +93,6 @@ impl KyuHub {
             200 => parse_envelope(response).await,
             status => Err(HubError::Status { status }),
         }
-    }
-}
-
-/// Read a 200 answer of the long poll into a message.
-async fn parse_envelope(response: reqwest::Response) -> Result<Poll, HubError> {
-    // Parsed with serde_json rather than reqwest's json feature: one
-    // fewer feature for one line of code.
-    let raw = response.bytes().await.map_err(|e| HubError::Unreachable {
-        detail: format!("the hub's answer could not be read: {e}"),
-    })?;
-    let envelope: serde_json::Value =
-        serde_json::from_slice(&raw).map_err(|e| HubError::Unreachable {
-            detail: format!("the hub's answer was not JSON: {e}"),
-        })?;
-    // An id is what ack and nack are addressed with; without one every
-    // settle would hit a malformed URL and the hub would offer the message
-    // again forever. A hub error with a clear line, not a silent "".
-    let id = match envelope.get("id").and_then(|v| v.as_str()) {
-        Some(id) if !id.is_empty() => id.to_string(),
-        _ => {
-            crate::obs::log_warn(
-                "hub",
-                "bad_envelope",
-                "the hub's answer carries no message id, so it cannot be acknowledged",
-            );
-            return Err(HubError::Unreachable {
-                detail: "the hub's answer carried no message id, so the message cannot be \
-                         acknowledged (check that kyu and this service speak the same envelope)"
-                    .to_string(),
-            });
-        }
-    };
-    match envelope.get("payload") {
-        Some(payload) => Ok(Poll::Message(Box::new(HubMessage {
-            id,
-            payload: payload.clone(),
-            attempt: envelope
-                .get("attempt")
-                .and_then(|v| v.as_u64())
-                .unwrap_or(1) as u32,
-        }))),
-        // kyu hands a non-JSON body over under another key (measured:
-        // payload_text for text bodies); either way there is no `payload`
-        // for a template to read.
-        None => Ok(Poll::NotJson { id }),
     }
 }
 

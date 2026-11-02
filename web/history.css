@@ -139,11 +139,6 @@
     gap: var(--kp-space-lg, 1.5rem);
 }
 
-/* A long profile name in the card's title breaks instead of widening the page. */
-#hsb-h-title {
-    overflow-wrap: anywhere;
-}
-
 /* The head's actions keep a real gap, whatever sits beside the View options button. */
 .hsb-h-card .kp-card__actions {
     gap: var(--kp-space-sm, 0.5rem);

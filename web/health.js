@@ -5,21 +5,15 @@
 // document, and `hsb:refresh` asks it for one more. There is no second poll. Words describe a profile from its own
 // shape (kyu or HTTP source, URL or kyu destination); nothing here sees a header, a payload or a webhook path.
 //
-// Layout: health-words.js (a state in words), health-hub.js (the hub banner); this file draws the alerts and does the
-// rechecks.
+// Layout: health-words.js (a state in words), health-hub.js (the hub banner); this file draws the alerts. A recheck is
+// recheck.js's recheckOne: one in-flight set, one toast and one refresh path for the whole page.
 
-import { setProblems, attachProblems } from '/static/kp/dist/kp-themes.min.js';
-import { attachConnection, CONNECTION_RETRY_EVENT } from '/static/kp/dist/kp-themes.min.js';
-import { attachArt } from '/static/kp/dist/kp-themes.min.js';
-import { setStrings } from '/static/kp/dist/kp-themes.min.js';
-import { toast } from '/static/kp/dist/kp-themes.min.js';
+import { setProblems, attachProblems, attachConnection, CONNECTION_RETRY_EVENT, attachArt, setStrings } from '/static/kp/dist/kp-themes.min.js';
 import { giveUpWordsOf, hubCaused, list, wordsOf } from './health-words.js';
 import { hubBanner } from './health-hub.js';
 import { post } from './hsb-post.js';
-import { markGivenUpSeen } from './give-up-seen.js';
-
-/** How long the success toast stays, in milliseconds. */
-const DONE_TOAST_MS = 6000;
+import { reconcileGivenUpSeen } from './give-up-seen.js';
+import { recheckOne } from './recheck.js';
 
 setStrings({
     connOffline: 'The kyu hub does not answer',
@@ -42,12 +36,10 @@ const problems = byId('hsbh-problems');
 const banner = byId('hsbh-connection');
 
 const embedded = JSON.parse(document.getElementById('hsb-data')?.textContent ?? '{}');
-const routes = embedded.routes ?? { recheckAll: '/profiles/recheck', recheckOne: '/profiles/{name}/recheck' };
+const routes = embedded.routes ?? { recheckAll: '/profiles/recheck' };
 
 /** @type {import('./health-words.js').Profile[]} */
 let profiles = embedded.profiles ?? [];
-/** @type {Set<string>} */
-const rechecking = new Set();
 let lastSig = '';
 
 /** A button of the kit's own look. @param {string} label @param {Record<string, string>} data */
@@ -102,21 +94,6 @@ function paintHealth() {
 
 // ── actions ────────────────────────────────────────────────────────────────────────────────────────────────────────
 
-/** @param {string} name */
-async function recheck(name) {
-    if (rechecking.has(name)) return;
-    rechecking.add(name);
-    const r = await post(routes.recheckOne.replace('{name}', encodeURIComponent(name)));
-    rechecking.delete(name);
-    if (r.ok) {
-        markGivenUpSeen(name, profiles.find((p) => p.name === name)?.given_up ?? 0);
-        document.dispatchEvent(new CustomEvent('hsb:refresh'));
-        toast(`${name} back to starting`, { className: 'kp-toast kp-toast--success', ms: DONE_TOAST_MS, close: true });
-    } else {
-        const t = toast(r.line, { className: 'kp-toast kp-toast--error', sticky: true, action: { label: 'Try again', onClick: () => { t.dismiss(); void recheck(name); } } });
-    }
-}
-
 const hub = hubBanner(banner, () => profiles, () => post(routes.recheckAll));
 
 // ── wiring ─────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -127,7 +104,7 @@ attachArt(frame);
 
 frame.addEventListener('click', (event) => {
     const again = /** @type {HTMLElement} */ (event.target).closest('[data-hsbh-recheck]');
-    if (again) void recheck(again.getAttribute('data-hsbh-recheck') ?? '');
+    if (again) void recheckOne(again.getAttribute('data-hsbh-recheck') ?? '');
 });
 banner.addEventListener(CONNECTION_RETRY_EVENT, (event) => {
     void hub.retry(Boolean(/** @type {CustomEvent} */ (event).detail?.auto));
@@ -137,6 +114,7 @@ document.addEventListener('hsb:profiles', (event) => {
     // A failed poll says nothing about the profiles: what is shown stays until a poll answers.
     if (detail?.status !== 'ready') return;
     profiles = detail.profiles ?? [];
+    reconcileGivenUpSeen(profiles);
     paintHealth();
     hub.paint();
 });

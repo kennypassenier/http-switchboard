@@ -48,13 +48,25 @@ function remember(key, value) {
  *   errorText: string | undefined, figures: { built: string, detachers: (() => void)[] }, current: () => import('./history-model.js').ProfileHistory | undefined }} Context
  */
 
+/** The phrase of the Rust explain text the name is put before; only the fallback below needs it. */
 const CHOSEN = 'the profile chosen in Path of a profile';
 
-/** The profile's name goes into the section's own lead line, the one the kit draws above the card. @param {string | undefined} name */
+/**
+ * The profile's name goes into the section's own lead line, the one the kit draws above the card. The lead should carry
+ * an element `<span data-hsb-lead-name></span>` which is filled here. Without one (the text has no such element) the name
+ * is put before the known phrase; if that phrase is missing too, the lead is left as the server wrote it.
+ * @param {string | undefined} name
+ */
 function nameInLead(name) {
     const lead = /** @type {HTMLElement | null} */ (document.querySelector('[data-chassis-section^="last-24-hours"] > .kp-card__body'));
     if (!lead) return;
+    const slot = lead.querySelector('[data-hsb-lead-name]');
+    if (slot) {
+        slot.textContent = name ? `${name}, ` : '';
+        return;
+    }
     lead.dataset.hsbLead ??= lead.textContent ?? '';
+    if (!lead.dataset.hsbLead.includes(CHOSEN)) return;
     lead.textContent = name ? lead.dataset.hsbLead.replace(CHOSEN, `${name}, ${CHOSEN}`) : lead.dataset.hsbLead;
 }
 

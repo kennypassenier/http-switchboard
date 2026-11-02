@@ -7,7 +7,9 @@ import { all, code, el, said, seconds } from './hsb-format.js';
 import { store } from './hsb-state.js';
 import { markName } from './profiles.js';
 
-const ROWS = ['Source', 'Destination host', 'Content type', 'Timeout', 'Retries', 'Max attempts', 'Lease', 'Retry budget'];
+// The rows every card has come first, the hub-only ones last: a hidden row then only shortens a card at its end, and the
+// shared rows stand beside each other in HTTP and hub cards alike.
+const ROWS = ['Source', 'Destination host', 'Content type', 'Timeout', 'Retries', 'Retry budget', 'Max attempts', 'Lease'];
 
 /** The fields that change a card; a poll that changes none of them leaves the card alone. */
 const SIGNATURE_KEYS = ['name', 'source', 'sink', 'kind', 'label', 'sub', 'content_type', 'timeout_ms', 'retries', 'pauses_ms', 'budget_ms', 'lease_ms', 'max_attempts'];

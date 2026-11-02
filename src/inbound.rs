@@ -182,15 +182,18 @@ async fn record(
 ) {
     let ok = match verdict {
         Verdict::GaveUp { summary, .. } => {
-            state.registry.record_given_up(&profile.name, true, summary);
-            crate::obs::log_message(&profile.name, "http", "given-up", duration_ms, attempts);
+            record_given_up(state, profile, summary, "given-up", (duration_ms, attempts));
             return;
         }
         Verdict::BadJson(_) => {
-            state
-                .registry
-                .record_given_up(&profile.name, true, give_up::NOT_JSON);
-            crate::obs::log_message(&profile.name, "http", "bad-json", duration_ms, attempts);
+            let outcome = "bad-json";
+            record_given_up(
+                state,
+                profile,
+                give_up::NOT_JSON,
+                outcome,
+                (duration_ms, attempts),
+            );
             return;
         }
         Verdict::Delivered => true,
@@ -218,5 +221,17 @@ async fn record(
     )
     .await;
     let outcome = if ok { "delivered" } else { "failed" };
+    crate::obs::log_message(&profile.name, "http", outcome, duration_ms, attempts);
+}
+
+/// Count a message that cannot be used and log it; health is left alone.
+fn record_given_up(
+    state: &Inbound,
+    profile: &Profile,
+    summary: &str,
+    outcome: &str,
+    (duration_ms, attempts): (u64, u32),
+) {
+    state.registry.record_given_up(&profile.name, true, summary);
     crate::obs::log_message(&profile.name, "http", outcome, duration_ms, attempts);
 }

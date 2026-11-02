@@ -87,48 +87,85 @@ pub async fn pump_once(
         .next(topic, lane.subscription(), state.replay_next)
         .await;
     policy::push_after_poll(hub, profile, topic, &poll, state).await;
-
     match poll {
-        Err(e @ crate::pump::HubError::Denied) => {
-            state.health = Health::Denied;
-            Step::Denied {
-                detail: e.to_string(),
-            }
-        }
-        Err(e) => {
-            state.health = Health::HubDown;
-            Step::HubDown {
-                detail: e.to_string(),
-            }
-        }
-        Ok(Poll::UnknownTopic) => {
+        Err(e) => hub_failure(e, state),
+        Ok(poll) => settle_poll(&lane, poll, sink, clock, state).await,
+    }
+}
+
+/// A poll that failed: the hub is refusing us or away.
+fn hub_failure(error: crate::pump::HubError, state: &mut PumpState) -> Step {
+    let detail = error.to_string();
+    if matches!(error, crate::pump::HubError::Denied) {
+        state.health = Health::Denied;
+        Step::Denied { detail }
+    } else {
+        state.health = Health::HubDown;
+        Step::HubDown { detail }
+    }
+}
+
+/// A poll the hub answered: act on what it holds.
+async fn settle_poll(
+    lane: &Lane<'_>,
+    poll: Poll,
+    sink: &dyn Sink,
+    clock: &dyn Clock,
+    state: &mut PumpState,
+) -> Step {
+    match poll {
+        Poll::UnknownTopic => {
             // Nothing has ever published here. Ask for the history on the
             // next poll so the first message is not missed.
             state.replay_next = true;
             Step::TopicMissing
         }
-        Ok(Poll::Empty) => idle(state),
-        Ok(Poll::NotJson { id }) => {
+        Poll::Empty => idle(state),
+        Poll::NotJson { id } => {
+            hub_answered(state);
             state.replay_next = false;
             // The hub does not say how often it offered this one, but a
             // dead letter ends it, so it is seen once.
             state.first_sight = true;
-            let reason =
-                "the message on the hub is not JSON, so no template can read it".to_string();
             lane.nack(&id, true).await;
-            // Health stays as it was: one unusable message says nothing
-            // about whether the next one will deliver.
+            // Health stays as it was (bar the recovery above): one
+            // unusable message says nothing about the next one.
             Step::DeadLettered {
                 id,
-                reason,
+                reason: "the message on the hub is not JSON, so no template can read it"
+                    .to_string(),
                 summary: give_up::NOT_JSON.to_string(),
             }
         }
-        Ok(Poll::Message(message)) => {
+        Poll::TooLarge { id } => {
+            hub_answered(state);
+            state.replay_next = false;
+            state.first_sight = true;
+            lane.nack(&id, true).await;
+            Step::DeadLettered {
+                id,
+                reason: "the message on the hub is larger than this service reads, so it was given up on unread"
+                    .to_string(),
+                summary: give_up::TOO_LARGE.to_string(),
+            }
+        }
+        Poll::Message(message) => {
+            hub_answered(state);
             state.replay_next = false;
             state.first_sight = message.attempt <= 1;
-            handle_message(&lane, *message, sink, clock, state).await
+            handle_message(lane, *message, sink, clock, state).await
         }
+    }
+}
+
+/// The hub answered the poll and accepted us, so a profile that was
+/// starting or cut off is working again.
+fn hub_answered(state: &mut PumpState) {
+    if matches!(
+        state.health,
+        Health::Starting | Health::HubDown | Health::Denied
+    ) {
+        state.health = Health::Working;
     }
 }
 
@@ -136,12 +173,7 @@ pub async fn pump_once(
 /// accepted us, so a profile that was starting or cut off is working.
 fn idle(state: &mut PumpState) -> Step {
     state.replay_next = false;
-    if matches!(
-        state.health,
-        Health::Starting | Health::HubDown | Health::Denied
-    ) {
-        state.health = Health::Working;
-    }
+    hub_answered(state);
     Step::Idle
 }
 
@@ -170,12 +202,22 @@ async fn handle_message(
         }
     };
     let outcome = deliver_with_retry(lane.profile, &delivery, sink, clock).await;
+    settle_delivery(lane, message.id, outcome, state).await
+}
+
+/// Settle a message with the hub by how its delivery ended.
+async fn settle_delivery(
+    lane: &Lane<'_>,
+    id: String,
+    outcome: crate::adapters::Outcome,
+    state: &mut PumpState,
+) -> Step {
     match outcome.result {
         Ok(()) => {
-            let ack_failed = lane.ack(&message.id).await;
+            let ack_failed = lane.ack(&id).await;
             state.health = Health::Working;
             Step::Delivered {
-                id: message.id,
+                id,
                 attempts: outcome.attempts,
                 ack_failed,
             }
@@ -184,10 +226,10 @@ async fn handle_message(
             // The destination will answer the same to the same bytes, so
             // re-offering only burns the hub's attempts. Give up at once;
             // the receiver's status is in the log, health stays as it was.
-            lane.nack(&message.id, true).await;
+            lane.nack(&id, true).await;
             let status = e.permanent_status().unwrap_or_default();
             Step::DeadLettered {
-                id: message.id,
+                id,
                 reason: e.to_string(),
                 summary: give_up::refused_summary(status),
             }
@@ -195,10 +237,10 @@ async fn handle_message(
         Err(e) => {
             // Hand it back at once rather than sitting on the claim: the
             // hub's own backoff is better at waiting than we are.
-            lane.nack(&message.id, false).await;
+            lane.nack(&id, false).await;
             state.health = Health::Failing;
             Step::HandedBack {
-                id: message.id,
+                id,
                 attempts: outcome.attempts,
                 reason: e.to_string(),
             }

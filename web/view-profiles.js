@@ -16,7 +16,7 @@ function flagsOf(p) {
     const flags = [{ label: p.source.kind === 'kyu' ? 'from the hub' : 'HTTP POST' }, { label: p.sink.kind === 'url' ? 'HTTP webhook' : 'to the hub' }];
     if (p.state === 'failing') flags.push({ label: hasHub(p) ? 'messages waiting on the hub' : 'destination refusing', tone: 'destructive' });
     if (p.state === 'denied') flags.push({ label: 'credentials refused', tone: 'destructive' });
-    if ((p.given_up ?? 0) > 0) flags.push({ label: `${count(p.given_up ?? 0)} given up`, tone: 'warning' });
+    if ((p.given_up ?? 0) > 0) flags.push({ label: `${count(p.given_up ?? 0)} given up since the start`, tone: 'warning' });
     if (p.state === 'hub-down') flags.push({ label: 'hub unreachable', tone: 'warning' });
     return flags;
 }

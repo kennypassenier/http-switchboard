@@ -1,7 +1,7 @@
 // The one POST of the status page: the rechecks (recheck.js, health.js) send it and read the answer the same way, so the
 // sentence for an unreachable service and the reading of a refusal live here once.
 
-export const UNREACHABLE = 'Could not reach HTTPSwitchboard. Check that the service is running, then try again.';
+const UNREACHABLE = 'Could not reach HTTPSwitchboard. Check that the service is running, then try again.';
 
 /** The kit's refusal shape `{ error, remedy }` as one sentence. @param {any} body */
 const refusalLine = (body) => [body.error, body.remedy].filter(Boolean).join('. ') + (body.remedy ? '.' : '');

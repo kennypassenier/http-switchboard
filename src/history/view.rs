@@ -65,12 +65,7 @@ fn bucket_of(track: &Track, h: u64) -> Option<Bucket> {
 }
 
 /// An hour's state and the short cause word the page explains.
-fn judge(
-    received: u32,
-    delivered: u32,
-    failed: u32,
-    worst: Cause,
-) -> (&'static str, Option<&'static str>) {
+fn judge(delivered: u32, failed: u32, worst: Cause) -> (&'static str, Option<&'static str>) {
     let by_health = match worst {
         Cause::Ok => None,
         Cause::Failing => Some(("degraded", "failing")),
@@ -79,7 +74,7 @@ fn judge(
     };
     let by_count = if failed == 0 {
         None
-    } else if delivered == 0 && (received > 0 || failed > 0) {
+    } else if delivered == 0 {
         Some(("down", "all-failed"))
     } else {
         Some(("degraded", "failing"))
@@ -127,7 +122,7 @@ pub struct HourView {
 impl HourView {
     /// An hour with traffic.
     fn busy(start_unix: u64, b: &Bucket) -> Self {
-        let (state, cause) = judge(b.received, b.delivered, b.failed, b.worst);
+        let (state, cause) = judge(b.delivered, b.failed, b.worst);
         Self {
             start_unix,
             received: b.received,
@@ -142,7 +137,7 @@ impl HourView {
     /// An hour without traffic: it takes the health the profile had when
     /// the hour began.
     fn quiet(start_unix: u64, running: Cause) -> Self {
-        let (state, cause) = judge(0, 0, 0, running);
+        let (state, cause) = judge(0, 0, running);
         Self {
             start_unix,
             received: 0,

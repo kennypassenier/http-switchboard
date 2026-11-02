@@ -55,8 +55,10 @@ async fn permanent_statuses_are_dead_lettered_at_once_and_leave_health_alone() {
             Step::DeadLettered {
                 summary, reason, ..
             } => {
-                assert!(summary.contains(&status.to_string()), "{summary}");
-                assert!(!summary.contains("secret-path"), "{summary}");
+                assert_eq!(
+                    summary,
+                    format!("the destination refused this message with status {status}, which retrying will not change")
+                );
                 assert!(reason.contains("What now:"), "{reason}");
             }
             other => panic!("status {status}: expected a dead letter, got {other:?}"),
@@ -137,4 +139,67 @@ async fn first_sight_follows_the_hubs_attempt_number() {
     )
     .await;
     assert!(!state.first_sight, "attempt 2 is the same message again");
+}
+
+#[tokio::test]
+async fn a_given_up_message_proves_the_hub_answers_and_ends_a_stale_hub_down() {
+    for stale in [Health::Starting, Health::HubDown, Health::Denied] {
+        let hub = FakeHub::new(vec![Ok(Poll::NotJson { id: "m1".into() })]);
+        let mut state = PumpState {
+            health: stale,
+            ..PumpState::default()
+        };
+        pump_once(
+            &profile(),
+            &hub,
+            &StatusSink(200),
+            &FakeClock::default(),
+            &mut state,
+        )
+        .await;
+        assert_eq!(state.health, Health::Working, "from {stale:?}");
+
+        let hub = FakeHub::new(vec![Ok(message("m1", serde_json::json!({"other": 1})))]);
+        let mut state = PumpState {
+            health: stale,
+            ..PumpState::default()
+        };
+        pump_once(
+            &profile(),
+            &hub,
+            &StatusSink(200),
+            &FakeClock::default(),
+            &mut state,
+        )
+        .await;
+        assert_eq!(state.health, Health::Working, "from {stale:?}");
+    }
+}
+
+#[tokio::test]
+async fn an_oversize_message_is_dead_lettered_unread_with_a_safe_reason() {
+    let hub = FakeHub::new(vec![Ok(Poll::TooLarge { id: "m1".into() })]);
+    let mut state = PumpState {
+        health: Health::Working,
+        ..PumpState::default()
+    };
+    let step = pump_once(
+        &profile(),
+        &hub,
+        &StatusSink(200),
+        &FakeClock::default(),
+        &mut state,
+    )
+    .await;
+    match step {
+        Step::DeadLettered { summary, .. } => {
+            assert_eq!(
+                summary,
+                "the message on the hub is larger than this service reads"
+            )
+        }
+        other => panic!("expected a dead letter, got {other:?}"),
+    }
+    assert!(hub.calls().contains(&"nack(m1, dead=true)".to_string()));
+    assert_eq!(state.health, Health::Working);
 }

@@ -4,8 +4,8 @@
 
 import { count, stamp } from './history-model.js';
 
-export const COMMAND = 'systemctl reload http-switchboard';
-export const OUTCOME = {
+const COMMAND = 'systemctl reload http-switchboard';
+const OUTCOME = {
     applied: { badge: 'kp-badge kp-badge--success', word: 'Applied' },
     'needs-restart': { badge: 'kp-badge kp-badge--warning', word: 'Needs a restart' },
     invalid: { badge: 'kp-badge kp-badge--destructive', word: 'Invalid' },

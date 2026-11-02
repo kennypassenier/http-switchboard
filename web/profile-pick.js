@@ -6,7 +6,7 @@
 import { attachSegmented, setSegmentedValues } from '/static/kp/dist/kp-themes.min.js';
 
 /** The most profiles shown as segments; from one more on the choice is a select. */
-export const MAX_SEGMENTS = 5;
+const MAX_SEGMENTS = 5;
 /** Fired on the host, bubbling: `detail.name` is the profile just chosen. */
 export const PICK_EVENT = 'hsb-profile-pick';
 

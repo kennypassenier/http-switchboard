@@ -71,3 +71,37 @@ fn a_request_we_could_not_build_is_not_retried() {
     }
     .is_retryable());
 }
+
+#[test]
+fn a_missing_attempt_reads_as_the_first_offer() {
+    use super::kyu_hub::envelope::parse_envelope_bytes;
+    use crate::pump::Poll;
+    let poll = parse_envelope_bytes(br#"{"id":"m1","payload":{"x":1}}"#).unwrap();
+    match poll {
+        Poll::Message(m) => assert_eq!((m.id.as_str(), m.attempt), ("m1", 1)),
+        other => panic!("expected a message, got {other:?}"),
+    }
+    let poll = parse_envelope_bytes(br#"{"id":"m1","payload":{},"attempt":3}"#).unwrap();
+    match poll {
+        Poll::Message(m) => assert_eq!(m.attempt, 3),
+        other => panic!("expected a message, got {other:?}"),
+    }
+}
+
+#[test]
+fn the_id_of_an_oversize_answer_is_found_near_its_start_or_not_at_all() {
+    use super::kyu_hub::envelope::scan_id;
+    assert_eq!(
+        scan_id(br#"{"id": "abc-1","payload":{"big":"xxxx"#).as_deref(),
+        Some("abc-1")
+    );
+    assert_eq!(scan_id(br#"{"payload":{"big":"xxxx"#), None);
+    assert_eq!(scan_id(br#"{"id":"a\"b","payload":1"#), None);
+    assert_eq!(scan_id(br#"{"id":"","payload":1"#), None);
+}
+
+#[test]
+fn an_id_inside_the_payload_is_never_taken_for_the_messages_own() {
+    use super::kyu_hub::envelope::scan_id;
+    assert_eq!(scan_id(br#"{"payload":{"id":"evil","x":"#), None);
+}

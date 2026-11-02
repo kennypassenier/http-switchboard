@@ -127,20 +127,22 @@ fn record_step(
         ),
         Step::HandedBack {
             attempts, reason, ..
-        } => {
-            registry.record_offer(&profile.name, false, duration_ms, first_sight);
-            obs::log_message(&profile.name, "kyu", "handed-back", duration_ms, *attempts);
-            obs::log_warn(&profile.name, "delivery_failed", reason);
-        }
+        } => record_handed_back(
+            registry,
+            profile,
+            (duration_ms, first_sight),
+            *attempts,
+            reason,
+        ),
         Step::DeadLettered {
             reason, summary, ..
-        } => {
-            registry.record_given_up(&profile.name, first_sight, summary);
-            obs::log_message(&profile.name, "kyu", "dead-lettered", duration_ms, 1);
-            // Health did not move, so this is not a transition: it is a
-            // warning that one message was given up on, and why.
-            obs::log_warn(&profile.name, "dead_lettered", reason);
-        }
+        } => record_given_up(
+            registry,
+            profile,
+            (duration_ms, first_sight),
+            reason,
+            summary,
+        ),
         Step::Idle | Step::TopicMissing => {}
         // The remedy in these carries the specifics — which
         // token to mint, or that the hub itself is away.
@@ -150,6 +152,33 @@ fn record_step(
             }
         }
     }
+}
+
+/// A delivery failed and the message went back to the hub.
+fn record_handed_back(
+    registry: &Registry,
+    profile: &Profile,
+    (duration_ms, first_sight): (u64, bool),
+    attempts: u32,
+    reason: &str,
+) {
+    registry.record_offer(&profile.name, false, duration_ms, first_sight);
+    obs::log_message(&profile.name, "kyu", "handed-back", duration_ms, attempts);
+    obs::log_warn(&profile.name, "delivery_failed", reason);
+}
+
+/// A message was given up on. Health did not move, so this is not a
+/// transition: it is a warning that one message was given up on, and why.
+fn record_given_up(
+    registry: &Registry,
+    profile: &Profile,
+    (duration_ms, first_sight): (u64, bool),
+    reason: &str,
+    summary: &str,
+) {
+    registry.record_given_up(&profile.name, first_sight, summary);
+    obs::log_message(&profile.name, "kyu", "dead-lettered", duration_ms, 1);
+    obs::log_warn(&profile.name, "dead_lettered", reason);
 }
 
 /// A message was delivered; a failed ack still means one duplicate later.

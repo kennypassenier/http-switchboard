@@ -10,7 +10,7 @@ import { unseenGivenUp } from './give-up-seen.js';
  *   attempts?: number, given_up?: number, last_given_up_unix?: number | null, last_given_up_reason?: string | null }} Profile */
 /** @typedef {{ severity: 'critical' | 'warning', title: string, why: string, remedy: string, command?: string, fix: string }} Words */
 
-export const hasHubSource = (/** @type {Profile} */ p) => p.source.kind === 'kyu';
+const hasHubSource = (/** @type {Profile} */ p) => p.source.kind === 'kyu';
 /** Whether the profile reads from or publishes to the kyu hub. */
 export const touchesHub = (/** @type {Profile} */ p) => p.source.kind === 'kyu' || p.sink.kind === 'kyu';
 /** A problem whose cause is the hub itself (it does not answer, or refuses our token). The hub banner says it once, for all the

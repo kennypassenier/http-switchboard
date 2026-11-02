@@ -6,7 +6,7 @@ import { toast } from '/static/kp/dist/kp-themes.min.js';
 import { hasHub, profileNamed } from './hsb-state.js';
 
 /** Single-quote a value for a POSIX shell; a quote inside it closes, escapes and reopens the quoting. @param {string} value */
-export function shellQuote(value) {
+function shellQuote(value) {
     return `'${value.replaceAll("'", "'\\''")}'`;
 }
 

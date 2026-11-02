@@ -3,7 +3,10 @@
 // profiles first and then waits for the pump to speak again before it changes its verdict.
 
 import { setConnection, setStrings } from '/static/kp/dist/kp-themes.min.js';
-import { hubCaused, list, touchesHub } from './health-words.js';
+import { hubVerdict, waitingNames, waitsSentence, whyOf } from './hub-verdict.js';
+
+/** The kit's neutral sentence while it tries to reach the hub; restored when no profile waits. */
+const RECONNECTING_WHY = 'Trying to reach the hub now.';
 
 /** How long the banner waits for the pump to speak again after a recheck, in ms. */
 const SETTLE_FIRST_MS = 1500;
@@ -39,44 +42,29 @@ function repoll() {
  * @param {() => Promise<unknown>} recheckAll posts the recheck of every profile
  */
 export function hubBanner(banner, profilesNow, recheckAll) {
-    /** What the profiles that read from the hub say about it: a verdict, or 'unknown' while they have not spoken since a recheck.
-     *  @returns {'offline' | 'refused' | 'online' | 'unknown' | 'none'} */
-    function verdict() {
-        const kyu = profilesNow().filter(touchesHub);
-        if (kyu.length === 0) return 'none';
-        if (kyu.some((p) => p.state === 'hub-down')) return 'offline';
-        if (kyu.some((p) => p.state === 'denied')) return 'refused';
-        if (kyu.every((p) => p.state === 'working' || p.state === 'failing')) return 'online';
-        return 'unknown';
-    }
-
-    /** The profiles the hub holds up, named once here instead of one alert each. */
-    const waiting = () => profilesNow().filter(hubCaused).map((p) => p.name);
-    /** @param {'offline' | 'refused'} v */
-    const whyOf = (v) => {
-        const names = waiting();
-        const who = `${list(names)} ${names.length === 1 ? 'waits' : 'wait'} for the hub.`;
-        return v === 'offline' ? who : `The hub did not accept the switchboard’s token, so ${who}`;
-    };
+    const verdict = () => hubVerdict(profilesNow());
+    const waiting = () => waitingNames(profilesNow());
 
     /** What the banner was last told; the kit restarts its countdown on every call, so an unchanged verdict is not repeated. */
     let applied = 'online';
     /** The names the banner last listed, so a change of who waits is told again. */
     let told = '';
     let settling = false;
+    /** True while a retry's settle loop runs: a second press waits for it instead of starting another. */
+    let retrying = false;
 
     /** @param {'offline' | 'refused' | 'online'} v */
     function tell(v) {
         applied = v;
         told = waiting().join(',');
         if (v === 'online') setConnection(banner, v);
-        else setConnection(banner, v, { why: whyOf(v) });
+        else setConnection(banner, v, { why: whyOf(v, waiting()) });
     }
 
-    /** The kit's own timed tries show "reconnecting" with a fixed sentence: it names who waits too. */
+    /** The kit's own timed tries show "reconnecting" with a fixed sentence: it names who waits too, or is neutral. */
     function nameWaiting() {
         const names = waiting();
-        if (names.length > 0) setStrings({ connReconnectingWhy: `${list(names)} ${names.length === 1 ? 'waits' : 'wait'} for the hub. Trying to reach it now.` });
+        setStrings({ connReconnectingWhy: names.length > 0 ? `${waitsSentence(names)} Trying to reach it now.` : RECONNECTING_WHY });
     }
 
     function paint() {
@@ -88,13 +76,9 @@ export function hubBanner(banner, profilesNow, recheckAll) {
         tell(v);
     }
 
-    /** A pressed Retry now rechecks the profiles first; the kit's own timed tries only look again. @param {boolean} auto */
-    async function retry(auto) {
-        settling = true;
-        applied = 'reconnecting';
-        if (!auto) await recheckAll();
+    /** Wait until the pump speaks again (or the tries run out) and give the verdict. @returns {Promise<string>} */
+    async function settle() {
         await sleep(SETTLE_FIRST_MS);
-        /** @type {string} */
         let v = 'unknown';
         for (let i = 0; i < SETTLE_TRIES; i++) {
             await repoll();
@@ -102,9 +86,24 @@ export function hubBanner(banner, profilesNow, recheckAll) {
             if (v !== 'unknown') break;
             await sleep(SETTLE_STEP_MS);
         }
-        settling = false;
-        // Still silent after a recheck: no fault is known any more, so the banner stands down; a real outage speaks again at once.
-        tell(v === 'offline' || v === 'refused' ? v : 'online');
+        return v;
+    }
+
+    /** A pressed Retry now rechecks the profiles first; the kit's own timed tries only look again. @param {boolean} auto */
+    async function retry(auto) {
+        if (retrying) return;
+        retrying = true;
+        settling = true;
+        applied = 'reconnecting';
+        try {
+            if (!auto) await recheckAll();
+            const v = await settle();
+            // Still silent after a recheck: no fault is known any more, so the banner stands down; a real outage speaks again at once.
+            tell(v === 'offline' || v === 'refused' ? v : 'online');
+        } finally {
+            settling = false;
+            retrying = false;
+        }
     }
 
     return { paint, retry };
