@@ -33,11 +33,7 @@ impl StatusSection for HealthSection {
         );
         Section {
             title: "Needs attention".to_string(),
-            explain: "One alert per profile that is not well, worst first: what is wrong, why, \
-                      what to do and the button that rechecks it. A profile leaves this list the \
-                      moment it works again; one that has not tried yet since the start is not \
-                      listed. When the kyu hub cannot be reached or refuses our token, a banner \
-                      says so."
+            explain: "Everything that needs a person, worst first, each with what is wrong and a button to recheck it; a hub that does not answer shows as one banner."
                 .to_string(),
             rows: Vec::new(),
             html: Some(html),

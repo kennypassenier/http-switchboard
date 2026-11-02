@@ -10,13 +10,13 @@ export const VIEW_KEY = 'hsb-profiles-view';
 /** The profile the per-profile sections (Path, Last 24 hours) show, remembered per browser. */
 export const PICK_KEY = 'hsb-profile';
 
-export const HEALTH_WORD = { working: 'working', starting: 'starting', failing: 'failing', denied: 'denied', 'hub-down': 'hub down' };
+export const HEALTH_WORD = { working: 'working', starting: 'starting', failing: 'failing', denied: 'hub refused', 'hub-down': 'hub offline' };
 export const HEALTH_TONE = { working: 'success', starting: 'info', failing: 'destructive', denied: 'destructive', 'hub-down': 'warning' };
 
 /** @typedef {{ kind: string, label: string, sub: string, path: string | null }} End */
 /** @typedef {{ name: string, template: string, state: keyof typeof HEALTH_WORD, received: number, delivered: number, failed: number, avg_ms: number | null, last_success_unix: number | null,
  *   source: End, sink: End, content_type: string, timeout_ms: number, retries: number, pauses_ms: number[], budget_ms: number, lease_ms: number | null,
- *   max_attempts: number | null }} Profile */
+ *   max_attempts: number | null, attempts?: number, given_up?: number, last_given_up_unix?: number | null, last_given_up_reason?: string | null }} Profile */
 
 const embedded = JSON.parse($('hsb-data')?.textContent ?? '{}');
 

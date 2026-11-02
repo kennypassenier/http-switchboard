@@ -6,14 +6,10 @@
     --kp-card-stage-min: 18rem;
 }
 
-/* The head row: one sentence on the left, the Cards/Map switch against the right edge on the title's baseline. */
+/* The head row: the Cards/Map switch against the end edge (the section's own lead line says what the cards are). */
 .hsb-area__head {
     align-items: center;
-}
-
-.hsb-area__lead {
-    flex: 1 1 18rem;
-    min-inline-size: 0;
+    justify-content: flex-end;
 }
 
 /* The frame no longer sets its own minimum: the stage does. */

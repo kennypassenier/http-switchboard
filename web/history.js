@@ -7,22 +7,19 @@
 // The history is in memory on the server and starts empty at every service start.
 //
 // Layout: history-model.js (the data's shape and its words), history-figures.js (the key figures and the deliveries
-// list); this file holds the page's context, the card, the strips, the reads and the wiring.
+// list), history-strips.js (the uptime strips); this file holds the page's context, the card, the reads and the wiring.
 
 import { attachCardStates, setCardState } from '/static/kp/dist/kp-themes.min.js';
 import { attachKpiStrips, KPI_TOGGLE_EVENT } from '/static/kp/dist/kp-themes.min.js';
-import { attachUptimes, setUptime } from '/static/kp/dist/kp-themes.min.js';
 import { attachSegmented, setSegmentedValues } from '/static/kp/dist/kp-themes.min.js';
-import { historyOf, periodOf, stamp, totals } from './history-model.js';
+import { historyOf, stamp, totals } from './history-model.js';
 import { paintFigures, paintRecent } from './history-figures.js';
+import { paintStrips } from './history-strips.js';
 import { clock, store } from './hsb-state.js';
 import { PICK_EVENT } from './profile-pick.js';
 
 const TILES_KEY = 'hsb-history-tiles';
 const PRESS_KEY = 'hsb-history-press';
-/** The cells of one uptime strip: one per hour of the window. */
-const STRIP_CELLS = 24;
-
 const $ = (/** @type {string} */ id) => document.getElementById(id);
 
 /** A remembered choice, one of `allowed`; storage that refuses keeps the first. @param {string} key @param {string[]} allowed */
@@ -51,16 +48,23 @@ function remember(key, value) {
  *   errorText: string | undefined, figures: { built: string, detachers: (() => void)[] }, current: () => import('./history-model.js').ProfileHistory | undefined }} Context
  */
 
+const CHOSEN = 'the profile chosen in Path of a profile';
+
+/** The profile's name goes into the section's own lead line, the one the kit draws above the card. @param {string | undefined} name */
+function nameInLead(name) {
+    const lead = /** @type {HTMLElement | null} */ (document.querySelector('[data-chassis-section^="last-24-hours"] > .kp-card__body'));
+    if (!lead) return;
+    lead.dataset.hsbLead ??= lead.textContent ?? '';
+    lead.textContent = name ? lead.dataset.hsbLead.replace(CHOSEN, `${name}, ${CHOSEN}`) : lead.dataset.hsbLead;
+}
+
 /** The card's head lines and its state: loading, failed, nothing received yet, or the figures. @param {Context} ctx */
 function paintCard(ctx) {
     const { data } = ctx;
     const p = ctx.current();
-    const title = $('hsb-h-title');
-    if (title) title.textContent = p ? `Last 24 hours of ${p.name}` : 'Last 24 hours';
-    const read = $('hsb-h-read');
-    if (read) read.textContent = `read ${stamp(data.now_unix * 1000)}`;
+    nameInLead(p?.name);
     const body = $('hsb-h-body');
-    if (body) body.textContent = `Counted per hour since the service started recording on ${stamp(data.since_unix * 1000)}.`;
+    if (body) body.textContent = `Recording since ${stamp(data.since_unix * 1000)}.`;
     if (ctx.state === 'loading') return setCardState(ctx.el.card, 'loading');
     if (ctx.state === 'error') {
         return setCardState(ctx.el.card, 'error', { title: 'Could not read the last 24 hours', text: ctx.errorText ?? 'The service did not answer. The counters keep running; nothing is lost.' });
@@ -74,44 +78,6 @@ function paintCard(ctx) {
     }
     setCardState(ctx.el.card, 'ready');
     paintFigures(ctx);
-}
-
-/** @type {Map<string, HTMLElement>} */
-const stripEls = new Map();
-
-/** One uptime strip per profile, made once and fed on every read; a strip whose profile is gone is removed. @param {Context} ctx */
-function paintStrips(ctx) {
-    const names = new Set(ctx.data.profiles.map((p) => p.name));
-    for (const [name, el] of stripEls) {
-        if (names.has(name)) continue;
-        el.remove();
-        stripEls.delete(name);
-    }
-    for (const p of ctx.data.profiles) {
-        let el = stripEls.get(p.name);
-        if (!el) {
-            el = document.createElement('div');
-            el.className = 'kp-uptime';
-            el.setAttribute('data-kp-uptime', '');
-            el.setAttribute('data-kp-uptime-count', String(STRIP_CELLS));
-            el.setAttribute('data-kp-uptime-label', p.name);
-            ctx.el.strips.append(el);
-            stripEls.set(p.name, el);
-            attachUptimes(el); // once per strip: the kit marks an attached strip and skips it later
-        }
-        if (ctx.press === 'info') el.setAttribute('data-kp-uptime-open', 'info');
-        else el.removeAttribute('data-kp-uptime-open');
-        setUptime(el, {
-            label: p.name,
-            periods: p.hours.map(periodOf),
-            state: ctx.state === 'ready' ? 'ready' : ctx.state,
-            count: STRIP_CELLS,
-            from: '24 hours ago',
-            to: 'Now',
-            error: 'Could not read the hourly history of this profile.',
-            open: ctx.press === 'info' ? 'info' : undefined,
-        });
-    }
 }
 
 function paintAll(/** @type {Context} */ ctx) {

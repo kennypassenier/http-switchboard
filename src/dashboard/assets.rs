@@ -61,6 +61,14 @@ pub(super) const WEB_FILES: &[(&str, &[u8])] = &[
         include_bytes!("../../web/reloads-model.js"),
     ),
     ("hsb-post.js", include_bytes!("../../web/hsb-post.js")),
+    (
+        "give-up-seen.js",
+        include_bytes!("../../web/give-up-seen.js"),
+    ),
+    (
+        "break-points.js",
+        include_bytes!("../../web/break-points.js"),
+    ),
     ("copy-text.js", include_bytes!("../../web/copy-text.js")),
     ("dashboard.css", include_bytes!("../../web/dashboard.css")),
     ("history.js", include_bytes!("../../web/history.js")),
@@ -71,6 +79,10 @@ pub(super) const WEB_FILES: &[(&str, &[u8])] = &[
     (
         "history-figures.js",
         include_bytes!("../../web/history-figures.js"),
+    ),
+    (
+        "history-strips.js",
+        include_bytes!("../../web/history-strips.js"),
     ),
     ("history.css", include_bytes!("../../web/history.css")),
     ("profiles.js", include_bytes!("../../web/profiles.js")),

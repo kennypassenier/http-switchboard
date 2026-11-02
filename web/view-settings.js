@@ -63,6 +63,11 @@ function makeCard(name) {
 /** @param {HTMLElement} dd @param {...(string | Node)} parts */
 const put = (dd, ...parts) => dd.replaceChildren(...parts);
 
+/** Show or leave out the whole row of a value. @param {HTMLElement} dd @param {boolean} yes */
+function applies(dd, yes) {
+    if (dd.parentElement) dd.parentElement.hidden = !yes;
+}
+
 /** The package's skeleton line in every value while the snapshot loads. @param {Card} c */
 function showLoading(c) {
     const wait = () => {
@@ -94,8 +99,11 @@ function fillRows(c, p) {
     put(r['Content type'], code(p.content_type));
     put(r['Timeout'], `${seconds(p.timeout_ms)} per try`);
     put(r['Retries'], String(p.retries));
-    put(r['Max attempts'], p.max_attempts === null ? 'Not used: an HTTP source has no hub' : `${p.max_attempts} hand-outs by the hub, then a dead letter`);
-    put(r['Lease'], p.lease_ms === null ? 'None: an HTTP source holds no lease' : seconds(p.lease_ms));
+    // A row that does not apply to this profile (an HTTP source has no hub, so no lease and no attempt limit) is left out.
+    applies(r['Max attempts'], p.max_attempts !== null);
+    applies(r['Lease'], p.lease_ms !== null);
+    if (p.max_attempts !== null) put(r['Max attempts'], `${p.max_attempts} deliveries, then the message is given up`);
+    if (p.lease_ms !== null) put(r['Lease'], seconds(p.lease_ms));
 }
 
 /** The retry budget: the sum in words, and against the lease a meter, the head's inline meter and the badge. @param {Card} c @param {import('./hsb-state.js').Profile} p */

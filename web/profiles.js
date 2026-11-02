@@ -9,7 +9,8 @@ import { attachHoverCards } from '/static/kp/dist/kp-themes.min.js';
 import { attachCardStates, setCardState } from '/static/kp/dist/kp-themes.min.js';
 import { agoMoment, attachAgo, humanDuration, setAgo } from '/static/kp/dist/kp-themes.min.js';
 import { setStrings } from '/static/kp/dist/kp-themes.min.js';
-import { localMs } from './hsb-state.js';
+import { stamp } from './history-model.js';
+import { HEALTH_WORD, localMs } from './hsb-state.js';
 
 /**
  * How long a profile may go without a delivery before its line turns to a warning, in seconds. The configuration has no
@@ -44,6 +45,12 @@ export function markName(el, name) {
 /** @type {import('/static/kp/dist/kp-themes.min.js').HoverCardHandle[]} */
 const cardsOpen = [];
 
+/** "3, the last on 02/11/2026 02:20: <reason>". @param {Profile} p */
+export function givenUpLine(p) {
+    const last = p.last_given_up_unix ? `, the last on ${stamp(p.last_given_up_unix * 1000)}` : '';
+    return `${count(p.given_up ?? 0)}${last}${p.last_given_up_reason ? `: ${p.last_given_up_reason}` : ''}`;
+}
+
 /**
  * The card's rows: status, source, destination host only, content type, template, the three exact counts and the last
  * success. Built as nodes, so no value can inject markup. @param {Profile | undefined} p
@@ -53,14 +60,16 @@ function rowsOf(p) {
     const kyu = p.source.kind === 'kyu';
     /** @type {[string, string][]} */
     const rows = [
-        ['Status', p.state === 'hub-down' ? 'hub down' : p.state],
-        ['Source', `${p.source.label}${kyu ? ` (${p.source.sub})` : ''}`],
+        ['Status', HEALTH_WORD[p.state]],
+        ['Source', kyu ? 'The kyu hub' : p.source.label],
         ['Destination host', p.sink.label],
         ['Content type', p.content_type],
         ['Template', p.template],
-        ['Received', count(p.received)],
+        ['Received', `${count(p.received)} messages`],
+        ...((p.attempts ?? 0) > 0 ? [/** @type {[string, string]} */ (['Attempts', `${count(p.attempts ?? 0)} deliveries tried`])] : []),
         ['Delivered', count(p.delivered)],
         ['Failed', count(p.failed)],
+        ...((p.given_up ?? 0) > 0 ? [/** @type {[string, string]} */ (['Given up', givenUpLine(p)])] : []),
         ['Last success', p.last_success_unix === null ? 'none yet' : agoMoment(localMs(p.last_success_unix))],
     ];
     const dl = document.createElement('dl');

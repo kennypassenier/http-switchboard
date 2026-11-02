@@ -73,6 +73,15 @@ endpoints and the CLI verbs — not about the internals.
 - **Navigation label** for Try a translation is "Translate", so the phone tab
   bar no longer cuts it; the page heading stays.
 - `web/history.js` split: the uptime strips live in `web/history-strips.js`.
+- **Status page, one story per fault** (UX pass 2026-11-02): a hub that does not
+  answer is one banner naming the profiles that wait, with no alert per profile;
+  Profiles, Last 24 hours and Reloads draw no inner card, and the profile name
+  sits in Last 24 hours' lead line; section descriptions are one sentence; the
+  words *hub-down*, topic and subscription names, "dead letter" and the rule chip
+  are gone from user text (Settings keeps the topic); an uptime strip with no
+  traffic reads "nothing received yet" instead of 100 %; on a phone the Recheck
+  table is name, state and one button, and Settings leaves out rows that do not
+  apply; a profile card shows "N given up" and a notice names the reason.
 - **Status page, browser side** (review 2026-11-02): a recheck's refresh is no
   longer lost behind a poll in flight; a wrong-shaped `/profiles.json` is an
   error, not a crash, and one failing view no longer stops the poll; Last 24

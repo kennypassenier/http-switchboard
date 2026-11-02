@@ -83,11 +83,10 @@ impl StatusSection for FiguresSection {
         let html = format!(
             r##"<link rel="stylesheet" href="{WEB_MOUNT}/history.css?v={version}">
 <script type="application/json" id="hsb-history-data">{data}</script>
-<section class="kp-card hsb-h-card" id="hsb-h-card" data-chassis-owned data-kp-state="loading" aria-labelledby="hsb-h-title" data-kp-loading-words="Reading the last 24 hours">
-  <div class="kp-card__header">
-    <h3 class="kp-card__title" id="hsb-h-title">Last 24 hours</h3>
+<section class="kp-card hsb-flat hsb-h-card" id="hsb-h-card" data-chassis-owned data-kp-state="loading" aria-label="Last 24 hours" data-kp-loading-words="Reading the last 24 hours">
+  <div class="hsb-h-toolbar">
+    <p class="kp-card__body" id="hsb-h-body"></p>
     <div class="kp-card__actions">
-      <span class="kp-timestamp" id="hsb-h-read"></span>
       <button type="button" class="kp-button kp-button--sm" id="hsb-h-options-open" popovertarget="hsb-h-options" aria-haspopup="dialog" style="anchor-name: --hsb-h-options" hidden>View options ▾</button>
       <div popover="auto" id="hsb-h-options" class="kp-popover hsb-h-options" style="position-anchor: --hsb-h-options" role="dialog" aria-label="View options">
         <div class="kp-formgrid">
@@ -115,7 +114,6 @@ impl StatusSection for FiguresSection {
       </div>
     </div>
   </div>
-  <p class="kp-card__body" id="hsb-h-body"></p>
   <div class="kp-card__stage">
     <div class="kp-card__data hsb-h-data">
       <div class="kp-kpis" data-kp-kpis-columns="4 2 1" role="group" aria-label="Key figures" id="hsb-h-strip"></div>
@@ -131,11 +129,8 @@ impl StatusSection for FiguresSection {
         );
         Section {
             title: "Last 24 hours".to_string(),
-            explain: "Received, delivered, failed and the average delivery time of one \
-                      profile over the last 24 hours, each with its trend by the hour. \
-                      The history lives in memory: it starts empty when the service \
-                      starts and keeps at most 24 hours. It shows the profile chosen in \
-                      Path of a profile; View options sets how the tiles look."
+            explain: "Received, delivered, failed and average delivery time of the profile \
+                      chosen in Path of a profile, counted per hour over the last 24 hours."
                 .to_string(),
             rows: Vec::new(),
             html: Some(html),
@@ -149,11 +144,9 @@ impl StatusSection for UptimeSection {
     fn render(&self) -> Section {
         Section {
             title: "Uptime by the hour".to_string(),
-            explain: "One strip per profile: each cell is an hour of the last 24, green when \
-                      it went well, amber when some deliveries failed, red when every \
-                      delivery failed or the hub refused or could not be reached, grey \
-                      before the service started. Press an hour for its details (View \
-                      options in Last 24 hours sets what opens)."
+            explain: "One strip per profile, one cell per hour of the last 24: green when it went \
+                      well, amber when some deliveries failed, red when all failed or the \
+                      hub could not be used, grey when nothing was received or recorded."
                 .to_string(),
             rows: Vec::new(),
             html: Some(r#"<div class="hsb-h-strips" id="hsb-h-strips"></div>"#.to_string()),

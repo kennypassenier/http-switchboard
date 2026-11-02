@@ -30,10 +30,7 @@ impl StatusSection for ProfilesSection {
         let html = markup(&data, &no_script_list(&profiles));
         Section {
             title: "Profiles".to_string(),
-            explain: "One profile is one source, one translation and one destination. \
-                      A profile is 'starting' until a message has gone through it, and \
-                      goes back to 'working' the moment one does. The page refreshes \
-                      itself as often as the refresh menu in the page header says."
+            explain: "One profile is one source, one translation and one destination, and its card says how it is doing."
                 .to_string(),
             rows: Vec::new(),
             html: Some(html),
@@ -66,9 +63,8 @@ fn markup(data: &str, plain: &str) -> String {
 <link rel="stylesheet" href="{WEB_MOUNT}/profiles.css?v={version}">
 <script type="application/json" id="hsb-data">{data}</script>
 <script type="module" src="{WEB_MOUNT}/dashboard.js?v={version}"></script>
-<section class="kp-card hsb-area" id="hsb-area" data-chassis-owned data-kp-state="loading" data-kp-loading-words="Reading the profiles…" aria-label="Profiles">
+<section class="kp-card hsb-flat hsb-area" id="hsb-area" data-chassis-owned data-kp-state="loading" data-kp-loading-words="Reading the profiles…" aria-label="Profiles">
   <div class="kp-card__header hsb-area__head">
-    <p class="kp-card__body hsb-area__lead">Each card is one profile; the map shows which source feeds which destination.</p>
     <div class="kp-card__actions">
       <div class="kp-segmented" data-kp-segmented="single" role="radiogroup" aria-label="Show the profiles as" id="hsb-view">
         <button type="button" class="kp-segmented__item" data-value="cards" role="radio" aria-checked="true"><span class="kp-segmented__label">Cards</span></button>

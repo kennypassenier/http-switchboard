@@ -2,8 +2,8 @@
 // turns our token down, online otherwise. Driven by the same snapshot as the band; a pressed "Retry now" rechecks the
 // profiles first and then waits for the pump to speak again before it changes its verdict.
 
-import { setConnection } from '/static/kp/dist/kp-themes.min.js';
-import { hasHubSource, subscriptionOf } from './health-words.js';
+import { setConnection, setStrings } from '/static/kp/dist/kp-themes.min.js';
+import { hubCaused, list, touchesHub } from './health-words.js';
 
 /** How long the banner waits for the pump to speak again after a recheck, in ms. */
 const SETTLE_FIRST_MS = 1500;
@@ -42,7 +42,7 @@ export function hubBanner(banner, profilesNow, recheckAll) {
     /** What the profiles that read from the hub say about it: a verdict, or 'unknown' while they have not spoken since a recheck.
      *  @returns {'offline' | 'refused' | 'online' | 'unknown' | 'none'} */
     function verdict() {
-        const kyu = profilesNow().filter(hasHubSource);
+        const kyu = profilesNow().filter(touchesHub);
         if (kyu.length === 0) return 'none';
         if (kyu.some((p) => p.state === 'hub-down')) return 'offline';
         if (kyu.some((p) => p.state === 'denied')) return 'refused';
@@ -50,26 +50,41 @@ export function hubBanner(banner, profilesNow, recheckAll) {
         return 'unknown';
     }
 
-    const refusedWhy = () => {
-        const subs = [...new Set(profilesNow().filter((p) => hasHubSource(p) && p.state === 'denied').map(subscriptionOf))];
-        return `The hub did not accept the switchboard’s token for the subscription ${subs.map((s) => `“${s}”`).join(', ')}. Nothing was lost.`;
+    /** The profiles the hub holds up, named once here instead of one alert each. */
+    const waiting = () => profilesNow().filter(hubCaused).map((p) => p.name);
+    /** @param {'offline' | 'refused'} v */
+    const whyOf = (v) => {
+        const names = waiting();
+        const who = `${list(names)} ${names.length === 1 ? 'waits' : 'wait'} for the hub.`;
+        return v === 'offline' ? who : `The hub did not accept the switchboard’s token, so ${who}`;
     };
 
     /** What the banner was last told; the kit restarts its countdown on every call, so an unchanged verdict is not repeated. */
     let applied = 'online';
+    /** The names the banner last listed, so a change of who waits is told again. */
+    let told = '';
     let settling = false;
 
     /** @param {'offline' | 'refused' | 'online'} v */
     function tell(v) {
         applied = v;
-        if (v === 'refused') setConnection(banner, 'refused', { why: refusedWhy() });
-        else setConnection(banner, v);
+        told = waiting().join(',');
+        if (v === 'online') setConnection(banner, v);
+        else setConnection(banner, v, { why: whyOf(v) });
+    }
+
+    /** The kit's own timed tries show "reconnecting" with a fixed sentence: it names who waits too. */
+    function nameWaiting() {
+        const names = waiting();
+        if (names.length > 0) setStrings({ connReconnectingWhy: `${list(names)} ${names.length === 1 ? 'waits' : 'wait'} for the hub. Trying to reach it now.` });
     }
 
     function paint() {
+        nameWaiting();
         if (settling) return;
         const v = verdict();
-        if (v === 'none' || v === 'unknown' || v === applied) return;
+        if (v === 'none' || v === 'unknown') return;
+        if (v === applied && (v === 'online' || told === waiting().join(','))) return;
         tell(v);
     }
 

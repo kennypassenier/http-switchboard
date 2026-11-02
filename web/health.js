@@ -13,16 +13,17 @@ import { attachConnection, CONNECTION_RETRY_EVENT } from '/static/kp/dist/kp-the
 import { attachArt } from '/static/kp/dist/kp-themes.min.js';
 import { setStrings } from '/static/kp/dist/kp-themes.min.js';
 import { toast } from '/static/kp/dist/kp-themes.min.js';
-import { list, wordsOf } from './health-words.js';
+import { giveUpWordsOf, hubCaused, list, wordsOf } from './health-words.js';
 import { hubBanner } from './health-hub.js';
 import { post } from './hsb-post.js';
+import { markGivenUpSeen } from './give-up-seen.js';
 
 /** How long the success toast stays, in milliseconds. */
 const DONE_TOAST_MS = 6000;
 
 setStrings({
-    connOffline: 'The kyu hub is unreachable',
-    connOfflineWhy: 'Messages cannot be fetched until the hub answers. The switchboard keeps trying by itself.',
+    connOffline: 'The kyu hub does not answer',
+    connOfflineWhy: 'Messages wait until the hub answers. The switchboard keeps trying by itself.',
     connReconnecting: 'Reaching the kyu hub…',
     connReconnectingWhy: 'Trying to reach the hub now.',
     connPending: (/** @type {number} */ n) => `${n} ${n === 1 ? 'message' : 'messages'} waiting on the hub`,
@@ -30,7 +31,7 @@ setStrings({
     connBackWhy: 'Messages are being fetched.',
     connBackSending: (/** @type {number} */ n) => `Delivering ${n} waiting ${n === 1 ? 'message' : 'messages'}`,
     connRefused: 'The kyu hub refused our credentials',
-    connRefusedWhy: 'The switchboard’s token was not accepted. Re-issue it.',
+    connRefusedWhy: 'The switchboard’s token was not accepted. Re-issue it and recheck.',
 });
 
 const byId = (/** @type {string} */ id) => /** @type {HTMLElement} */ (document.getElementById(id));
@@ -71,17 +72,19 @@ function clearLine(all) {
 }
 
 function paintHealth() {
+    // Per profile: its own failure (the hub's faults are the banner's) and the messages it gave up.
     const unwell = profiles.flatMap((p) => {
-        const w = wordsOf(p);
-        return w ? [{ p, w }] : [];
+        const own = hubCaused(p) ? null : wordsOf(p);
+        const gaveUp = giveUpWordsOf(p);
+        return [...(own ? [{ p, w: own, key: p.name }] : []), ...(gaveUp ? [{ p, w: gaveUp, key: `${p.name}:given-up` }] : [])];
     });
-    const sig = JSON.stringify(unwell.map(({ p, w }) => [p.name, p.state, w.title, w.why]));
+    const sig = JSON.stringify(unwell.map(({ key, w }) => [key, w.title, w.why]));
     if (sig !== lastSig) {
         lastSig = sig;
         setProblems(
             problems,
-            unwell.map(({ p, w }) => ({
-                key: p.name,
+            unwell.map(({ p, w, key }) => ({
+                key,
                 severity: w.severity,
                 what: w.title,
                 why: w.why,
@@ -92,7 +95,7 @@ function paintHealth() {
         );
         problems.hidden = unwell.length === 0;
     }
-    const allWell = profiles.length > 0 && unwell.length === 0;
+    const allWell = profiles.length > 0 && unwell.length === 0 && !profiles.some(hubCaused);
     clear.hidden = !allWell;
     if (allWell) clearBody.textContent = clearLine(profiles);
 }
@@ -106,6 +109,7 @@ async function recheck(name) {
     const r = await post(routes.recheckOne.replace('{name}', encodeURIComponent(name)));
     rechecking.delete(name);
     if (r.ok) {
+        markGivenUpSeen(name, profiles.find((p) => p.name === name)?.given_up ?? 0);
         document.dispatchEvent(new CustomEvent('hsb:refresh'));
         toast(`${name} back to starting`, { className: 'kp-toast kp-toast--success', ms: DONE_TOAST_MS, close: true });
     } else {

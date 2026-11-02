@@ -33,11 +33,12 @@ static PREVIEW_SLOTS: Semaphore = Semaphore::const_new(MAX_CONCURRENT_PREVIEWS);
 /// Register the page, its place in the navigation and the route it posts
 /// to. Called from `dashboard::install`.
 pub fn install(app: &mut chassis::App, profiles: Arc<Profiles>) {
-    app.page(chassis::shell::pages::Page::new(
-        "translate",
-        "Try a translation",
-        PAGE_ROUTE,
-    ));
+    // The navigation label is short so the phone's tab bar does not cut it; the
+    // page's own heading (`web/translate.html`) keeps the full "Try a translation".
+    app.page(
+        chassis::shell::pages::Page::new("translate", "Translate", PAGE_ROUTE)
+            .hint("Try a translation: see what a profile makes of a sample message"),
+    );
     let router = Router::new()
         .route(PAGE_ROUTE, get(page))
         .route(PREVIEW_ROUTE, post(preview_route))
@@ -189,11 +190,16 @@ fn profile_entries(profiles: &Profiles) -> Vec<Value> {
                     "delivers to its destination (the address is a credential and is never shown)"
                         .to_string()
                 }
-                _ => format!("publishes to the hub ({})", view.sink.label),
+                _ => "publishes to the kyu hub".to_string(),
+            };
+            // The topic name is configuration detail (Settings shows it); here the page says where messages come from.
+            let takes = match view.source.kind {
+                "kyu" => "messages from the kyu hub".to_string(),
+                _ => view.source.label.clone(),
             };
             Some(json!({
                 "name": view.name,
-                "takes": view.source.label,
+                "takes": takes,
                 "delivers": delivers,
                 "content_type": profile.content_type,
                 "template": profile.body,

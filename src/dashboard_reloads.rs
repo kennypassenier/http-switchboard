@@ -52,13 +52,10 @@ impl StatusSection for ReloadsSection {
             r##"<link rel="stylesheet" href="{WEB_MOUNT}/reloads.css?v={version}">
 <script type="application/json" id="hsb-reloads-data">{data}</script>
 <script type="module" src="{WEB_MOUNT}/reloads.js?v={version}"></script>
-<section class="kp-card hsb-reloads-card" id="hsb-reloads" data-chassis-owned data-kp-state="loading" aria-labelledby="hsb-reloads-t">
-  <div class="kp-card__header">
-    <h3 class="kp-card__title" id="hsb-reloads-t">Reloads</h3>
-    <p class="hsb-reloads-counts" id="hsb-reloads-counts" aria-live="polite"></p>
-  </div>
+<section class="kp-card hsb-flat hsb-reloads-card" id="hsb-reloads" data-chassis-owned data-kp-state="loading" aria-label="Reload history">
   <div class="kp-card__stage">
     <div class="kp-card__data hsb-reloads">
+      <p class="hsb-reloads-counts" id="hsb-reloads-counts" aria-live="polite"></p>
       <div class="kp-problems" data-kp-problems data-kp-problems-mode="each" id="hsb-reloads-alert"></div>
       <div class="hsb-reloads__host">
         <ol class="kp-timeline hsb-reloads__list" id="hsb-reloads-list" data-kp-follow="head" data-kp-pill-unit="reload,reloads" tabindex="0" aria-label="Reloads of the profile file, newest first"></ol>
@@ -71,10 +68,7 @@ impl StatusSection for ReloadsSection {
         );
         Section {
             title: "Reloads".to_string(),
-            explain: "Every time the service read its profile file again (after \
-                      `systemctl reload http-switchboard`), newest first: what changed, what \
-                      needs a restart, and what was refused. The history is kept in memory, \
-                      holds the last 50 reloads and starts empty after every restart."
+            explain: "Each time the service read its profile file again (systemctl reload http-switchboard), newest first: what changed, what needs a restart and what was refused; the last 50 are kept in memory."
                 .to_string(),
             rows: Vec::new(),
             html: Some(html),

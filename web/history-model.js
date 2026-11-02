@@ -103,18 +103,25 @@ function stateWord(h) {
     return 'Failing';
 }
 
-/** One hour as an uptime strip cell: its tooltip and the quick-info lines. @param {Hour} h */
+/** An hour that carries no verdict: not recorded yet, or nothing came in (an hour without traffic is neither up nor down). @param {Hour} h */
+const silent = (h) => h.state === 'none' || (h.received === 0 && h.state === 'up');
+
+/** One hour as an uptime strip cell: its tooltip and the quick-info lines. The kit's percentage counts only the cells that
+ *  are not `none`, so a silent hour must not be `up` or an idle profile would read 100 %. @param {Hour} h */
 export function periodOf(h) {
     const at = h.start_unix * 1000;
     const label = stamp(at).slice(0, 14) + '00';
     const avg = h.delivered ? `, ${count(Math.round(h.duration_ms / h.delivered))} ms on average` : '';
-    const figures = h.state === 'none' ? 'No data: the service was not recording yet' : h.received ? `${count(h.delivered)} of ${count(h.received)} delivered${avg}` : 'nothing to deliver';
+    if (silent(h)) {
+        const none = h.state === 'none';
+        return { key: new Date(at).toISOString(), label, state: /** @type {const} */ ('none'), tip: `${label} · ${none ? 'No data' : 'Nothing received'}`, details: [none ? causeLines(h)[0] : 'Nothing came in during this hour.'] };
+    }
     return {
         key: new Date(at).toISOString(),
         label,
         state: h.state,
-        tip: h.state === 'none' ? `${label} · No data` : `${label} · ${stateWord(h)} · ${figures}`,
-        details: h.state === 'none' ? causeLines(h) : [`Received ${count(h.received)}, delivered ${count(h.delivered)}, failed ${count(h.failed)}.`, ...causeLines(h)],
+        tip: `${label} · ${stateWord(h)} · ${count(h.delivered)} of ${count(h.received)} delivered${avg}`,
+        details: [`Received ${count(h.received)}, delivered ${count(h.delivered)}, failed ${count(h.failed)}.`, ...causeLines(h)],
     };
 }
 

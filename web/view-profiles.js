@@ -13,9 +13,10 @@ const WARN_BELOW_SHARE = 0.99;
 /** @param {import('./hsb-state.js').Profile} p */
 function flagsOf(p) {
     /** @type {{ label: string, tone?: 'success' | 'warning' | 'destructive' | 'info' }[]} */
-    const flags = [{ label: p.source.kind === 'kyu' ? 'kyu topic' : 'HTTP POST' }, { label: p.sink.kind === 'url' ? 'HTTP webhook' : 'kyu topic' }];
+    const flags = [{ label: p.source.kind === 'kyu' ? 'from the hub' : 'HTTP POST' }, { label: p.sink.kind === 'url' ? 'HTTP webhook' : 'to the hub' }];
     if (p.state === 'failing') flags.push({ label: hasHub(p) ? 'messages waiting on the hub' : 'destination refusing', tone: 'destructive' });
     if (p.state === 'denied') flags.push({ label: 'credentials refused', tone: 'destructive' });
+    if ((p.given_up ?? 0) > 0) flags.push({ label: `${count(p.given_up ?? 0)} given up`, tone: 'warning' });
     if (p.state === 'hub-down') flags.push({ label: 'hub unreachable', tone: 'warning' });
     return flags;
 }
@@ -65,12 +66,12 @@ function mapSpec() {
         corner: 'Source to destination',
         rows: profiles.map((p) => ({
             key: `src-${p.name}`,
-            label: p.source.label,
-            sub: `profile ${p.name}, ${p.source.sub}`,
+            label: hasHub(p) ? 'Kyu hub' : p.source.label,
+            sub: `for ${p.name}`,
             tone: toneOf(p, 'source'),
             dashed: p.state === 'starting',
         })),
-        columns: profiles.map((p) => ({ key: `dst-${p.name}`, label: p.sink.label, sub: `for ${p.name}`, tone: toneOf(p, 'dest') })),
+        columns: profiles.map((p) => ({ key: `dst-${p.name}`, label: p.sink.kind === 'url' ? p.sink.label : 'Kyu hub', sub: `from ${p.name}`, tone: toneOf(p, 'dest') })),
         cell: (/** @type {string} */ row, /** @type {string} */ column) =>
             row.slice(4) === column.slice(4) ? { tone: 'ok', label: 'delivers' } : { tone: 'none' },
         countLabel: (/** @type {number} */ n) => plural(n, 'profile'),

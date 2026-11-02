@@ -9,9 +9,7 @@ impl StatusSection for TraceSection {
     fn render(&self) -> Section {
         Section {
             title: "Path of a profile".to_string(),
-            explain: "Follows one message from its sender to the destination and stops at \
-                      the first hop that refuses it, saying which one and why. The profile \
-                      chosen here is also the one Last 24 hours shows."
+            explain: "Follows a message from its sender to the destination and says where it stops and why."
                 .to_string(),
             rows: Vec::new(),
             html: Some(
@@ -40,10 +38,7 @@ impl StatusSection for SettingsSection {
     fn render(&self) -> Section {
         Section {
             title: "Settings and retry budget".to_string(),
-            explain: "What each profile does in plain rows, and one bar for how long its \
-                      retries can take compared to the time the hub holds a message for it \
-                      (the lease). The destination is shown as host and port; its path is a \
-                      credential and is never shown."
+            explain: "What each profile does in plain rows, and how long its retries can take against the time the hub holds a message for it; a destination's path is never shown."
                 .to_string(),
             rows: Vec::new(),
             html: Some(

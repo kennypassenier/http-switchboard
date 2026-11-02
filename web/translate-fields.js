@@ -3,6 +3,7 @@
 // module only draws them, as the package's plain table with its card layout on a narrow container.
 
 import { els } from './translate-dom.js';
+import { breakableCode } from './break-points.js';
 
 const STATES = {
     read: { label: 'Read', badge: 'kp-badge--success' },
@@ -21,9 +22,7 @@ function cell(label, content, cls = '') {
 
 /** @param {string} text */
 function code(text) {
-    const el = document.createElement('code');
-    el.textContent = text;
-    return el;
+    return breakableCode(text);
 }
 
 /** @param {{ field: string, key: string, value: string, state: keyof typeof STATES }} row */

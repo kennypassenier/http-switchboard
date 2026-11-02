@@ -1,9 +1,9 @@
 /* The reload history card (kp-themes 11). Everything with a kp- class is the package; the hsb- rules only lay it out.
    Colours, spacing and radii come from the theme's tokens, never from here. */
 
+/* The state host inside the section's own card (.hsb-flat draws no second card). */
 .hsb-reloads-card {
     --kp-card-stage-min: 24rem;
-    block-size: 100%;
 }
 
 .hsb-reloads {
@@ -67,31 +67,10 @@
     }
 }
 
-/* The head: the title and the count on one baseline, the count at the end edge. */
-.hsb-reloads-card .kp-card__header {
-    display: grid;
-    grid-template-columns: minmax(0, auto) minmax(0, 1fr);
-    align-items: baseline;
-    column-gap: var(--kp-space-lg, 1.5rem);
-}
-
+/* The counts line: the section's own title sits above the card, so only the count shows here, quiet and at the start edge. */
 .hsb-reloads-counts {
     margin: 0;
-    justify-self: end;
-    text-align: end;
     color: var(--muted-foreground);
     font-size: var(--kp-text-sm, 0.8125rem);
     font-variant-numeric: tabular-nums;
-}
-
-@media (max-width: 40rem) {
-    .hsb-reloads-card .kp-card__header {
-        grid-template-columns: minmax(0, 1fr);
-        row-gap: var(--kp-space-xs, 0.25rem);
-    }
-
-    .hsb-reloads-counts {
-        justify-self: start;
-        text-align: start;
-    }
 }

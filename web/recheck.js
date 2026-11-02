@@ -8,6 +8,7 @@ import { setMenu } from '/static/kp/dist/kp-themes.min.js';
 import { dataTable } from '/static/kp/dist/kp-themes.min.js';
 import { all, capital, el, plural, seconds } from './hsb-format.js';
 import { post } from './hsb-post.js';
+import { markGivenUpSeen } from './give-up-seen.js';
 import { HEALTH_TONE, HEALTH_WORD, hasHub, hooks, profileNamed, routes, store } from './hsb-state.js';
 
 /** How long the success toast stays, in milliseconds. */
@@ -118,6 +119,7 @@ export async function recheckAll(button) {
             return { error: r.line };
         }
         n = Number(r.body.rechecked ?? 0);
+        for (const p of store.profiles) markGivenUpSeen(p.name, p.given_up ?? 0);
         await hooks.refresh();
         return 'Done';
     });
@@ -133,6 +135,7 @@ export async function recheckOne(name) {
     const r = await post(routes.recheckOne.replace('{name}', encodeURIComponent(name)));
     store.rechecking.delete(name);
     if (r.ok) {
+        markGivenUpSeen(name, profileNamed(name)?.given_up ?? 0);
         await hooks.refresh();
         done(`${name} back to starting`);
     } else {

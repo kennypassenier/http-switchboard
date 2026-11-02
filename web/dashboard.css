@@ -166,3 +166,36 @@
 .hsb-pick {
     min-inline-size: 0;
 }
+
+/* A path or address wraps only at the <wbr> marks break-points.js puts after dots, colons and slashes, never inside a word
+   or a number. `break-word` (not `anywhere`) lets the marks win and only breaks a word that cannot fit a line at all. */
+.hsb-breakable {
+    overflow-wrap: break-word;
+    word-break: normal;
+}
+
+/* One card level: the section's own card is the only card. A state host inside it (Profiles, Last 24 hours, Reloads) carries
+   the loading / empty / error faces on a plain stage: no border, padding, shadow or fill, so it never adds a second card. */
+.hsb-flat {
+    padding: 0;
+    border: 0;
+    box-shadow: none;
+    background: transparent;
+}
+
+/* A phone: the Recheck table is rows of name, state and one menu button. The retry budget is Settings' to show, and the
+   table never scrolls sideways inside its card. */
+@media (max-width: 40rem) {
+    .hsb-table th:nth-child(3),
+    .hsb-table td[data-hsb-budget] {
+        display: none;
+    }
+
+    .hsb-table .hsb-col-act {
+        inline-size: auto;
+    }
+
+    .hsb-table :is(th, td) {
+        padding-inline: var(--kp-space-sm, 0.5rem);
+    }
+}

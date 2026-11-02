@@ -189,3 +189,9 @@
 .hsbt-try__profile > #hsbt-unknown:not([hidden]) {
     grid-column: 1 / -1;
 }
+
+/* The same break rule as the status page's: only after dots, colons and slashes (break-points.js marks them). */
+.hsb-breakable {
+    overflow-wrap: break-word;
+    word-break: normal;
+}

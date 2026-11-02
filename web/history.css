@@ -143,3 +143,21 @@
 #hsb-h-title {
     overflow-wrap: anywhere;
 }
+
+/* The head's actions keep a real gap, whatever sits beside the View options button. */
+.hsb-h-card .kp-card__actions {
+    gap: var(--kp-space-sm, 0.5rem);
+}
+
+/* The view options sit on one row with the since line: the sentence at the start edge, the button at the end. */
+.hsb-h-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--kp-space-sm, 0.5rem);
+}
+
+.hsb-h-toolbar > .kp-card__body {
+    margin: 0;
+}

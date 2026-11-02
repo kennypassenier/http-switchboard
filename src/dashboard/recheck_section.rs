@@ -16,10 +16,7 @@ impl StatusSection for RecheckSection {
         let html = markup(&rows);
         Section {
             title: "Recheck".to_string(),
-            explain: "Puts every profile, or just one, back to 'starting' so the service \
-                      tries its destination again. A profile's health only changes when a \
-                      message goes through it, so one that failed once stays red until a \
-                      sender posts again; this is the way out."
+            explain: "Puts a profile, or all of them, back to 'starting' so the next message decides again, which is the way out of a failure that stays red until a sender posts."
                 .to_string(),
             rows: Vec::new(),
             html: Some(html),
