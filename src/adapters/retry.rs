@@ -43,12 +43,10 @@ pub async fn deliver_with_retry(
                         result: Err(e),
                     };
                 }
-                // 1 s, 2 s, 4 s … taken from the very list the config's
-                // budget check sums (`pauses_ms`), so the two cannot drift
-                // apart. `attempts <= retries` here, so the index exists.
-                clock
-                    .sleep(profile.pauses_ms()[attempts as usize - 1])
-                    .await;
+                // 1 s, 2 s, 4 s … from the very function the config's
+                // budget check sums (`pause_ms`), so the two cannot drift
+                // apart. Computed by index: no list is built per retry.
+                clock.sleep(profile.pause_ms(attempts - 1)).await;
             }
         }
     }

@@ -30,7 +30,7 @@ pub struct Envelope {
     pub template: Option<String>,
 }
 
-fn refused(error: &str, why: String, remedy: &str, kind: &'static str) -> Box<Failure> {
+pub(super) fn refused(error: &str, why: String, remedy: &str, kind: &'static str) -> Box<Failure> {
     Box::new(Failure {
         error: error.to_string(),
         why,

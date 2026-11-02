@@ -118,6 +118,15 @@ pub struct PumpState {
     pub replay_next: bool,
     pub health: Health,
     pub policy_pushed: bool,
+    /// A reload changed the lease or attempt cap after a push had already
+    /// succeeded: the subscription exists, so the new policy is written
+    /// BEFORE the next poll and no message is claimed under the old lease.
+    pub policy_before_poll: bool,
+    /// When the policy write was last tried, and the error text it last
+    /// failed with: together they keep a refusing hub from being asked and
+    /// logged about every turn.
+    pub policy_last_try: Option<std::time::Instant>,
+    pub policy_last_error: Option<String>,
 }
 
 impl Default for PumpState {
@@ -126,6 +135,9 @@ impl Default for PumpState {
             replay_next: false,
             health: Health::Starting,
             policy_pushed: false,
+            policy_before_poll: false,
+            policy_last_try: None,
+            policy_last_error: None,
         }
     }
 }

@@ -5,6 +5,7 @@ use std::time::Duration;
 use super::BoxFuture;
 use crate::pump::{Hub, HubError, HubMessage, Poll};
 use crate::secret::Secret;
+use crate::translate::percent_encode;
 
 /// How long a short hub call (ack, nack, policy write) may take.
 const HUB_REQUEST_TIMEOUT_S: u64 = 10;
@@ -103,11 +104,24 @@ async fn parse_envelope(response: reqwest::Response) -> Result<Poll, HubError> {
         serde_json::from_slice(&raw).map_err(|e| HubError::Unreachable {
             detail: format!("the hub's answer was not JSON: {e}"),
         })?;
-    let id = envelope
-        .get("id")
-        .and_then(|v| v.as_str())
-        .unwrap_or_default()
-        .to_string();
+    // An id is what ack and nack are addressed with; without one every
+    // settle would hit a malformed URL and the hub would offer the message
+    // again forever. A hub error with a clear line, not a silent "".
+    let id = match envelope.get("id").and_then(|v| v.as_str()) {
+        Some(id) if !id.is_empty() => id.to_string(),
+        _ => {
+            crate::obs::log_warn(
+                "hub",
+                "bad_envelope",
+                "the hub's answer carries no message id, so it cannot be acknowledged",
+            );
+            return Err(HubError::Unreachable {
+                detail: "the hub's answer carried no message id, so the message cannot be \
+                         acknowledged (check that kyu and this service speak the same envelope)"
+                    .to_string(),
+            });
+        }
+    };
     match envelope.get("payload") {
         Some(payload) => Ok(Poll::Message(Box::new(HubMessage {
             id,
@@ -141,8 +155,9 @@ impl Hub for KyuHub {
         id: &'a str,
     ) -> BoxFuture<'a, Result<(), HubError>> {
         Box::pin(self.settle(format!(
-            "{}/t/{topic}/ack/{id}?as={subscription}",
-            self.base_url
+            "{}/t/{topic}/ack/{}?as={subscription}",
+            self.base_url,
+            percent_encode(id)
         )))
     }
 
@@ -155,8 +170,9 @@ impl Hub for KyuHub {
     ) -> BoxFuture<'a, Result<(), HubError>> {
         let dead = if dead { "&dead=true" } else { "" };
         Box::pin(self.settle(format!(
-            "{}/t/{topic}/nack/{id}?as={subscription}{dead}",
-            self.base_url
+            "{}/t/{topic}/nack/{}?as={subscription}{dead}",
+            self.base_url,
+            percent_encode(id)
         )))
     }
 

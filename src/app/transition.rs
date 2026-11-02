@@ -24,6 +24,23 @@ pub async fn note_transition(
         return;
     }
     registry.set_health(profile, now);
+    announce_transition(sink, reporting, profile, before, now, detail).await;
+}
+
+/// The reporting half of a transition: log it once and publish the event
+/// when it is worth one. For callers that already recorded the new health
+/// atomically (`Registry::swap_health`) and must not write it a second time.
+pub async fn announce_transition(
+    sink: &dyn Sink,
+    reporting: Option<&str>,
+    profile: &str,
+    before: Health,
+    now: Health,
+    detail: &str,
+) {
+    if before == now {
+        return;
+    }
     obs::log_transition(profile, before, now, detail);
     if let (Some(topic), Some(event)) = (reporting, transition_event(profile, before, now, detail))
     {

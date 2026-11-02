@@ -5,10 +5,16 @@
 import { toast } from '/static/kp/dist/kp-themes.min.js';
 import { hasHub, profileNamed } from './hsb-state.js';
 
+/** Single-quote a value for a POSIX shell; a quote inside it closes, escapes and reopens the quoting. @param {string} value */
+export function shellQuote(value) {
+    return `'${value.replaceAll("'", "'\\''")}'`;
+}
+
 /** @param {import('./hsb-state.js').Profile} p */
 function testCommand(p) {
-    if (hasHub(p)) return `http-switchboard test --config config.toml --profile ${p.name} --input sample.json`;
-    return `curl -X POST '${location.origin}${p.source.path ?? ''}' -H "Authorization: Bearer $SENDER_TOKEN" -H 'Content-Type: ${p.content_type}' -d @sample.json`;
+    if (hasHub(p)) return `http-switchboard test --config config.toml --profile ${shellQuote(p.name)} --input sample.json`;
+    const url = shellQuote(`${location.origin}${p.source.path ?? ''}`);
+    return `curl -X POST ${url} -H "Authorization: Bearer $SENDER_TOKEN" -H ${shellQuote(`Content-Type: ${p.content_type}`)} -d @sample.json`;
 }
 
 /** The legacy path: a selected, off-screen field and execCommand. @param {string} text */

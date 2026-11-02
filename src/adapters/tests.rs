@@ -63,3 +63,11 @@ fn w3_only_the_errors_worth_retrying_are_retried() {
         );
     }
 }
+
+#[test]
+fn a_request_we_could_not_build_is_not_retried() {
+    assert!(!DeliverError::Request {
+        detail: "bad header".into()
+    }
+    .is_retryable());
+}

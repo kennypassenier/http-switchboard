@@ -108,4 +108,23 @@ pub enum ConfigError {
         profile: String,
         url: String,
     },
+
+    #[error("{file}, profile '{profile}': {field} is {value}, but {rule}. What now: {remedy}")]
+    OutOfRange {
+        file: String,
+        profile: String,
+        field: &'static str,
+        value: u64,
+        rule: &'static str,
+        remedy: &'static str,
+    },
+
+    #[error("{file}, profile '{profile}': {what} is not usable ({problem}). What now: {remedy} — it would otherwise fail on every delivery, and be retried as if the receiver were down.")]
+    BadHttpPart {
+        file: String,
+        profile: String,
+        what: String,
+        problem: &'static str,
+        remedy: &'static str,
+    },
 }

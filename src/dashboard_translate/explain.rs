@@ -4,7 +4,9 @@
 use serde::Serialize;
 use serde_json::Value;
 
-use super::scanner::references;
+use std::collections::HashSet;
+
+use super::scanner::Reference;
 
 /// A default the template filled in.
 #[derive(Debug, Serialize, PartialEq, Eq)]
@@ -31,8 +33,8 @@ pub(super) fn resolve<'a>(value: &'a Value, path: &[String]) -> Result<&'a Value
 
 /// "Line 2 reads alerts.0, but the message has no alerts at position 0":
 /// the first reference on `line` that the message lacks, in words.
-pub(super) fn explain_missing(template: &str, line: usize, message: &Value) -> Option<String> {
-    for r in references(template).iter().filter(|r| r.line == line) {
+pub(super) fn explain_missing(refs: &[Reference], line: usize, message: &Value) -> Option<String> {
+    for r in refs.iter().filter(|r| r.line == line) {
         if r.default.is_some() {
             continue;
         }
@@ -61,15 +63,16 @@ pub(super) fn explain_missing(template: &str, line: usize, message: &Value) -> O
 }
 
 /// The defaults the template filled in for this message.
-pub(super) fn defaults_filled(template: &str, message: &Value) -> Vec<Note> {
+pub(super) fn defaults_filled(refs: &[Reference], message: &Value) -> Vec<Note> {
     let mut notes: Vec<Note> = Vec::new();
-    for r in references(template) {
+    let mut seen: HashSet<String> = HashSet::new();
+    for r in refs {
         let Some(given) = &r.default else { continue };
         if resolve(message, &r.path).is_ok() {
             continue;
         }
         let key = format!("{}@{}", r.path.join("."), r.line);
-        if notes.iter().any(|n| n.key == key) {
+        if !seen.insert(key.clone()) {
             continue;
         }
         let name = r.path.last().cloned().unwrap_or_default();

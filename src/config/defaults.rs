@@ -39,3 +39,9 @@ pub(super) const DEFAULT_FORWARD_ERROR_BODY: bool = false;
 
 /// A URL must be longer than this many bytes (the length of `https://`).
 pub(super) const MIN_URL_LEN_EXCLUSIVE: usize = 8;
+
+/// The most retries a profile may ask for. Each retry doubles its pause
+/// (1 s, 2 s … 512 s at the tenth), so past this the pauses alone outlast
+/// any lease worth holding; and the bound keeps the budget arithmetic and
+/// the dashboard's pause list small whatever a file says.
+pub(super) const MAX_RETRIES: u32 = 10;

@@ -18,6 +18,10 @@ pub(super) fn regions(template: &str) -> Vec<Region<'_>> {
     let mut found = Vec::new();
     let bytes = template.as_bytes();
     let mut at = 0;
+    // Newlines are counted incrementally from the previous region, so the
+    // whole pass is linear in the template's size.
+    let mut line = 1;
+    let mut counted_to = 0;
     while at + 1 < bytes.len() {
         let close = match (bytes[at], bytes[at + 1]) {
             (b'{', b'{') => Some("}}"),
@@ -34,7 +38,11 @@ pub(super) fn regions(template: &str) -> Vec<Region<'_>> {
             .find(close)
             .map_or(template.len(), |n| start + n);
         if close != "#}" {
-            let line = 1 + template[..start].bytes().filter(|b| *b == b'\n').count();
+            line += bytes[counted_to..start]
+                .iter()
+                .filter(|b| **b == b'\n')
+                .count();
+            counted_to = start;
             found.push(Region {
                 line,
                 start,

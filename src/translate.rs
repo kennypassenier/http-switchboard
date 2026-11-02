@@ -18,10 +18,15 @@
 
 use std::collections::BTreeMap;
 
-use minijinja::{AutoEscape, Environment, UndefinedBehavior};
+mod limits;
+mod target;
+
+pub use limits::{template_env, MAX_RENDERED_BODY_BYTES, MAX_TEMPLATE_FUEL};
 
 use crate::config::{Profile, Sink};
 use crate::secret::Secret;
+pub use target::percent_encode;
+use target::render_target;
 
 /// What the sinks in L3 are asked to perform. Note what is NOT here: the
 /// destination is copied from the profile, never rendered, so no incoming
@@ -103,21 +108,11 @@ pub fn prepare(profile: &Profile, payload: &[u8]) -> Result<Delivery, RenderErro
 /// The same, for a payload the hub already handed over parsed (AR8: the
 /// template's input is the parsed payload, never the envelope around it).
 pub fn prepare_value(profile: &Profile, json: &serde_json::Value) -> Result<Delivery, RenderError> {
-    let mut env = Environment::new();
-    env.set_undefined_behavior(UndefinedBehavior::Strict);
     let json_profile = is_json(&profile.content_type);
-    if json_profile {
-        env.set_auto_escape_callback(move |_| AutoEscape::Json);
-    } else {
-        env.set_auto_escape_callback(|_| AutoEscape::None);
-    }
-
-    let body = env
+    let body = template_env(json_profile)
         .render_str(&profile.body, json)
-        .map_err(|e| RenderError::Render {
-            profile: profile.name.clone(),
-            detail: describe(&e),
-        })?;
+        .map_err(|e| limits::render_error(&profile.name, &e))?;
+    limits::check_body_size(&profile.name, &body)?;
 
     // AR7's second net: prove the result is what the profile claims it is
     // before anyone is asked to accept it. Non-mutating on purpose — K3's
@@ -159,81 +154,4 @@ fn describe(err: &minijinja::Error) -> String {
         source = e.source();
     }
     parts.join(": ")
-}
-
-/// K7: a destination whose *path* carries a value from the message —
-/// `/devices/{{ id }}/state`. Everything about where the request goes
-/// still comes from the config (AR10): the scheme, the host and the port
-/// are split off before rendering and put back afterwards, so a template
-/// cannot reach them. Each interpolated value is percent-encoded by the
-/// engine rather than by the template author, the same "mechanism, not
-/// habit" rule AR7 applies to JSON.
-fn render_target(
-    profile: &Profile,
-    url: &str,
-    json: &serde_json::Value,
-) -> Result<String, RenderError> {
-    if !url.contains("{{") {
-        return Ok(url.to_string());
-    }
-
-    let (scheme, rest) = url.split_once("://").ok_or_else(|| RenderError::Target {
-        profile: profile.name.clone(),
-        detail: format!("'{url}' has no scheme"),
-    })?;
-    let (authority, path) = match rest.find('/') {
-        Some(i) => (&rest[..i], &rest[i..]),
-        None => (rest, ""),
-    };
-    if authority.contains("{{") {
-        return Err(RenderError::Target {
-            profile: profile.name.clone(),
-            detail: "the host or port is templated".to_string(),
-        });
-    }
-
-    let mut env = Environment::new();
-    env.set_undefined_behavior(UndefinedBehavior::Strict);
-    env.set_formatter(|out, _state, value| {
-        let raw = match value.as_str() {
-            Some(text) => text.to_string(),
-            None => value.to_string(),
-        };
-        out.write_str(&percent_encode(&raw))?;
-        Ok(())
-    });
-
-    let rendered = env
-        .render_str(path, json)
-        .map_err(|e| RenderError::Render {
-            profile: profile.name.clone(),
-            detail: describe(&e),
-        })?;
-
-    // Belt and braces: percent-encoding already makes these impossible,
-    // and a future change to the encoder should not quietly re-open them.
-    if rendered.contains("..") || rendered.contains("://") {
-        return Err(RenderError::Target {
-            profile: profile.name.clone(),
-            detail: format!("the rendered path '{rendered}' escapes its own address"),
-        });
-    }
-
-    Ok(format!("{scheme}://{authority}{rendered}"))
-}
-
-/// Percent-encode everything that is not unreserved. Deliberately strict:
-/// a slash inside a *value* is encoded, so a value can never add a path
-/// segment of its own.
-fn percent_encode(value: &str) -> String {
-    let mut out = String::with_capacity(value.len());
-    for byte in value.as_bytes() {
-        match byte {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
-                out.push(*byte as char)
-            }
-            other => out.push_str(&format!("%{other:02X}")),
-        }
-    }
-    out
 }

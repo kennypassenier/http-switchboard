@@ -5,7 +5,8 @@
 use std::collections::BTreeMap;
 
 use super::checks::{
-    check_lease_budget, check_name, check_path, check_template, check_topic, is_http_url,
+    check_http_parts, check_lease_budget, check_limits, check_name, check_path, check_template,
+    check_topic, is_http_url,
 };
 use super::defaults::{
     DEFAULT_FORWARD_ERROR_BODY, DEFAULT_LEASE_MS, DEFAULT_MAX_ATTEMPTS, DEFAULT_METHOD,
@@ -60,6 +61,8 @@ pub(super) fn validate_profile(
         max_attempts: rp.max_attempts.unwrap_or(DEFAULT_MAX_ATTEMPTS),
         forward_error_body,
     };
+    check_limits(file, &profile)?;
+    check_http_parts(file, &profile)?;
     check_lease_budget(file, &profile)?;
     Ok(profile)
 }

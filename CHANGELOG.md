@@ -39,6 +39,45 @@ endpoints and the CLI verbs — not about the internals.
 - The profile choice on Try a translation turns into a list from six
   profiles on.
 
+### Fixed
+
+- Try a translation renders on a blocking thread under a 5 s deadline and at
+  most four previews at once (429 beyond that); a stuck or crashed preview
+  answers in words instead of a 500.
+- Try a translation scans a draft template once per request, in linear time.
+- A path-template error in Try a translation no longer points at a line of
+  the body template.
+- *Copy test command* shell-quotes the profile's path and content type.
+- **Retry settings are bounded**: `retries` above 10, `timeout_ms = 0`,
+  `lease_ms = 0` and `max_attempts = 0` are refused at load with what, why
+  and what now. The retry budget uses saturating arithmetic and each pause is
+  computed by index, so a huge `retries` can no longer overflow or exhaust
+  memory.
+- **A refused policy write is no longer silent**: the pump logs it on the
+  first failure and whenever the error text changes, and retries at most once
+  every 30 s.
+- **A reloaded lease or attempt cap reaches the hub before the next poll**
+  once a policy push has succeeded, so no message is claimed under the old
+  lease.
+- **A hub message without an id is a hub error** (logged), not an ack to a
+  bad URL and endless redelivery; ids are percent-encoded in ack and nack
+  URLs.
+- **Inbound health transitions no longer race**: the previous health is
+  swapped in one locked step, and the report happens afterwards.
+- **A failing profile after *Recheck* shows failing again**: the pump compares
+  with the registry's current health instead of its own remembered one.
+- **A templated path may contain dots** ("Waiting..."): only a segment that is
+  exactly `.` or `..` is refused.
+- **A dead letter is logged as a transition only when health changed.**
+- **An invalid method, header name or header value in a profile is a config
+  error**; a request that still cannot be built at send time is not retried.
+- **The destination path is never repeated in an error**: a refused address
+  says which kind of value was refused, not the rendered path, so it cannot
+  reach the sender's 502 or the logs (the path of a webhook is its credential).
+- **Template work is limited**: a render has a fuel ceiling (500 000 engine
+  steps) and a body cap (1 MiB), both refused with advice; `template_env`
+  is the one engine builder for delivery and the preview.
+
 ## [5.0.0] - 2026-10-31
 
 ### Changed

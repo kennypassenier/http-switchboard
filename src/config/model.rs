@@ -56,17 +56,22 @@ impl Profile {
     /// between them. The pauses are part of the budget — leaving them out
     /// is how a design that looks like it fits the lease does not.
     pub fn retry_budget_ms(&self) -> u64 {
-        let attempts = self.timeout_ms * u64::from(self.retries + 1);
-        attempts + self.pauses_ms().iter().sum::<u64>()
+        let tries = u64::from(self.retries).saturating_add(1);
+        let attempts = self.timeout_ms.saturating_mul(tries);
+        (0..self.retries).fold(attempts, |sum, i| sum.saturating_add(self.pause_ms(i)))
     }
 
-    /// The pauses between tries, in order: 1 s, 2 s, 4 s, doubling. One
-    /// list for the budget above and for the dashboard that draws it, so
-    /// the page cannot disagree with the check that guards the lease.
+    /// The pause before retry number `index` (0-based): 1 s, 2 s, 4 s,
+    /// doubling. Saturating, so an out-of-range index cannot overflow.
+    pub fn pause_ms(&self, index: u32) -> u64 {
+        BACKOFF_BASE_MS.saturating_mul(2u64.saturating_pow(index))
+    }
+
+    /// All the pauses, in order, for the dashboard that draws them. One
+    /// definition (`pause_ms`) for the budget, the retry loop and the
+    /// page, so they cannot disagree with the check that guards the lease.
     pub fn pauses_ms(&self) -> Vec<u64> {
-        (0..self.retries)
-            .map(|i| BACKOFF_BASE_MS * 2u64.pow(i))
-            .collect()
+        (0..self.retries).map(|i| self.pause_ms(i)).collect()
     }
 }
 

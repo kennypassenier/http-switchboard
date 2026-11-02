@@ -4,6 +4,8 @@
 //! message renders (the engine does that); it only explains, so a missed
 //! reference degrades an explanation to the engine's own sentence.
 
+use std::collections::HashSet;
+
 use super::lexing::{attribute_in, read_call, read_string, regions};
 use super::words::{KEYWORDS, LIST_FILTERS};
 
@@ -55,7 +57,7 @@ impl Cursor {
 /// (loop variables, `set` targets) that must not count as message fields.
 struct Scan {
     found: Vec<Reference>,
-    locals: Vec<String>,
+    locals: HashSet<String>,
     /// Where the region being scanned starts in the template.
     at: usize,
 }
@@ -64,7 +66,7 @@ struct Scan {
 pub(super) fn references(template: &str) -> Vec<Reference> {
     let mut scan = Scan {
         found: Vec::new(),
-        locals: Vec::new(),
+        locals: HashSet::new(),
         at: 0,
     };
     for region in regions(template) {
@@ -161,7 +163,7 @@ impl Scan {
             return;
         }
         if cur.binding {
-            self.locals.push(root);
+            self.locals.insert(root);
         } else if !self.locals.contains(&root) {
             self.found.push(Reference {
                 path,

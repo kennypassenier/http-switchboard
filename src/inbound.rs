@@ -160,17 +160,16 @@ async fn deliver_one(state: &Inbound, profile: &Profile, body: &Bytes) -> Option
 /// write the per-message log line.
 async fn record(state: &Inbound, profile: &Profile, ok: bool, duration_ms: u64, attempts: u32) {
     state.registry.record(&profile.name, ok, duration_ms);
-    let before = state
-        .registry
-        .health_of(&profile.name)
-        .unwrap_or(Health::Starting);
     let (now, why) = if ok {
         (Health::Working, "back to normal")
     } else {
         (Health::Failing, "deliveries are failing")
     };
-    crate::app::note_transition(
-        state.registry.as_ref(),
+    // One locked swap decides who saw the transition; the awaiting report
+    // happens afterwards, so two concurrent requests cannot both read the
+    // old health and report the same change twice (or lose one).
+    let before = state.registry.swap_health(&profile.name, now);
+    crate::app::announce_transition(
         state.sink.as_ref(),
         state.reporting.as_deref(),
         &profile.name,

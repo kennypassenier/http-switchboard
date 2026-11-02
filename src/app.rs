@@ -14,7 +14,7 @@ use std::sync::Arc;
 mod pump_task;
 mod transition;
 
-pub use transition::note_transition;
+pub use transition::{announce_transition, note_transition};
 
 use pump_task::PumpContext;
 

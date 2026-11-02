@@ -4,6 +4,7 @@
 //! a missing topic, dead-letter what can never render, ack only after
 //! delivery, nack at once on a failed delivery) reads on its own.
 
+use super::policy;
 use super::types::{Health, Hub, HubMessage, Poll, PumpState, Step};
 use crate::adapters::{deliver_with_retry, Clock, Sink};
 use crate::config::{Profile, Source};
@@ -79,10 +80,11 @@ pub async fn pump_once(
         profile,
         topic,
     };
+    policy::push_before_poll(hub, profile, topic, state).await;
     let poll = hub
         .next(topic, lane.subscription(), state.replay_next)
         .await;
-    push_policy_once(&lane, &poll, state).await;
+    policy::push_after_poll(hub, profile, topic, &poll, state).await;
 
     match poll {
         Err(e @ crate::pump::HubError::Denied) => {
@@ -115,43 +117,6 @@ pub async fn pump_once(
             state.replay_next = false;
             handle_message(&lane, *message, sink, clock, state).await
         }
-    }
-}
-
-/// Write the subscription's lease and attempt policy after the first
-/// successful poll, never before. A kyu subscription starts existing when
-/// it first polls, so a policy write beforehand is refused for a
-/// subscription that does not exist yet — measured against a real hub
-/// during the Phase 7 sweep, where the effective lease turned out to be the
-/// hub's default 30 s and not the 60 s this profile was validated against.
-/// Residual, and small: a message that arrives on the very first poll (only
-/// possible on the replay path) is still claimed under the default lease.
-/// A refused write leaves `policy_pushed` false, so the next turn tries again.
-async fn push_policy_once(
-    lane: &Lane<'_>,
-    poll: &Result<Poll, crate::pump::HubError>,
-    state: &mut PumpState,
-) {
-    let polled = matches!(
-        poll,
-        Ok(Poll::Empty | Poll::Message(_) | Poll::NotJson { .. })
-    );
-    if state.policy_pushed || !polled {
-        return;
-    }
-    let profile = lane.profile;
-    if lane
-        .hub
-        .set_policy(
-            lane.topic,
-            lane.subscription(),
-            profile.lease_ms,
-            profile.max_attempts,
-        )
-        .await
-        .is_ok()
-    {
-        state.policy_pushed = true;
     }
 }
 

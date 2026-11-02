@@ -51,11 +51,10 @@ impl HttpSink {
     /// hub token for a kyu topic.
     fn build_request(&self, delivery: &Delivery) -> Result<reqwest::RequestBuilder, DeliverError> {
         let (url, method, auth) = self.url_and_auth(delivery);
-        let method = reqwest::Method::from_bytes(method.as_bytes()).map_err(|e| {
-            DeliverError::Transport {
+        let method =
+            reqwest::Method::from_bytes(method.as_bytes()).map_err(|e| DeliverError::Request {
                 detail: format!("'{method}' is not an HTTP method ({e})"),
-            }
-        })?;
+            })?;
         let mut req = self
             .client
             .request(method, &url)
@@ -119,6 +118,11 @@ impl Sink for HttpSink {
             match req.send().await {
                 Ok(response) if response.status().is_success() => Ok(()),
                 Ok(response) => Err(self.refusal(delivery, response).await),
+                // A bad header name or value surfaces here, from the builder.
+                // Not retryable, and the value (maybe a secret) is not quoted.
+                Err(e) if e.is_builder() => Err(DeliverError::Request {
+                    detail: format!("{}", e.without_url()),
+                }),
                 Err(e) if e.is_timeout() => Err(DeliverError::Timeout {
                     timeout_ms: self.timeout_ms,
                 }),

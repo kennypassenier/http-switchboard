@@ -20,6 +20,9 @@ pub enum DeliverError {
 
     #[error("the destination could not be reached: {detail}. What now: check the address in the profile and whether this container can reach it — a name that does not resolve and a port nothing listens on look the same from here.")]
     Transport { detail: String },
+
+    #[error("the request could not be built: {detail}. What now: fix the method or header named in this profile — it was accepted at startup only if the config check missed it; retrying cannot help.")]
+    Request { detail: String },
 }
 
 impl DeliverError {
@@ -28,6 +31,8 @@ impl DeliverError {
     pub fn is_retryable(&self) -> bool {
         match self {
             DeliverError::Timeout { .. } | DeliverError::Transport { .. } => true,
+            // Our own request is malformed; the same bytes fail again.
+            DeliverError::Request { .. } => false,
             DeliverError::Status { status, .. } => *status >= 500 || *status == 429,
         }
     }

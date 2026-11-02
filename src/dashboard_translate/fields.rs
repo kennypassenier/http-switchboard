@@ -7,12 +7,14 @@
 //! forgiving: a read the scanner misses is a row that is missing, never a
 //! wrong render, because the engine alone produces the result.
 
+use std::collections::{HashMap, HashSet};
+
 use serde::Serialize;
 use serde_json::Value;
 
 use super::explain::resolve;
 use super::keys::paths_at;
-use super::scanner::references;
+use super::scanner::{references, Reference};
 
 /// The longest a value is shown before it is cut with an ellipsis.
 const SHOWN_CHARS: usize = 80;
@@ -46,27 +48,43 @@ fn shown(value: &Value) -> String {
     format!("{cut}…")
 }
 
-/// The table for `template` read against `message`.
-pub fn field_table(template: &str, message: &Value) -> Vec<FieldRow> {
-    let paths = paths_at(template);
-    let mut rows: Vec<FieldRow> = Vec::new();
-    for r in references(template) {
-        let field = r.path.join(".");
-        let key = paths.get(&r.at).cloned().unwrap_or_default();
-        if rows.iter().any(|row| row.field == field && row.key == key) {
-            continue;
+/// One scan of a template, made once per request and shared by the field
+/// table, the defaults and the explanation of a failure.
+pub struct Analysis {
+    pub(super) refs: Vec<Reference>,
+    paths: HashMap<usize, String>,
+}
+
+impl Analysis {
+    pub fn of(template: &str) -> Self {
+        Self {
+            refs: references(template),
+            paths: paths_at(template),
         }
-        let (value, state) = match (resolve(message, &r.path), &r.default) {
-            (Ok(found), _) => (shown(found), "read"),
-            (Err(_), Some(given)) => (given.clone(), "default"),
-            (Err(_), None) => (String::new(), "missing"),
-        };
-        rows.push(FieldRow {
-            field,
-            key,
-            value,
-            state,
-        });
     }
-    rows
+
+    /// The table for the scanned template read against `message`.
+    pub fn field_table(&self, message: &Value) -> Vec<FieldRow> {
+        let mut rows: Vec<FieldRow> = Vec::new();
+        let mut seen: HashSet<(String, String)> = HashSet::new();
+        for r in &self.refs {
+            let field = r.path.join(".");
+            let key = self.paths.get(&r.at).cloned().unwrap_or_default();
+            if !seen.insert((field.clone(), key.clone())) {
+                continue;
+            }
+            let (value, state) = match (resolve(message, &r.path), &r.default) {
+                (Ok(found), _) => (shown(found), "read"),
+                (Err(_), Some(given)) => (given.clone(), "default"),
+                (Err(_), None) => (String::new(), "missing"),
+            };
+            rows.push(FieldRow {
+                field,
+                key,
+                value,
+                state,
+            });
+        }
+        rows
+    }
 }

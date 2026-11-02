@@ -5,9 +5,10 @@ use serde::Serialize;
 use serde_json::Value;
 
 use super::explain::{defaults_filled, explain_missing, Note};
-use super::fields::{field_table, FieldRow};
+use super::fields::{Analysis, FieldRow};
+use super::scanner::Reference;
 use super::MAX_MESSAGE_BYTES;
-use crate::config::Profile;
+use crate::config::{Profile, Sink};
 use crate::translate::{self, RenderError};
 
 /// What a successful preview carries.
@@ -61,6 +62,9 @@ pub fn preview(profile: &Profile, payload: &[u8]) -> Result<Preview, Box<Failure
             fields: Vec::new(),
         }));
     }
+    // One scan of the template, shared by the table, the notes and the
+    // explanation of a failure.
+    let analysis = Analysis::of(&profile.body);
     match translate::prepare(profile, payload) {
         Ok(delivery) => {
             let message: Value = serde_json::from_slice(payload).unwrap_or(Value::Null);
@@ -68,15 +72,15 @@ pub fn preview(profile: &Profile, payload: &[u8]) -> Result<Preview, Box<Failure
                 profile: profile.name.clone(),
                 bytes: delivery.body.len(),
                 content_type: delivery.content_type,
-                notes: defaults_filled(&profile.body, &message),
-                fields: field_table(&profile.body, &message),
+                notes: defaults_filled(&analysis.refs, &message),
+                fields: analysis.field_table(&message),
                 body: delivery.body,
             })
         }
         Err(error) => {
-            let mut failure = Box::new(failure_of(profile, payload, &error));
+            let mut failure = Box::new(failure_of(profile, payload, &error, &analysis));
             if let Ok(message) = serde_json::from_slice::<Value>(payload) {
-                failure.fields = field_table(&profile.body, &message);
+                failure.fields = analysis.field_table(&message);
             }
             Err(failure)
         }
@@ -106,7 +110,12 @@ pub(super) fn line_of(detail: &str) -> Option<usize> {
     digits.parse().ok()
 }
 
-fn failure_of(profile: &Profile, payload: &[u8], error: &RenderError) -> Failure {
+fn failure_of(
+    profile: &Profile,
+    payload: &[u8],
+    error: &RenderError,
+    analysis: &Analysis,
+) -> Failure {
     let remedy = remedy_of(error);
     match error {
         RenderError::PayloadNotJson { detail, .. } => Failure {
@@ -118,20 +127,15 @@ fn failure_of(profile: &Profile, payload: &[u8], error: &RenderError) -> Failure
             line: None,
             fields: Vec::new(),
         },
-        RenderError::Render { detail, .. } => render_failure(profile, payload, detail, remedy),
+        // `prepare` renders the body first and the destination's path
+        // after it, and both raise `Render`: only an error of the body
+        // carries a line of the body template.
+        RenderError::Render { detail, .. } if body_fails(profile, payload) => {
+            render_failure(&analysis.refs, payload, detail, remedy)
+        }
         // The detail of these may carry the destination's path, which is
         // the credential of a webhook: it is never repeated here.
-        RenderError::Target { .. } => Failure {
-            error: "The destination address could not be built".to_string(),
-            why: "The destination's path uses a value this message does not provide, or builds \
-                  an address that is not allowed. The address itself is never shown."
-                .to_string(),
-            remedy,
-            kind: "template",
-            fixable: true,
-            line: None,
-            fields: Vec::new(),
-        },
+        RenderError::Render { .. } | RenderError::Target { .. } => target_failure(remedy),
         RenderError::InvalidJson { detail, .. } => Failure {
             error: "The translated body is not valid JSON".to_string(),
             why: format!(
@@ -147,13 +151,40 @@ fn failure_of(profile: &Profile, payload: &[u8], error: &RenderError) -> Failure
     }
 }
 
+fn target_failure(remedy: String) -> Failure {
+    Failure {
+        error: "The destination address could not be built".to_string(),
+        why: "The destination's path uses a value this message does not provide, or builds \
+              an address that is not allowed. The address itself is never shown."
+            .to_string(),
+        remedy,
+        kind: "template",
+        fixable: true,
+        line: None,
+        fields: Vec::new(),
+    }
+}
+
+/// Whether the body template alone fails to render: the profile is tried
+/// again with a sink that has no templated path.
+fn body_fails(profile: &Profile, payload: &[u8]) -> bool {
+    let mut body_only = profile.clone();
+    body_only.sink = Sink::Kyu {
+        topic: String::new(),
+    };
+    matches!(
+        translate::prepare(&body_only, payload),
+        Err(RenderError::Render { .. })
+    )
+}
+
 /// The failure for a template the engine could not render: the line it
 /// named and, when the cause is a field the message lacks, which field.
-fn render_failure(profile: &Profile, payload: &[u8], detail: &str, remedy: String) -> Failure {
+fn render_failure(refs: &[Reference], payload: &[u8], detail: &str, remedy: String) -> Failure {
     let line = line_of(detail);
     let message: Value = serde_json::from_slice(payload).unwrap_or(Value::Null);
     let why = line
-        .and_then(|n| explain_missing(&profile.body, n, &message))
+        .and_then(|n| explain_missing(refs, n, &message))
         .unwrap_or_else(|| detail.replace("<string>", "the template"));
     // The engine's remedy is about a field the message lacks; a syntax error
     // (most often a draft being typed) needs the line fixed instead.

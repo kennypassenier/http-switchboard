@@ -74,6 +74,20 @@ impl Registry {
             .health = Some(health);
     }
 
+    /// Record `health` and return what it replaced, in one locked step.
+    /// A caller that reads the old value, awaits something and then writes
+    /// can lose a transition to a concurrent request; this cannot. Nothing
+    /// remembered reads as `Starting`.
+    pub fn swap_health(&self, profile: &str, health: Health) -> Health {
+        let previous = {
+            let mut guard = self.profiles.lock().unwrap();
+            let stats = guard.entry(profile.to_string()).or_default();
+            stats.health.replace(health)
+        };
+        self.history.note_health(profile, health);
+        previous.unwrap_or(Health::Starting)
+    }
+
     /// Put every profile back to `Starting` (H1/V1, 3.0.0): the dashboard's
     /// "Recheck profiles" button.
     ///

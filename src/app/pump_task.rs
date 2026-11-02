@@ -37,6 +37,7 @@ pub(super) async fn run(
             return;
         }
         adopt_reload(&ctx.profiles, &mut profile, &mut state);
+        adopt_registry_health(&ctx.registry, &profile.name, &mut state);
         let before = state.health;
         let started = Instant::now();
         let step = pump_once(
@@ -82,9 +83,23 @@ fn adopt_reload(profiles: &ProfileStore, profile: &mut Arc<Profile>, state: &mut
         return;
     }
     if now.lease_ms != profile.lease_ms || now.max_attempts != profile.max_attempts {
+        // A push that already succeeded means the subscription exists, so
+        // the new policy goes in before the next poll, not after it.
+        state.policy_before_poll |= state.policy_pushed;
         state.policy_pushed = false;
+        state.policy_last_try = None;
     }
     *profile = now;
+}
+
+/// A "Recheck" resets the registry to `Starting` from outside the pump.
+/// The pump compares against what the registry says now, so a profile that
+/// fails again after a recheck is a transition again (and is noted again)
+/// instead of looking unchanged to a pump that still remembers `Failing`.
+fn adopt_registry_health(registry: &Registry, name: &str, state: &mut PumpState) {
+    if let Some(current) = registry.health_of(name) {
+        state.health = current;
+    }
 }
 
 /// Count and log what one pump step did.
@@ -112,7 +127,9 @@ fn record_step(
         Step::DeadLettered { reason, .. } => {
             registry.record(&profile.name, false, duration_ms);
             obs::log_message(&profile.name, "kyu", "dead-lettered", duration_ms, 1);
-            obs::log_transition(&profile.name, before, after, reason);
+            if before != after {
+                obs::log_transition(&profile.name, before, after, reason);
+            }
         }
         Step::Idle | Step::TopicMissing => {}
         // The remedy in these carries the specifics — which

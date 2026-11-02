@@ -2,6 +2,7 @@
 //! `preview` and `example_message`.
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use axum::body::Bytes;
 use axum::extract::{DefaultBodyLimit, Path, State};
@@ -10,12 +11,24 @@ use axum::response::{Html, IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Extension, Router};
 use serde_json::{json, Value};
+use tokio::sync::Semaphore;
 
 use super::example::example_message;
-use super::preview::{preview, Failure};
-use super::scratch::{open, with_template, ENVELOPE_TYPE};
+use super::preview::{preview, Failure, Preview};
+use super::scratch::{open, refused, with_template, ENVELOPE_TYPE};
 use super::{MAX_MESSAGE_BYTES, MAX_TEMPLATE_BYTES, PAGE_ROUTE, PREVIEW_ROUTE};
+use crate::config::Profile;
 use crate::dashboard::{Profiles, WEB_MOUNT};
+
+/// The longest one preview may take before it is answered with a failure.
+const PREVIEW_TIMEOUT: Duration = Duration::from_secs(5);
+
+/// How many previews may render at once. A preview renders a draft template
+/// on a blocking thread that cannot be cancelled, so the slot is held by
+/// that thread until it ends, not by the request that gave up waiting.
+const MAX_CONCURRENT_PREVIEWS: usize = 4;
+
+static PREVIEW_SLOTS: Semaphore = Semaphore::const_new(MAX_CONCURRENT_PREVIEWS);
 
 /// Register the page, its place in the navigation and the route it posts
 /// to. Called from `dashboard::install`.
@@ -43,11 +56,15 @@ fn json(status: StatusCode, body: String) -> Response {
 }
 
 /// The answer for a refused preview: 413 for size, 400 for a request the
-/// route cannot read, 422 for the rest.
+/// route cannot read, 429 when busy, 504 when it took too long, 503 when
+/// the work itself died, 422 for the rest.
 fn refusal(failure: &Failure) -> Response {
     let status = match failure.kind {
         "size" => StatusCode::PAYLOAD_TOO_LARGE,
         "request" => StatusCode::BAD_REQUEST,
+        "busy" => StatusCode::TOO_MANY_REQUESTS,
+        "timeout" => StatusCode::GATEWAY_TIMEOUT,
+        "internal" => StatusCode::SERVICE_UNAVAILABLE,
         _ => StatusCode::UNPROCESSABLE_ENTITY,
     };
     json(status, serde_json::to_string(failure).unwrap_or_default())
@@ -99,19 +116,57 @@ async fn preview_route(
         Ok(parts) => parts,
         Err(failure) => return refusal(&failure),
     };
-    let profile = match draft {
-        Some(template) => match with_template(&profile, &template) {
-            Ok(draft) => Arc::new(draft),
-            Err(failure) => return refusal(&failure),
-        },
-        None => profile,
-    };
-    match preview(&profile, &message) {
+    match run_guarded(profile, message, draft).await {
         Ok(ok) => json(
             StatusCode::OK,
             serde_json::to_string(&ok).unwrap_or_default(),
         ),
         Err(failure) => refusal(&failure),
+    }
+}
+
+/// Check the draft and render the preview on a blocking thread, under a
+/// slot and a deadline. Every way this can go wrong is a [`Failure`] in
+/// words, never a 500 and never a panic in the handler.
+async fn run_guarded(
+    profile: Arc<Profile>,
+    message: Vec<u8>,
+    draft: Option<String>,
+) -> Result<Preview, Box<Failure>> {
+    let Ok(slot) = PREVIEW_SLOTS.try_acquire() else {
+        return Err(refused(
+            "Too many previews are running",
+            format!("{MAX_CONCURRENT_PREVIEWS} previews are already being worked out."),
+            "Wait a moment and try again.",
+            "busy",
+        ));
+    };
+    let job = tokio::task::spawn_blocking(move || {
+        let _slot = slot;
+        let profile = match draft {
+            Some(template) => Arc::new(with_template(&profile, &template)?),
+            None => profile,
+        };
+        preview(&profile, &message)
+    });
+    match tokio::time::timeout(PREVIEW_TIMEOUT, job).await {
+        Ok(Ok(result)) => result,
+        Ok(Err(error)) => Err(refused(
+            "The preview stopped unexpectedly",
+            format!("The work of rendering it ended abnormally ({error})."),
+            "Try again; if it keeps happening, simplify the template and report it.",
+            "internal",
+        )),
+        Err(_) => Err(refused(
+            "The preview took too long",
+            format!(
+                "Rendering did not finish within {} s, which usually means a loop or a very \
+                 large expansion in the template.",
+                PREVIEW_TIMEOUT.as_secs()
+            ),
+            "Simplify the loops in the template, or try a smaller message.",
+            "timeout",
+        )),
     }
 }
 

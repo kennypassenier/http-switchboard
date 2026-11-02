@@ -24,6 +24,7 @@
 //! public paths (`crate::pump::Health`, `crate::pump::pump_once`, …) stay
 //! as they were.
 
+mod policy;
 mod turn;
 mod types;
 

@@ -62,7 +62,7 @@ mod view;
 
 use std::sync::Arc;
 
-use chassis::shell::webapp::WebApp;
+use chassis::shell::webapp::{Pwa, WebApp};
 
 use assets::WEB_FILES;
 use profiles_section::ProfilesSection;
@@ -105,5 +105,19 @@ pub fn install(app: &mut chassis::App, profiles: Arc<Profiles>) {
     app.dashboard_routes(profiles.routes());
     crate::dashboard_reloads::install(app, Arc::clone(profiles.store()));
     crate::dashboard_translate::install(app, Arc::clone(&profiles));
-    app.webapp(WebApp::embedded(WEB_FILES).at(WEB_MOUNT));
+    app.webapp(
+        WebApp::embedded(WEB_FILES)
+            .at(WEB_MOUNT)
+            .pwa(install_settings()),
+    );
+}
+
+/// The name under the home-screen icon when the dashboard is installed as an
+/// app: the kit would cut the brand at 12 characters ("HTTPSwitchbo").
+const INSTALL_SHORT_NAME: &str = "Switchboard";
+
+/// How the dashboard installs as an app. The icons are the files in
+/// `web/pwa/`; the kit lists them in the manifest it builds.
+fn install_settings() -> Pwa {
+    Pwa::new().short_name(INSTALL_SHORT_NAME)
 }

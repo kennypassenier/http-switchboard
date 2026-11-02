@@ -3,7 +3,8 @@
 //! refuses with a [`ConfigError`] that says what to do.
 
 use super::defaults::{
-    LEASE_MARGIN_MS, MAX_NAME_LEN, MIN_URL_LEN_EXCLUSIVE, RESERVED_PATHS, RESERVED_TOPIC_PREFIX,
+    LEASE_MARGIN_MS, MAX_NAME_LEN, MAX_RETRIES, MIN_URL_LEN_EXCLUSIVE, RESERVED_PATHS,
+    RESERVED_TOPIC_PREFIX,
 };
 use super::error::ConfigError;
 use super::model::{Profile, Source};
@@ -110,7 +111,7 @@ pub(super) fn check_lease_budget(file: &str, profile: &Profile) -> Result<(), Co
     if !matches!(profile.source, Source::Kyu { .. }) {
         return Ok(());
     }
-    let needed = profile.retry_budget_ms() + LEASE_MARGIN_MS;
+    let needed = profile.retry_budget_ms().saturating_add(LEASE_MARGIN_MS);
     if needed > profile.lease_ms {
         return Err(ConfigError::LeaseBudget {
             file: file.to_string(),
@@ -118,6 +119,77 @@ pub(super) fn check_lease_budget(file: &str, profile: &Profile) -> Result<(), Co
             needed_ms: needed,
             lease_ms: profile.lease_ms,
         });
+    }
+    Ok(())
+}
+
+/// Numbers that must be positive or bounded before anything computes with
+/// them: a zero timeout fails every attempt at once, a zero lease or
+/// attempt cap makes the hub drop or dead-letter at the first claim, and an
+/// unbounded retry count drives the budget arithmetic and the pause list.
+pub(super) fn check_limits(file: &str, profile: &Profile) -> Result<(), ConfigError> {
+    let out_of_range = |field: &'static str,
+                        value: u64,
+                        rule: &'static str,
+                        remedy: &'static str| ConfigError::OutOfRange {
+        file: file.to_string(),
+        profile: profile.name.clone(),
+        field,
+        value,
+        rule,
+        remedy,
+    };
+    if profile.timeout_ms == 0 {
+        return Err(out_of_range("timeout_ms", 0, "it must be at least 1", "set a timeout in milliseconds, e.g. 10000 — with 0 every attempt times out before it starts"));
+    }
+    if profile.retries > MAX_RETRIES {
+        return Err(out_of_range("retries", u64::from(profile.retries), "at most 10 retries are allowed", "lower it — every retry doubles its pause, so past this the pauses alone outlast any lease"));
+    }
+    if profile.lease_ms == 0 {
+        return Err(out_of_range("lease_ms", 0, "it must be at least 1", "set the lease in milliseconds, e.g. 60000 — a zero lease returns every message to the hub the moment it is claimed"));
+    }
+    if profile.max_attempts == 0 {
+        return Err(out_of_range("max_attempts", 0, "it must be at least 1", "set how many times the hub may offer a message, e.g. 5 — zero would dead-letter every message unseen"));
+    }
+    Ok(())
+}
+
+/// The method and header names/values a url sink will send, parsed now so
+/// a typo stops the service at startup instead of failing (and being
+/// retried) on every message. Values are never echoed: they may be secrets.
+pub(super) fn check_http_parts(file: &str, profile: &Profile) -> Result<(), ConfigError> {
+    let bad =
+        |what: String, problem: &'static str, remedy: &'static str| ConfigError::BadHttpPart {
+            file: file.to_string(),
+            profile: profile.name.clone(),
+            what,
+            problem,
+            remedy,
+        };
+    if let super::model::Sink::Url { method, .. } = &profile.sink {
+        if reqwest::Method::from_bytes(method.as_bytes()).is_err() {
+            return Err(bad(
+                format!("method '{method}'"),
+                "not an HTTP method token",
+                "use a plain method name such as POST, PUT or PATCH",
+            ));
+        }
+    }
+    for (name, value) in &profile.headers {
+        if reqwest::header::HeaderName::from_bytes(name.as_bytes()).is_err() {
+            return Err(bad(
+                format!("header name '{name}'"),
+                "not a valid header name",
+                "use letters, digits and dashes only",
+            ));
+        }
+        if reqwest::header::HeaderValue::from_str(value.expose()).is_err() {
+            return Err(bad(
+                format!("the value of header '{name}'"),
+                "it holds a character a header cannot carry, such as a line break",
+                "remove it from the value (or from the variable it references)",
+            ));
+        }
     }
     Ok(())
 }

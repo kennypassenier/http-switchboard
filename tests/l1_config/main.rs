@@ -80,5 +80,6 @@ body = "{}"
 
 mod consistency;
 mod endpoints;
+mod limits;
 mod loading;
 mod structure;
