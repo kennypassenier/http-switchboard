@@ -27,15 +27,17 @@ use axum::response::IntoResponse;
 use axum::routing::post;
 use axum::Router;
 
+mod answer;
 mod standalone;
+use answer::{answer, Verdict};
 pub use standalone::router;
 
 use crate::adapters::{deliver_with_retry, Clock, Sink};
 use crate::config::{Config, Profile, Source};
 use crate::obs::Registry;
-use crate::pump::Health;
+use crate::pump::{give_up, Health};
 use crate::reload::ProfileStore;
-use crate::translate;
+use crate::translate::{self, RenderError};
 
 /// A body cap exists from day one even though the configurable limits of
 /// W9 are rated Later: the cap is three lines, and its absence is
@@ -120,22 +122,26 @@ async fn handle(State(state): State<Arc<Inbound>>, body: Bytes) -> impl IntoResp
         .iter()
         .filter_map(|name| state.store.get(name))
         .collect();
-    let mut failures = Vec::new();
+    let mut verdicts = Vec::new();
     for profile in &profiles {
-        if let Some(failure) = deliver_one(&state, profile, &body).await {
-            failures.push(failure);
-        }
+        verdicts.push(deliver_one(&state, profile, &body).await);
     }
-    answer(&failures)
+    answer(&verdicts)
 }
 
 /// Translate and deliver one message for one profile, then record what
-/// happened (counters, health transition, the message log line). Returns
-/// the failure sentence for the sender, or `None` when it was delivered.
-async fn deliver_one(state: &Inbound, profile: &Profile, body: &Bytes) -> Option<String> {
+/// happened (counters, health transition, the message log line).
+async fn deliver_one(state: &Inbound, profile: &Profile, body: &Bytes) -> Verdict {
     let started = std::time::Instant::now();
-    let (failure, attempts) = match translate::prepare(profile, body) {
-        Err(e) => (Some(format!("{e}")), 0),
+    let (verdict, attempts) = match translate::prepare(profile, body) {
+        Err(RenderError::PayloadNotJson { detail, .. }) => (Verdict::BadJson(detail), 0),
+        Err(e) => (
+            Verdict::GaveUp {
+                failure: e.to_string(),
+                summary: give_up::render_summary(&e).to_string(),
+            },
+            0,
+        ),
         Ok(delivery) => {
             let outcome = deliver_with_retry(
                 profile,
@@ -144,22 +150,55 @@ async fn deliver_one(state: &Inbound, profile: &Profile, body: &Bytes) -> Option
                 state.clock.as_ref(),
             )
             .await;
-            let failure = outcome
-                .result
-                .err()
-                .map(|e| format!("profile '{}': {e}", profile.name));
-            (failure, outcome.attempts)
+            let verdict = match outcome.result {
+                Ok(()) => Verdict::Delivered,
+                Err(e) => match e.permanent_status() {
+                    Some(status) => Verdict::GaveUp {
+                        failure: format!("profile '{}': {e}", profile.name),
+                        summary: give_up::refused_summary(status),
+                    },
+                    None => Verdict::Failed(format!("profile '{}': {e}", profile.name)),
+                },
+            };
+            (verdict, outcome.attempts)
         }
     };
     let duration_ms = started.elapsed().as_millis() as u64;
-    record(state, profile, failure.is_none(), duration_ms, attempts).await;
-    failure
+    record(state, profile, &verdict, duration_ms, attempts).await;
+    verdict
 }
 
 /// Count the outcome, note a health transition (and report it, AR12) and
-/// write the per-message log line.
-async fn record(state: &Inbound, profile: &Profile, ok: bool, duration_ms: u64, attempts: u32) {
-    state.registry.record(&profile.name, ok, duration_ms);
+/// write the per-message log line. A message that cannot be used is
+/// counted as given up and leaves the health alone: the sender is told
+/// (400 or 502), but the profile is not "failing" because of one bad
+/// message.
+async fn record(
+    state: &Inbound,
+    profile: &Profile,
+    verdict: &Verdict,
+    duration_ms: u64,
+    attempts: u32,
+) {
+    let ok = match verdict {
+        Verdict::GaveUp { summary, .. } => {
+            state.registry.record_given_up(&profile.name, true, summary);
+            crate::obs::log_message(&profile.name, "http", "given-up", duration_ms, attempts);
+            return;
+        }
+        Verdict::BadJson(_) => {
+            state
+                .registry
+                .record_given_up(&profile.name, true, give_up::NOT_JSON);
+            crate::obs::log_message(&profile.name, "http", "bad-json", duration_ms, attempts);
+            return;
+        }
+        Verdict::Delivered => true,
+        Verdict::Failed(_) => false,
+    };
+    state
+        .registry
+        .record_offer(&profile.name, ok, duration_ms, true);
     let (now, why) = if ok {
         (Health::Working, "back to normal")
     } else {
@@ -180,22 +219,4 @@ async fn record(state: &Inbound, profile: &Profile, ok: bool, duration_ms: u64, 
     .await;
     let outcome = if ok { "delivered" } else { "failed" };
     crate::obs::log_message(&profile.name, "http", outcome, duration_ms, attempts);
-}
-
-/// The sender's answer. AR4: with several profiles on one path, all must
-/// succeed or the sender is told it failed — and the documented
-/// consequence is that their retry re-delivers the branch that did succeed.
-fn answer(failures: &[String]) -> axum::response::Response {
-    if failures.is_empty() {
-        return (StatusCode::OK, "delivered\n").into_response();
-    }
-    (
-        StatusCode::BAD_GATEWAY,
-        format!(
-            "not delivered.\n{}\nWhat now: this message was NOT accepted; send it again once \
-             the cause above is addressed.\n",
-            failures.join("\n")
-        ),
-    )
-        .into_response()
 }

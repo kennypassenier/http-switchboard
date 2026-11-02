@@ -127,6 +127,10 @@ pub struct PumpState {
     /// logged about every turn.
     pub policy_last_try: Option<std::time::Instant>,
     pub policy_last_error: Option<String>,
+    /// Whether the message of the latest turn is new to us: the hub's
+    /// `attempt` was 1. A message handed back and offered again is a
+    /// further attempt, not a further message.
+    pub first_sight: bool,
 }
 
 impl Default for PumpState {
@@ -138,6 +142,7 @@ impl Default for PumpState {
             policy_before_poll: false,
             policy_last_try: None,
             policy_last_error: None,
+            first_sight: true,
         }
     }
 }
@@ -171,7 +176,12 @@ pub enum Step {
     /// is not JSON); dead-lettered so it is visible instead of looping.
     DeadLettered {
         id: String,
+        /// Why, with the remedy: for the log.
         reason: String,
+        /// One plain line for the dashboard. Written from fixed words (plus
+        /// a status number), never from the error text, which can carry a
+        /// destination path or a receiver's own words.
+        summary: String,
     },
     Idle,
     TopicMissing,

@@ -9,6 +9,27 @@ endpoints and the CLI verbs — not about the internals.
 
 ### Changed
 
+- **Give up at once on a permanent refusal** (review 2026-11-02): a
+  destination answering 400, 413 or 422 dead-letters the kyu message at
+  once, with the reason in the log, instead of being re-offered up to
+  `max_attempts` times. 401, 403, 404, 5xx and transport errors are handed
+  back as before.
+- **Malformed JSON is a 400, not a failure** (review 2026-11-02, endpoint
+  contract change): an inbound HTTP path now answers a body that is not
+  valid JSON with 400 (was 502) and a what/why/what-now text that never
+  repeats the body; the profile's state does not change and nothing is
+  reported as failing.
+- **Messages are counted once** (review 2026-11-02): `received` counts each
+  message once (a message the hub offers again adds an attempt only); the
+  new `attempts` field in `/profiles.json` and `switchboard_message_attempts_total`
+  count the offers; the average and `switchboard_delivery_duration_ms_total`
+  cover successful deliveries only, like the history.
+- **A message that cannot be used no longer changes the state** (review
+  2026-11-02): not-JSON, unrenderable and permanently refused messages are
+  counted per profile (`given_up`, `switchboard_messages_given_up_total`),
+  with the time and a one-line reason of the last one
+  (`last_given_up_unix`, `last_given_up_reason`), instead of turning the
+  profile to failing.
 - **Needs attention says each problem once** (UX review 2026-11-01): one
   alert per profile that is not well, with what, why, what now and a
   *Recheck <name>* button. The attention band's copy, *See the fix* and the
@@ -41,6 +62,17 @@ endpoints and the CLI verbs — not about the internals.
 
 ### Fixed
 
+- **Reloads section** (UX pass 2026-11-02): the inner card no longer sticks out
+  below its section, the title shows once (the counts line stays) and the
+  description names the command without backticks.
+- **Paths and addresses wrap only after dots, colons and slashes** (Path of a
+  profile at 390 px, Where each field goes): `homeassistant.lan:8123` and
+  `alerts.0.labels.severity` no longer break inside a word or number.
+- **Last 24 hours head**: the "read" timestamp is gone (it crowded View
+  options and wrapped on a phone); one sentence says since when it records.
+- **Navigation label** for Try a translation is "Translate", so the phone tab
+  bar no longer cuts it; the page heading stays.
+- `web/history.js` split: the uptime strips live in `web/history-strips.js`.
 - **Status page, browser side** (review 2026-11-02): a recheck's refresh is no
   longer lost behind a poll in flight; a wrong-shaped `/profiles.json` is an
   error, not a crash, and one failing view no longer stops the poll; Last 24

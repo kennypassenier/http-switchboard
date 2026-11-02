@@ -79,7 +79,7 @@ fn judge(
     };
     let by_count = if failed == 0 {
         None
-    } else if delivered == 0 && received > 0 {
+    } else if delivered == 0 && (received > 0 || failed > 0) {
         Some(("down", "all-failed"))
     } else {
         Some(("degraded", "failing"))

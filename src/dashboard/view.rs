@@ -14,11 +14,22 @@ pub struct ProfileView {
     pub name: String,
     /// `starting`, `working`, `failing`, `denied` or `hub-down`.
     pub state: &'static str,
+    /// Messages seen, each once (a message the hub offers again is not
+    /// counted again).
     pub received: u64,
+    /// Times a message was worked on, re-offers included.
+    pub attempts: u64,
     pub delivered: u64,
     pub failed: u64,
-    /// Mean delivery time; `None` before the first message.
+    /// Mean time of the successful deliveries; `None` before the first.
     pub avg_ms: Option<u64>,
+    /// Messages given up on because they cannot be used (not JSON, no
+    /// render, or a permanent refusal), since start. Health is untouched.
+    pub given_up: u64,
+    /// Unix seconds of the last one.
+    pub last_given_up_unix: Option<u64>,
+    /// One plain-English line about the last one; no path, header or payload.
+    pub last_given_up_reason: Option<String>,
     pub last_success_unix: Option<u64>,
     pub source: EndView,
     pub sink: EndView,
@@ -108,16 +119,20 @@ fn sink_view(profile: &Profile) -> EndView {
 /// A profile's configuration and its counters (if any yet) as one view.
 pub(super) fn view_of(profile: &Profile, stats: Option<&ProfileStats>) -> ProfileView {
     let kyu_source = matches!(profile.source, Source::Kyu { .. });
-    let received = stats.map_or(0, |s| s.received);
+    let delivered = stats.map_or(0, |s| s.delivered);
     ProfileView {
         name: profile.name.clone(),
         state: state_word(stats.and_then(|s| s.health)),
-        received,
-        delivered: stats.map_or(0, |s| s.delivered),
+        received: stats.map_or(0, |s| s.received),
+        attempts: stats.map_or(0, |s| s.attempts),
+        delivered,
         failed: stats.map_or(0, |s| s.failed),
         avg_ms: stats
-            .filter(|_| received > 0)
-            .map(|s| s.duration_ms_total / received),
+            .filter(|_| delivered > 0)
+            .map(|s| s.duration_ms_total / delivered),
+        given_up: stats.map_or(0, |s| s.given_up),
+        last_given_up_unix: stats.and_then(|s| s.last_given_up_unix),
+        last_given_up_reason: stats.and_then(|s| s.last_given_up_reason.clone()),
         last_success_unix: stats.and_then(|s| s.last_success_unix),
         source: source_view(profile),
         sink: sink_view(profile),

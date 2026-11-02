@@ -98,6 +98,18 @@ impl Registry {
         );
         push_counter(
             &mut out,
+            "switchboard_message_attempts_total",
+            "Times a message was worked on, re-offers included.",
+            &per_profile(|s| s.attempts),
+        );
+        push_counter(
+            &mut out,
+            "switchboard_messages_given_up_total",
+            "Messages dead-lettered or rejected because they cannot be used.",
+            &per_profile(|s| s.given_up),
+        );
+        push_counter(
+            &mut out,
             "switchboard_messages_delivered_total",
             "Messages the destination accepted.",
             &per_profile(|s| s.delivered),
@@ -111,7 +123,7 @@ impl Registry {
         push_counter(
             &mut out,
             "switchboard_delivery_duration_ms_total",
-            "Time spent delivering, per profile.",
+            "Time spent on successful deliveries, per profile.",
             &per_profile(|s| s.duration_ms_total),
         );
         push_counter(

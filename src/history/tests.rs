@@ -75,3 +75,21 @@ fn a_slot_is_reused_after_24_hours_and_memory_stays_fixed() {
     }
     assert!(h.tracks.lock().unwrap().len() <= PROFILE_CAP);
 }
+
+#[test]
+fn a_re_offered_message_does_not_count_as_received_again_and_a_give_up_is_not_a_failure() {
+    let h = History::started_at(0);
+    h.record_offer_at("a", 50 * H + 1, false, 9, true);
+    h.record_offer_at("a", 50 * H + 2, true, 40, false);
+    h.record_given_up_at("a", 50 * H + 3, true);
+    let view = h.view_at(50 * H + 10, &names());
+    let hour = &view.profiles[0].hours[HOURS - 1];
+    assert_eq!((hour.received, hour.delivered, hour.failed), (2, 1, 1));
+    assert_eq!(hour.duration_ms, 40);
+
+    let quiet = History::started_at(0);
+    quiet.record_given_up_at("a", 50 * H + 3, true);
+    let view = quiet.view_at(50 * H + 10, &names());
+    let hour = &view.profiles[0].hours[HOURS - 1];
+    assert_eq!((hour.received, hour.failed, hour.state), (1, 0, "up"));
+}

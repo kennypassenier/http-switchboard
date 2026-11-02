@@ -49,19 +49,35 @@ impl History {
             .or_insert_with(Track::new)))
     }
 
-    /// One message finished (delivered or not) at `at` unix seconds.
+    /// One message finished (delivered or not) at `at` unix seconds, seen
+    /// for the first time.
     pub fn record_at(&self, profile: &str, at: u64, delivered: bool, duration_ms: u64) {
+        self.record_offer_at(profile, at, delivered, duration_ms, true);
+    }
+
+    /// One offer of a message finished at `at`. `first_sight` is false for
+    /// a message the hub handed out again: it is a further attempt, not a
+    /// further message, so `received` does not move (the same rule as the
+    /// registry's counters).
+    pub fn record_offer_at(
+        &self,
+        profile: &str,
+        at: u64,
+        delivered: bool,
+        duration_ms: u64,
+        first_sight: bool,
+    ) {
         self.with_track(profile, |track| {
             let hour = at / HOUR_SECS;
             let bucket = track.bucket(hour);
-            bucket.received = bucket.received.saturating_add(1);
+            if first_sight {
+                bucket.received = bucket.received.saturating_add(1);
+            }
             if delivered {
                 bucket.delivered = bucket.delivered.saturating_add(1);
                 bucket.duration_ms = bucket.duration_ms.saturating_add(duration_ms);
             } else {
                 bucket.failed = bucket.failed.saturating_add(1);
-            }
-            if !delivered {
                 track.last_failure_unix = Some(at);
             }
             if track.recent.len() == RECENT_CAP {
@@ -75,8 +91,34 @@ impl History {
         });
     }
 
+    /// A message was given up on at `at` (it cannot be used). It counts as
+    /// received when new, but it is neither a delivery nor a failure: the
+    /// hour does not turn red for a message that no retry could save.
+    pub fn record_given_up_at(&self, profile: &str, at: u64, first_sight: bool) {
+        self.with_track(profile, |track| {
+            if first_sight {
+                let bucket = track.bucket(at / HOUR_SECS);
+                bucket.received = bucket.received.saturating_add(1);
+            }
+        });
+    }
+
     pub fn record(&self, profile: &str, delivered: bool, duration_ms: u64) {
-        self.record_at(profile, now_unix(), delivered, duration_ms);
+        self.record_offer_at(profile, now_unix(), delivered, duration_ms, true);
+    }
+
+    pub fn record_offer(
+        &self,
+        profile: &str,
+        delivered: bool,
+        duration_ms: u64,
+        first_sight: bool,
+    ) {
+        self.record_offer_at(profile, now_unix(), delivered, duration_ms, first_sight);
+    }
+
+    pub fn record_given_up(&self, profile: &str, first_sight: bool) {
+        self.record_given_up_at(profile, now_unix(), first_sight);
     }
 
     /// The profile's health changed (or was reset) at `at`.

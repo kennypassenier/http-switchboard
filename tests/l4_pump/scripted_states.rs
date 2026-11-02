@@ -102,7 +102,7 @@ async fn ar7_a_message_that_can_never_render_is_dead_lettered_not_looped() {
     let step = pump_once(&p, &hub, &sink, &FakeClock::default(), &mut state).await;
 
     match step {
-        Step::DeadLettered { id, reason } => {
+        Step::DeadLettered { id, reason, .. } => {
             assert_eq!(id, "m1");
             assert!(reason.contains("What now:"), "no remedy: {reason}");
         }

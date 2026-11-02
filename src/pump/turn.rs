@@ -2,8 +2,10 @@
 //!
 //! Split into one function per outcome of the poll so each rule (replay on
 //! a missing topic, dead-letter what can never render, ack only after
-//! delivery, nack at once on a failed delivery) reads on its own.
+//! delivery, nack at once on a failed delivery, give up at once on a
+//! permanent refusal) reads on its own.
 
+use super::give_up;
 use super::policy;
 use super::types::{Health, Hub, HubMessage, Poll, PumpState, Step};
 use crate::adapters::{deliver_with_retry, Clock, Sink};
@@ -108,13 +110,23 @@ pub async fn pump_once(
         Ok(Poll::Empty) => idle(state),
         Ok(Poll::NotJson { id }) => {
             state.replay_next = false;
+            // The hub does not say how often it offered this one, but a
+            // dead letter ends it, so it is seen once.
+            state.first_sight = true;
             let reason =
                 "the message on the hub is not JSON, so no template can read it".to_string();
             lane.nack(&id, true).await;
-            Step::DeadLettered { id, reason }
+            // Health stays as it was: one unusable message says nothing
+            // about whether the next one will deliver.
+            Step::DeadLettered {
+                id,
+                reason,
+                summary: give_up::NOT_JSON.to_string(),
+            }
         }
         Ok(Poll::Message(message)) => {
             state.replay_next = false;
+            state.first_sight = message.attempt <= 1;
             handle_message(&lane, *message, sink, clock, state).await
         }
     }
@@ -147,11 +159,13 @@ async fn handle_message(
             // Rendering is pure: it will fail identically next time.
             // Dead-letter it so it is visible on the dashboard instead of
             // cycling until its attempts run out.
+            // The profile's health is left alone: this message is the
+            // problem, not the destination.
             lane.nack(&message.id, true).await;
-            state.health = Health::Failing;
             return Step::DeadLettered {
                 id: message.id,
                 reason: e.to_string(),
+                summary: give_up::render_summary(&e).to_string(),
             };
         }
     };
@@ -164,6 +178,18 @@ async fn handle_message(
                 id: message.id,
                 attempts: outcome.attempts,
                 ack_failed,
+            }
+        }
+        Err(e) if e.is_permanent() => {
+            // The destination will answer the same to the same bytes, so
+            // re-offering only burns the hub's attempts. Give up at once;
+            // the receiver's status is in the log, health stays as it was.
+            lane.nack(&message.id, true).await;
+            let status = e.permanent_status().unwrap_or_default();
+            Step::DeadLettered {
+                id: message.id,
+                reason: e.to_string(),
+                summary: give_up::refused_summary(status),
             }
         }
         Err(e) => {

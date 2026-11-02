@@ -35,7 +35,7 @@ mod retry;
 #[cfg(test)]
 mod tests;
 
-pub use error::DeliverError;
+pub use error::{DeliverError, PERMANENT_STATUSES};
 pub use http_sink::HttpSink;
 pub use kyu_hub::KyuHub;
 pub use retry::{deliver_with_retry, Outcome};

@@ -10,10 +10,23 @@ use crate::pump::Health;
 
 #[derive(Debug, Default, Clone)]
 pub struct ProfileStats {
+    /// Messages seen, each counted once: a kyu message the hub hands out
+    /// again is another attempt, not another message.
     pub received: u64,
+    /// Times a message was taken up and worked on, re-offers included.
+    pub attempts: u64,
     pub delivered: u64,
     pub failed: u64,
+    /// Time spent on the deliveries that succeeded (the history's rule),
+    /// so the average is `duration_ms_total / delivered`.
     pub duration_ms_total: u64,
+    /// Messages dead-lettered or rejected because they cannot be used,
+    /// since start. They never change `health`.
+    pub given_up: u64,
+    pub last_given_up_unix: Option<u64>,
+    /// One plain-English line about the last one; never a path, header
+    /// value or payload text.
+    pub last_given_up_reason: Option<String>,
     pub last_success_unix: Option<u64>,
     pub health: Option<Health>,
 }
@@ -49,19 +62,50 @@ impl Registry {
         *self.reloads.lock().unwrap().entry(outcome).or_default() += 1;
     }
 
+    /// A message seen for the first time was delivered or not.
     pub fn record(&self, profile: &str, delivered: bool, duration_ms: u64) {
+        self.record_offer(profile, delivered, duration_ms, true);
+    }
+
+    /// One offer of a message finished. `first_sight` is false for a
+    /// message the hub offered again, which adds an attempt but not a
+    /// message.
+    pub fn record_offer(
+        &self,
+        profile: &str,
+        delivered: bool,
+        duration_ms: u64,
+        first_sight: bool,
+    ) {
         let mut guard = self.profiles.lock().unwrap();
         let stats = guard.entry(profile.to_string()).or_default();
-        stats.received += 1;
-        stats.duration_ms_total += duration_ms;
+        stats.received += u64::from(first_sight);
+        stats.attempts += 1;
         if delivered {
             stats.delivered += 1;
+            stats.duration_ms_total += duration_ms;
             stats.last_success_unix = Some(now_unix());
         } else {
             stats.failed += 1;
         }
         drop(guard);
-        self.history.record(profile, delivered, duration_ms);
+        self.history
+            .record_offer(profile, delivered, duration_ms, first_sight);
+    }
+
+    /// A message was given up on because it cannot be used. Counted and
+    /// remembered, but the profile's health is left alone: the next
+    /// message may be fine.
+    pub fn record_given_up(&self, profile: &str, first_sight: bool, reason: &str) {
+        let mut guard = self.profiles.lock().unwrap();
+        let stats = guard.entry(profile.to_string()).or_default();
+        stats.received += u64::from(first_sight);
+        stats.attempts += 1;
+        stats.given_up += 1;
+        stats.last_given_up_unix = Some(now_unix());
+        stats.last_given_up_reason = Some(reason.to_string());
+        drop(guard);
+        self.history.record_given_up(profile, first_sight);
     }
 
     pub fn set_health(&self, profile: &str, health: Health) {

@@ -57,6 +57,7 @@ pub(super) async fn run(
             duration_ms,
             before,
             state.health,
+            state.first_sight,
         );
         note_transition(
             ctx.registry.as_ref(),
@@ -110,26 +111,35 @@ fn record_step(
     duration_ms: u64,
     before: Health,
     after: Health,
+    first_sight: bool,
 ) {
     match step {
         Step::Delivered {
             attempts,
             ack_failed,
             ..
-        } => record_delivered(registry, profile, duration_ms, *attempts, *ack_failed),
+        } => record_delivered(
+            registry,
+            profile,
+            (duration_ms, first_sight),
+            *attempts,
+            *ack_failed,
+        ),
         Step::HandedBack {
             attempts, reason, ..
         } => {
-            registry.record(&profile.name, false, duration_ms);
+            registry.record_offer(&profile.name, false, duration_ms, first_sight);
             obs::log_message(&profile.name, "kyu", "handed-back", duration_ms, *attempts);
             obs::log_warn(&profile.name, "delivery_failed", reason);
         }
-        Step::DeadLettered { reason, .. } => {
-            registry.record(&profile.name, false, duration_ms);
+        Step::DeadLettered {
+            reason, summary, ..
+        } => {
+            registry.record_given_up(&profile.name, first_sight, summary);
             obs::log_message(&profile.name, "kyu", "dead-lettered", duration_ms, 1);
-            if before != after {
-                obs::log_transition(&profile.name, before, after, reason);
-            }
+            // Health did not move, so this is not a transition: it is a
+            // warning that one message was given up on, and why.
+            obs::log_warn(&profile.name, "dead_lettered", reason);
         }
         Step::Idle | Step::TopicMissing => {}
         // The remedy in these carries the specifics — which
@@ -146,11 +156,11 @@ fn record_step(
 fn record_delivered(
     registry: &Registry,
     profile: &Profile,
-    duration_ms: u64,
+    (duration_ms, first_sight): (u64, bool),
     attempts: u32,
     ack_failed: bool,
 ) {
-    registry.record(&profile.name, true, duration_ms);
+    registry.record_offer(&profile.name, true, duration_ms, first_sight);
     obs::log_message(&profile.name, "kyu", "delivered", duration_ms, attempts);
     if ack_failed {
         obs::log_warn(

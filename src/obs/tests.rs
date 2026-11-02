@@ -41,7 +41,7 @@ fn w6_the_counters_and_the_duration_move_as_expected() {
         "{text}"
     );
     assert!(
-        text.contains(r#"switchboard_delivery_duration_ms_total{profile="a"} 42"#),
+        text.contains(r#"switchboard_delivery_duration_ms_total{profile="a"} 12"#),
         "the duration W6 asks for is missing: {text}"
     );
 }
@@ -55,4 +55,27 @@ fn w7_a_health_body_carries_names_and_never_content() {
     let parsed: serde_json::Value = serde_json::from_str(&body).expect("valid JSON");
     assert_eq!(parsed["profiles"][0]["name"], "alertmanager");
     assert!(parsed["profiles"][0]["last_success_age_s"].is_number());
+}
+
+#[test]
+fn a_re_offered_message_is_one_message_and_two_attempts() {
+    let registry = Registry::new();
+    registry.record_offer("a", false, 30, true);
+    registry.record_offer("a", true, 10, false);
+    registry.record_given_up("a", true, "the message was not JSON");
+
+    let s = &registry.snapshot()["a"];
+    assert_eq!((s.received, s.attempts), (2, 3));
+    assert_eq!((s.delivered, s.failed, s.given_up), (1, 1, 1));
+    // Only the successful delivery's time counts, as in the history.
+    assert_eq!(s.duration_ms_total, 10);
+    assert_eq!(
+        s.last_given_up_reason.as_deref(),
+        Some("the message was not JSON")
+    );
+    assert_eq!(
+        registry.health_of("a"),
+        None,
+        "giving up leaves health alone"
+    );
 }

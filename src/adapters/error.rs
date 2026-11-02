@@ -25,7 +25,31 @@ pub enum DeliverError {
     Request { detail: String },
 }
 
+/// Statuses a destination answers when it will never take THIS message:
+/// bad request, too large, unprocessable. Retrying or re-offering the same
+/// bytes gets the same answer, so the pump dead-letters at once. 401, 403
+/// and 404 are deliberately absent: a rotated token or a recreated webhook
+/// is fixed on the destination's side and the message is fine, so those
+/// keep being handed back.
+pub const PERMANENT_STATUSES: [u16; 3] = [400, 413, 422];
+
 impl DeliverError {
+    /// Whether the destination refused this message for good (see
+    /// [`PERMANENT_STATUSES`]).
+    pub fn is_permanent(&self) -> bool {
+        self.permanent_status().is_some()
+    }
+
+    /// The status of a permanent refusal, `None` for anything else.
+    pub fn permanent_status(&self) -> Option<u16> {
+        match self {
+            DeliverError::Status { status, .. } if PERMANENT_STATUSES.contains(status) => {
+                Some(*status)
+            }
+            _ => None,
+        }
+    }
+
     /// Whether trying again could plausibly help. A 400 will be a 400
     /// again; a 503 or a timeout may not be.
     pub fn is_retryable(&self) -> bool {

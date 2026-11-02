@@ -140,15 +140,32 @@ produces a duplicate by construction.
 *Proven by* `w3_two_failures_then_success_is_one_delivery_and_three_attempts`
 and `k10_a_retry_budget_that_does_not_fit_the_lease_is_refused`.
 
-A message that can **never** work — not JSON, or missing a field the
-template needs — is dead-lettered once so it becomes visible, instead of
-cycling until its attempts run out.
-*Proven by* `k2_e2e_a_message_that_can_never_work_is_settled_not_looped`.
+A message that can **never** work — not JSON, missing a field the
+template needs, or refused by the destination with 400, 413 or 422 — is
+dead-lettered at once (the reason is in the log) instead of cycling until
+its attempts run out. Other refusals (401, 403, 404, 5xx, no answer) are
+handed back as before, because fixing the destination fixes them. Giving up
+on a message does **not** change the profile's state: the profile page
+counts them (*given up*, since start) and keeps the time and a one-line
+reason of the last one, which never holds the destination address, a header
+or the message text.
+*Proven by* `k2_e2e_a_message_that_can_never_work_is_settled_not_looped`,
+`permanent_statuses_are_dead_lettered_at_once_and_leave_health_alone` and
+`other_refusals_keep_being_handed_back`.
+
+*Received* counts each message once: a message handed back and offered
+again is another **attempt**, not another message. The average time is the
+mean of the successful deliveries only, the same as the 24-hour history.
+*Proven by* `a_re_offered_message_is_one_message_and_two_attempts` and
+`first_sight_follows_the_hubs_attempt_number`.
 
 ### From an incoming webhook (W1, W12)
 
 The sender is answered only after the delivery succeeded. If it failed,
-the sender gets a 502 saying so — because this service stores nothing,
+the sender gets a 502 saying so (a body that is not valid JSON gets a 400
+instead, with what is wrong, why and what to do, and without repeating the
+body; that is the sender's mistake, so the profile's state does not change)
+— because this service stores nothing,
 answering "accepted" and failing afterwards would lose the message while
 the sender believed it arrived.
 *Proven by* `w1_the_sender_is_told_the_truth_when_the_destination_refuses`.
@@ -170,7 +187,7 @@ and `k10_forwarding_is_refused_where_there_is_nobody_to_answer`.
 |---|---|
 | `GET /healthz` | 200 while the process is alive, with each profile's state and how long ago it last succeeded. |
 | `GET /healthz?strict=1` | 503 when any profile is failing, denied or cut off. This is the one a monitor should watch. |
-| `GET /metrics` | Prometheus counters per profile: received, delivered, failed, and delivery duration. |
+| `GET /metrics` | Prometheus counters per profile: received, attempts, delivered, failed, given up, and the duration of successful deliveries. |
 
 The split is deliberate: the container's own healthcheck uses plain
 `/healthz`, so the orchestrator does not restart this service because

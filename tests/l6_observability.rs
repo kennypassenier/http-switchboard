@@ -119,7 +119,7 @@ async fn w6_metrics_move_after_a_success_and_a_failure() {
     let (base, _registry) = serve(&good.base_url).await;
 
     assert_eq!(post(&format!("{base}/hook"), r#"{"x": 1}"#).await, 200);
-    // A body that cannot render counts as received and failed.
+    // A body that cannot render is given up on: received, not failed.
     assert_eq!(post(&format!("{base}/hook"), r#"{"nope": 1}"#).await, 502);
 
     let (status, text) = get(&format!("{base}/metrics")).await;
@@ -134,7 +134,11 @@ async fn w6_metrics_move_after_a_success_and_a_failure() {
         "{text}"
     );
     assert!(
-        text.contains(r#"switchboard_messages_failed_total{profile="hook"} 1"#),
+        text.contains(r#"switchboard_messages_failed_total{profile="hook"} 0"#),
+        "{text}"
+    );
+    assert!(
+        text.contains(r#"switchboard_messages_given_up_total{profile="hook"} 1"#),
         "{text}"
     );
     assert!(
