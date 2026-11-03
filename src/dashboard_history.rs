@@ -87,8 +87,8 @@ impl StatusSection for FiguresSection {
   <div class="hsb-h-toolbar">
     <p class="kp-card__body" id="hsb-h-body"></p>
     <div class="kp-card__actions">
-      <button type="button" class="kp-button kp-button--sm" id="hsb-h-options-open" popovertarget="hsb-h-options" aria-haspopup="dialog" style="anchor-name: --hsb-h-options" hidden>View options ▾</button>
-      <div popover="auto" id="hsb-h-options" class="kp-popover hsb-h-options" style="position-anchor: --hsb-h-options" role="dialog" aria-label="View options">
+      <button type="button" class="kp-button kp-button--sm" id="hsb-h-options-open" popovertarget="hsb-h-options" aria-haspopup="dialog" hidden>View options ▾</button>
+      <div popover="auto" id="hsb-h-options" class="kp-popover hsb-h-options" role="dialog" aria-label="View options">
         <div class="kp-formgrid">
           <div class="kp-formgrid__row">
             <b class="kp-formgrid__label">Tiles</b>

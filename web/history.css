@@ -2,8 +2,14 @@
    hsb-h- rules only lay the sections out. Colours, spacing and radii come from the theme's tokens, never from here. */
 
 /* View options: the popover under its button in the card's head, its two choices on a form grid of their own. */
+/* The popover anchors to its button here, not in the markup: the CSP allows no style attribute. */
+#hsb-h-options-open {
+    anchor-name: --hsb-h-options;
+}
+
 /* It hangs under the button and grows towards the start edge, so on a phone it stays on the screen. */
 .hsb-h-options {
+    position-anchor: --hsb-h-options;
     inline-size: min(28rem, calc(100vw - 2 * var(--kp-space-md, 1rem)));
     padding: var(--kp-space-md, 1rem);
     position-area: block-end span-inline-start;
@@ -156,3 +162,9 @@
 .hsb-h-toolbar > .kp-card__body {
     margin: 0;
 }
+
+/* Each key figure's chart takes its own series colour (a class per tile: the CSP allows no style attribute). */
+.hsb-chart-1 { --kp-chart-series: var(--chart-1); }
+.hsb-chart-2 { --kp-chart-series: var(--chart-2); }
+.hsb-chart-3 { --kp-chart-series: var(--chart-3); }
+.hsb-chart-4 { --kp-chart-series: var(--chart-4); }

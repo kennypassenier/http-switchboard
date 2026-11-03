@@ -24,7 +24,7 @@ function tileHtml(m, n, t, p, ctx) {
         return `<div class="kp-kpi kp-kpi--trend" data-hsb-metric="${m.key}">${head}
             <a class="kp-kpi__link" href="#hsb-h-strips" title="Open ${m.label} by the hour"><span class="kp-kpi__link-word">Hourly</span> ↗</a>
             ${num}${sub}
-            <figure class="kp-kpi__chart" data-kp-chart="spark" data-kp-spark-head="none" data-kp-spark-axis="relative" data-kp-spark-readout="float" aria-label="${m.label}, last 24 hours" style="--kp-chart-series: var(--chart-${n})"></figure>
+            <figure class="kp-kpi__chart hsb-chart-${n}" data-kp-chart="spark" data-kp-spark-head="none" data-kp-spark-axis="relative" data-kp-spark-readout="float" aria-label="${m.label}, last 24 hours"></figure>
         </div>`;
     }
     if (m.key === 'failed') {

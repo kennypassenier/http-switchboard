@@ -375,7 +375,7 @@ and `v1_recheck_clears_a_failure_a_profile_can_no_longer_clear_itself`.
 
 ### Try a translation
 
-The **Try a translation** page (navigation label **Translate**; also the
+The **Try a translation** page (in the navigation; **Translate** on the phone's tab bar; also the
 *Try a translation* button on a profile's card and the same item in a row's
 *Actions* menu in the Recheck table) shows what a profile makes of a message without sending
 anything. Pick a profile, paste a sample message into the box (it checks

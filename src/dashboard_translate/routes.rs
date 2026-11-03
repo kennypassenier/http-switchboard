@@ -17,6 +17,9 @@ use super::example::example_message;
 use super::preview::{preview, Failure, Preview};
 use super::scratch::{open, refused, with_template, ENVELOPE_TYPE};
 use super::{MAX_MESSAGE_BYTES, MAX_TEMPLATE_BYTES, PAGE_ROUTE, PREVIEW_ROUTE};
+
+/// The word under the page's icon in the phone's tab bar (a 78 px tab).
+const NAV_SHORT_LABEL: &str = "Translate";
 use crate::config::Profile;
 use crate::dashboard::{Profiles, WEB_MOUNT};
 
@@ -33,11 +36,11 @@ static PREVIEW_SLOTS: Semaphore = Semaphore::const_new(MAX_CONCURRENT_PREVIEWS);
 /// Register the page, its place in the navigation and the route it posts
 /// to. Called from `dashboard::install`.
 pub fn install(app: &mut chassis::App, profiles: Arc<Profiles>) {
-    // The navigation label is short so the phone's tab bar does not cut it; the
-    // page's own heading (`web/translate.html`) keeps the full "Try a translation".
+    // The phone's tab bar shows the short label; everywhere else the full title.
     app.page(
-        chassis::shell::pages::Page::new("translate", "Translate", PAGE_ROUTE)
-            .hint("Try a translation: see what a profile makes of a sample message"),
+        chassis::shell::pages::Page::new("translate", "Try a translation", PAGE_ROUTE)
+            .short_label(NAV_SHORT_LABEL)
+            .hint("See what a profile makes of a sample message, without sending it"),
     );
     let router = Router::new()
         .route(PAGE_ROUTE, get(page))
