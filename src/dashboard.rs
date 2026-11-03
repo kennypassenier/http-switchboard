@@ -116,8 +116,15 @@ pub fn install(app: &mut chassis::App, profiles: Arc<Profiles>) {
 /// app: the kit would cut the brand at 12 characters ("HTTPSwitchbo").
 const INSTALL_SHORT_NAME: &str = "Switchboard";
 
+/// Where the installed app opens: the kit's status page.
+const INSTALL_START_URL: &str = "/";
+
 /// How the dashboard installs as an app. The icons are the files in
 /// `web/pwa/`; the kit lists them in the manifest it builds.
 fn install_settings() -> Pwa {
-    Pwa::new().short_name(INSTALL_SHORT_NAME)
+    // The web app holds only the status page's modules, so the installed app
+    // opens on the status page itself rather than on the mount.
+    Pwa::new()
+        .short_name(INSTALL_SHORT_NAME)
+        .start_url(INSTALL_START_URL)
 }
