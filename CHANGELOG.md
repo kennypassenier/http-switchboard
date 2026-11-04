@@ -7,6 +7,8 @@ endpoints and the CLI verbs — not about the internals.
 
 ## [Unreleased]
 
+## [6.0.0] - 2026-11-04
+
 ### Changed
 
 - **A destination that refuses everything fails the profile** (Kenny,
