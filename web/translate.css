@@ -195,3 +195,12 @@
     overflow-wrap: break-word;
     word-break: normal;
 }
+
+/* On a touch screen "Show line diff" is a tap target of the theme's touch size. */
+@media (pointer: coarse) {
+    .hsbt-diffbox__summary {
+        display: flex;
+        align-items: center;
+        min-block-size: var(--kp-touch-target, 2.75rem);
+    }
+}

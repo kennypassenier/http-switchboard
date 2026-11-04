@@ -63,13 +63,19 @@ pub(super) fn render_target(
     Ok(format!("{scheme}://{authority}{rendered}"))
 }
 
-/// Belt and braces: percent-encoding already makes these impossible, and
-/// a future change to the encoder should not quietly re-open them. A
-/// segment of exactly `.` or `..` is traversal; a longer one that merely
-/// contains dots ("Waiting...") is an ordinary value.
+/// A segment of exactly `.` or `..` is traversal; a longer one that merely
+/// contains dots ("Waiting...") is an ordinary value. The check reads the
+/// path as a server that decodes `%2F` and `%2E` would, because servers
+/// differ there: a value `../../admin` arrives encoded as `..%2F..%2Fadmin`
+/// and is still refused (fail closed).
 fn escapes_address(rendered: &str) -> bool {
     let path = rendered.split(['?', '#']).next().unwrap_or_default();
-    rendered.contains("://") || path.split('/').any(|seg| seg == "." || seg == "..")
+    let decoded = path
+        .replace("%2F", "/")
+        .replace("%2f", "/")
+        .replace("%2E", ".")
+        .replace("%2e", ".");
+    rendered.contains("://") || decoded.split('/').any(|seg| seg == "." || seg == "..")
 }
 
 /// Percent-encode everything that is not unreserved. Deliberately strict:
@@ -98,6 +104,8 @@ mod tests {
         assert!(escapes_address("/a/../b"));
         assert!(escapes_address("/a/./b"));
         assert!(escapes_address("/a/.."));
+        assert!(escapes_address("/devices/..%2F..%2Fadmin/state"));
+        assert!(!escapes_address("/devices/a%2Fb/state"));
     }
 
     fn profile(url: &str) -> Profile {

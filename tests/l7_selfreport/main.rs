@@ -30,10 +30,15 @@ async fn read_topic(
     subscription: &str,
 ) -> Vec<serde_json::Value> {
     let mut out = Vec::new();
-    for _ in 0..10 {
+    for n in 0..10 {
+        // Only the first read asks for the history: kyu 7 starts the
+        // subscription over on every `from=beginning`, so asking each time
+        // reads the first events again (a doubled event list, not a doubled
+        // report).
+        let from = if n == 0 { "&from=beginning" } else { "" };
         let response = reqwest::Client::new()
             .get(format!(
-                "{base_url}/t/{topic}/next?as={subscription}&envelope=json&wait=1&from=beginning"
+                "{base_url}/t/{topic}/next?as={subscription}&envelope=json&wait=1{from}"
             ))
             .bearer_auth(token)
             .send()

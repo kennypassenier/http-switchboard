@@ -69,6 +69,11 @@ endpoints and the CLI verbs — not about the internals.
 
 ### Fixed
 
+- A templated path refuses a value that would become a `.` or `..` segment once a
+  server decodes `%2F`/`%2E` (`../../admin` arrived as `..%2F..%2Fadmin` and was let through).
+- On a touch screen the profile names that open a hover card and "Show line diff" are
+  at least the theme's touch size (44 px).
+
 - **A message or a given-up message ends a stale hub-down/denied state** (review 2026-11-02): any poll that returns a message or a non-JSON message proves the hub answers, so the profile leaves starting/hub-down/denied like on an empty poll.
 - **Hub answers are read with a cap** (review 2026-11-02): a kyu envelope over 1 MiB is given up on (dead letter, reason "larger than this service reads") without being read into memory.
 - **A hub envelope without `attempt` is logged once** (review 2026-11-02): `received` may count a re-offered message twice, and the warning says so.

@@ -204,3 +204,13 @@
 .hsb-profile .kp-kv__row[hidden] {
     display: none;
 }
+
+/* On a touch screen a profile name that opens its hover card is a tap target: at least the theme's touch size, with
+   the name centred in it, so a finger can open it (UI principles; kp-themes' --kp-touch-target). */
+@media (pointer: coarse) {
+    [data-hsb-profile][data-kp-hovercard] {
+        display: inline-flex;
+        align-items: center;
+        min-block-size: var(--kp-touch-target, 2.75rem);
+    }
+}
