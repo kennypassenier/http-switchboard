@@ -31,10 +31,12 @@ async fn read_topic(
 ) -> Vec<serde_json::Value> {
     let mut out = Vec::new();
     for n in 0..10 {
-        // Only the first read asks for the history: kyu 7 starts the
-        // subscription over on every `from=beginning`, so asking each time
-        // reads the first events again (a doubled event list, not a doubled
-        // report).
+        // Only the first read asks for the history; the later ones carry on
+        // where the subscription stands. Against kyu-latest 7.0.0 a reader
+        // that sent `from=beginning` on every read got the events twice
+        // (2026-11-04); kyu could not reproduce that with a plain ack loop,
+        // so the cause is not pinned down, but asking once is all a reader
+        // needs.
         let from = if n == 0 { "&from=beginning" } else { "" };
         let response = reqwest::Client::new()
             .get(format!(
