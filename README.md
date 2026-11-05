@@ -88,7 +88,10 @@ http-switchboard --knobs
 The config path is a flag, not a positional argument — it has been since
 2.0.0, and `tests/l10_docs.rs` now hands every command line on this page
 to the binary so this block cannot drift away from it again.
-`--knobs` prints every setting the kit reads, with its environment
+On CT 109 the unit passes no `--config`: the file is
+`<state_dir>/config.toml`, i.e. `/appdata/kyu/http-switchboard-config/config.toml`
+(`HTTP_SWITCHBOARD_CONFIG` in `docs/KIT.md`), and the homelab writes it from
+latch (`latch_files` in `stacks/kyu/lxc-compose.yml`). `--knobs` prints every setting the kit reads, with its environment
 variable, its default and what it means, before any configuration is
 opened.
 
@@ -151,17 +154,17 @@ A release is built and published from this machine, not by GitHub
 Actions: `chassis release <version>` runs the gate, bumps `Cargo.toml` and
 the changelog, commits (through the release tier above) and tags, builds
 the static musl binary in docker, refuses it if `ldd` finds a shared
-library, writes `dist/http-switchboard` + `dist/SHA256SUMS`, builds the
-image `ghcr.io/kennypassenier/http-switchboard:v<version>` + `:latest`, and
-only then pushes `main`, the tag and both image tags and creates the GitHub
-release (not `latest`); `scripts/sign-release.sh v<version>` signs it and
+library, writes `dist/http-switchboard` + `dist/SHA256SUMS`, and
+only then pushes `main` and the tag and creates the GitHub
+release (not `latest`). No image is built: `deploy/service.yml` names a
+binary, so the kit treats the project as a native unit (`chassis release`
+prints `container image: no`); `scripts/sign-release.sh v<version>` signs it and
 marks it `latest`. `chassis release <version> --dry-run` rehearses every
 build and stops before any commit, tag or upload. The release machine
-needs docker logged in to `ghcr.io` with `write:packages`, `cargo-deny`,
-`gh` and `minisign`.
+needs docker (for the musl build), `cargo-deny`, `gh` and `minisign`.
 
-This needs chassis-rs **3.0.0 or later**; `Cargo.toml` pins it at
-**4.0.0**.
+This needs chassis-rs **3.0.0 or later**; the version in use is the
+`chassis` tag in `Cargo.toml`.
 
 ## Licence
 

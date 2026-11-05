@@ -111,9 +111,9 @@ format. Neither endpoint ever echoes message content.
 ## 4 · The hub refuses us (`state: "denied"`)
 
 Almost always a rotated `KYU_TOKEN` with this service not restarted.
-Mint an app token on kyu's Apps page, put it in the environment the
-service starts in — through the homelab vault, which resolves it from
-latch at deploy time — and redeploy. The service reads secrets once, at
+Mint an app token on kyu's Apps page, put it in
+`/appdata/kyu/http-switchboard-config/token.env` (the unit's
+`EnvironmentFile`) and restart the unit. The service reads secrets once, at
 startup, on purpose.
 
 ## 5 · Restore from zero
@@ -124,12 +124,20 @@ startup, on purpose.
 > native chassis service (`deploy/service.yml` + `deploy/http-switchboard.service`,
 > install path `/opt/http-switchboard/bin`). The verification steps still hold.
 
-1. `git clone` this repository.
-2. Deploy the preset from `~/Projects/homelab` onto a NEW container (A1
-   forbids the orchestrator managing an existing guest).
-3. The orchestrator resolves `KYU_TOKEN` with `latch cat` and composes it
-   into the container's environment from the host vault.
-4. Copy the deployment config into place and run `--check --config <path>`.
+1. Rebuild CT 109 from `stacks/kyu` in the homelab repository (the hub,
+   kyu-runner and this service share that container). Its
+   `http-switchboard-config` directory is bind-mounted from the host and
+   is in the nightly backup (`data_dirs` of `http-switchboard/service.yml`).
+2. The homelab deploy writes the config: `latch_files` in
+   `stacks/kyu/lxc-compose.yml` copies `http-switchboard/config.toml` from
+   latch (project `stacks`, prod) to
+   `/appdata/kyu/http-switchboard-config/config.toml` and restarts the unit
+   when it changes.
+3. The hub token (`KYU_TOKEN`, expanded in the config) is read from
+   `/appdata/kyu/http-switchboard-config/token.env`, the unit's
+   `EnvironmentFile`; it comes back with the directory or is re-minted
+   (§7).
+4. Run `--check` as the service user against that config.
 5. Publish one recorded alert onto `alerts.raw` and confirm it arrives in
    Home Assistant.
 
@@ -150,6 +158,13 @@ preset.
 > rather than by hand. That belongs to the homelab project, which is
 > where the preset lands (Kenny's sequence: fold it in just before the
 > retrospective).
+
+## 5a · Updates are manual
+
+`stacks/kyu/http-switchboard/service.yml` has `update_policy: manual`, so
+the homelab's nightly round never installs a new release here. An update
+is a decision: the stack's `update_cmd` runs `http-switchboard update`
+(verify, install, exit; `docs/KIT.md`), followed by a restart of the unit.
 
 ## 6 · The container, when there is no shell to help you
 
@@ -178,9 +193,9 @@ names the file, the profile and the remedy.
 The service reads secrets once, at startup, on purpose. So:
 
 1. Mint a new app token on kyu's Apps page.
-2. Put it in the environment the service starts in (on the homelab, the
-   orchestrator composes it into the container from the host vault).
-3. Redeploy or restart.
+2. Put it in `/appdata/kyu/http-switchboard-config/token.env`, the
+   unit's `EnvironmentFile`.
+3. Restart the unit.
 
 Forgetting step 3 shows up as `state: "denied"` on every profile, with a
 log line naming the Apps page. It is not silent.
